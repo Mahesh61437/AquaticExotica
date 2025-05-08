@@ -1,19 +1,19 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { 
-  User, 
-  onAuthStateChanged, 
-  signOut as firebaseSignOut,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  updateProfile
-} from "firebase/auth";
-import { auth } from "../lib/firebase";
 import { useToast } from "../hooks/use-toast";
+import { apiRequest } from "../lib/queryClient";
+
+// Define our user interface
+interface User {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+}
 
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName: string) => Promise<User | null>;
+  signUp: (email: string, password: string, fullName: string) => Promise<User | null>;
   signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
 }
@@ -25,30 +25,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Check for authentication on initial load
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
+    const checkAuth = async () => {
+      try {
+        const user = await apiRequest<User>('/api/auth/me');
+        setCurrentUser(user);
+      } catch (error) {
+        // This would be a 401 if not authenticated, which is fine
+        console.log('Not authenticated');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return unsubscribe;
+    checkAuth();
   }, []);
 
-  const signUp = async (email: string, password: string, displayName: string) => {
+  const signUp = async (email: string, password: string, fullName: string) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = await apiRequest<User>('/api/auth/signup', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password,
+          fullName
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       
-      // Set the display name
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, { displayName });
-      }
+      setCurrentUser(user);
       
       toast({
         title: "Account created successfully",
         description: "You have been signed up and logged in",
       });
       
-      return userCredential.user;
+      return user;
     } catch (error: any) {
       console.error("Signup error", error);
       toast({
@@ -62,12 +77,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = await apiRequest<User>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      setCurrentUser(user);
+      
       toast({
         title: "Signed in successfully",
         description: "Welcome back!",
       });
-      return userCredential.user;
+      return user;
     } catch (error: any) {
       console.error("Sign in error", error);
       toast({
@@ -81,7 +108,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
-      await firebaseSignOut(auth);
+      await apiRequest('/api/auth/logout', {
+        method: 'POST'
+      });
+      
+      setCurrentUser(null);
+      
       toast({
         title: "Signed out",
         description: "You have been signed out successfully",

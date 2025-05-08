@@ -1,10 +1,38 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { pool } from "./db";
+
+// Create PostgreSQL session store
+const PgSession = connectPgSimple(session);
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Session configuration
+app.use(session({
+  store: new PgSession({
+    pool,
+    tableName: 'session'
+  }),
+  secret: process.env.SESSION_SECRET || 'candid-e-commerce-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+  }
+}));
+
+// Add session type declaration
+declare module 'express-session' {
+  interface SessionData {
+    userId: number;
+  }
+}
 
 app.use((req, res, next) => {
   const start = Date.now();

@@ -1,12 +1,140 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, cartSchema, insertOrderSchema } from "@shared/schema";
+import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import { hash, compare } from "bcrypt";
+
+// Authentication validation schemas
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters")
+});
+
+const signupSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  fullName: z.string().min(2, "Full name is required")
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
+
+  // Authentication routes
+  app.post("/api/auth/signup", async (req: Request, res: Response) => {
+    try {
+      const result = signupSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: result.error.format() 
+        });
+      }
+      
+      const { email, password, fullName } = result.data;
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      
+      // Hash password
+      const hashedPassword = await hash(password, 10);
+      
+      // Create user
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        username: email.split('@')[0], // Use part of email as username
+        fullName,
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      res.status(201).json(userWithoutPassword);
+    } catch (error) {
+      console.error("Signup error:", error);
+      res.status(500).json({ message: "Failed to create account" });
+    }
+  });
+
+  app.post("/api/auth/login", async (req: Request, res: Response) => {
+    try {
+      const result = loginSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: result.error.format() 
+        });
+      }
+      
+      const { email, password } = result.data;
+      
+      // Find user by email
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Compare password
+      const isPasswordValid = await compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Set session
+      req.session.userId = user.id;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Failed to login" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: Request, res: Response) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/auth/me", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        // Clear invalid session
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "User not found" });
+      }
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = user;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Get current user error:", error);
+      res.status(500).json({ message: "Failed to get user data" });
+    }
+  });
 
   // Products
   app.get("/api/products", async (req, res) => {
