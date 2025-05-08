@@ -621,8 +621,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Make user an admin (for development/testing)
-  app.post("/api/admin/make-admin", async (req, res) => {
+  // Manage admin privileges - protected by isAdmin middleware
+  app.post("/api/admin/make-admin", isAdmin, async (req, res) => {
     try {
       const { userId } = req.body;
       if (!userId) {
@@ -639,6 +639,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
       
+      // Check if this is the only admin to prevent removal of last admin
+      if (user.isAdmin) {
+        // Count total admins before allowing removal of admin status
+        const allUsers = await storage.getAllUsers();
+        const adminCount = allUsers.filter(u => u.isAdmin).length;
+        
+        if (adminCount <= 1) {
+          return res.status(400).json({ 
+            message: "Cannot remove admin status from the only admin user"
+          });
+        }
+      }
+      
       // Update user to make them an admin
       const updatedUser = await storage.updateUser(id, { isAdmin: true });
       
@@ -652,6 +665,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Make admin error:", error);
       res.status(500).json({ message: "Failed to make user an admin" });
+    }
+  });
+
+  // Revoke admin privileges - protected by isAdmin middleware
+  app.post("/api/admin/revoke-admin", isAdmin, async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const id = parseInt(userId);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Don't allow removing yourself as admin
+      if (id === req.session.userId) {
+        return res.status(400).json({ 
+          message: "You cannot revoke your own admin privileges"
+        });
+      }
+      
+      // Check if user is already not an admin
+      if (!user.isAdmin) {
+        return res.status(400).json({ 
+          message: "User is not an admin"
+        });
+      }
+      
+      // Count total admins before allowing removal of admin status
+      const allUsers = await storage.getAllUsers();
+      const adminCount = allUsers.filter(u => u.isAdmin).length;
+      
+      if (adminCount <= 1) {
+        return res.status(400).json({ 
+          message: "Cannot remove admin status from the only admin user"
+        });
+      }
+      
+      // Update user to remove admin privileges
+      const updatedUser = await storage.updateUser(id, { isAdmin: false });
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json({
+        ...userWithoutPassword,
+        message: "Admin privileges revoked"
+      });
+    } catch (error) {
+      console.error("Revoke admin error:", error);
+      res.status(500).json({ message: "Failed to revoke admin privileges" });
     }
   });
 

@@ -36,17 +36,38 @@ export default function UserManagement() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/users", {
-        method: "GET"
-      });
+      const res = await apiRequest("GET", "/api/admin/users");
       return await res.json() as UserWithoutPassword[];
     },
   });
 
-  // Update user admin status mutation
-  const updateAdminStatusMutation = useMutation({
-    mutationFn: async ({ id, isAdmin }: { id: number; isAdmin: boolean }) => {
-      const res = await apiRequest("POST", `/api/admin/make-admin`, {
+  // Update user admin status mutation - grant admin
+  const grantAdminMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/make-admin`, { userId: id });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      toast({
+        title: "Success",
+        description: "Admin privileges granted successfully",
+      });
+      setIsOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to grant admin privileges: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Update user admin status mutation - revoke admin
+  const revokeAdminMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/revoke-admin`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: id })
@@ -57,14 +78,14 @@ export default function UserManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
       toast({
         title: "Success",
-        description: "User admin status updated successfully",
+        description: "Admin privileges revoked successfully",
       });
       setIsOpen(false);
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: `Failed to update user admin status: ${error.message}`,
+        description: `Failed to revoke admin privileges: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -75,13 +96,14 @@ export default function UserManagement() {
     setIsOpen(true);
   };
 
-  const handleUpdateAdminStatus = () => {
+  const handleGrantAdmin = () => {
     if (!selectedUser) return;
-    
-    // Currently this only adds admin privileges
-    // In a real app, you'd want to toggle this
-    // But our API just has "make-admin" endpoint
-    updateAdminStatusMutation.mutate({ id: selectedUser.id, isAdmin: true });
+    grantAdminMutation.mutate(selectedUser.id);
+  };
+  
+  const handleRevokeAdmin = () => {
+    if (!selectedUser) return;
+    revokeAdminMutation.mutate(selectedUser.id);
   };
 
   const formatDate = (date: Date | string) => {
@@ -177,7 +199,7 @@ export default function UserManagement() {
                 <Label htmlFor="adminStatus">Admin Privileges</Label>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
-                    <p>Grant administrative permissions to this user</p>
+                    <p>{selectedUser.isAdmin ? "Admin Status" : "Grant Administrative Access"}</p>
                     <p className="text-sm text-muted-foreground">
                       Admins can manage products, categories, orders, and other users
                     </p>
@@ -185,13 +207,13 @@ export default function UserManagement() {
                   <Switch
                     id="adminStatus"
                     checked={selectedUser.isAdmin}
-                    disabled={selectedUser.isAdmin}
-                    onCheckedChange={() => handleUpdateAdminStatus()}
+                    disabled={false}
+                    onCheckedChange={(checked) => checked ? handleGrantAdmin() : handleRevokeAdmin()}
                   />
                 </div>
                 {selectedUser.isAdmin && (
                   <p className="text-sm italic text-muted-foreground mt-2">
-                    This user already has admin privileges.
+                    This user currently has admin privileges.
                   </p>
                 )}
               </div>
@@ -203,15 +225,26 @@ export default function UserManagement() {
                 >
                   Close
                 </Button>
-                {!selectedUser.isAdmin && (
+                {!selectedUser.isAdmin ? (
                   <Button 
-                    onClick={handleUpdateAdminStatus}
-                    disabled={updateAdminStatusMutation.isPending}
+                    onClick={handleGrantAdmin}
+                    disabled={grantAdminMutation.isPending}
                   >
-                    {updateAdminStatusMutation.isPending && (
+                    {grantAdminMutation.isPending && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
                     Grant Admin Access
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={handleRevokeAdmin}
+                    disabled={revokeAdminMutation.isPending}
+                    variant="destructive"
+                  >
+                    {revokeAdminMutation.isPending && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Revoke Admin Access
                   </Button>
                 )}
               </DialogFooter>
