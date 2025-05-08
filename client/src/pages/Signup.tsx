@@ -61,31 +61,16 @@ export default function Signup() {
       
     } catch (error: any) {
       console.error("Sign up error:", error);
-      // Handle specific error cases
-      if (error.response?.status === 409) {
-        toast({
-          title: "Account already exists",
-          description: "This email is already registered. Please sign in instead.",
-          variant: "destructive"
-        });
-        
+      
+      // The message handling is primarily done in the AuthContext
+      // Handle specific error cases here
+      if (error.message?.includes("already exists")) {
         // Add a small delay before redirecting to login page
         setTimeout(() => {
           setLocation("/login");
         }, 1500);
-      } else if (error.response?.status === 400) {
-        toast({
-          title: "Invalid data",
-          description: "Please check your information and try again.",
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "Registration failed",
-          description: error.message || "An error occurred while creating your account.",
-          variant: "destructive"
-        });
       }
+      // The toast error message is already being shown in the AuthContext
     } finally {
       setLoading(false);
     }
