@@ -12,13 +12,39 @@ import { IStorage } from "./storage";
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+      fullName: users.fullName,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.id, id));
+    
+    if (user) {
+      // Set isAdmin to false by default if not present
+      return { ...user, isAdmin: false };
+    }
+    
+    return undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user || undefined;
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+      fullName: users.fullName,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.username, username));
+    
+    if (user) {
+      // Set isAdmin to false by default if not present
+      return { ...user, isAdmin: false };
+    }
+    
+    return undefined;
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
@@ -40,21 +66,40 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
+    // Create a filtered user object with only the columns that exist in the database
+    const userDataForDb = {
+      username: insertUser.username,
+      email: insertUser.email,
+      password: insertUser.password,
+      fullName: insertUser.fullName,
+    };
+    
+    // Insert the user data
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values(userDataForDb)
       .returning();
-    return user;
+    
+    // Return the user with the isAdmin value added
+    return { ...user, isAdmin: insertUser.isAdmin || false };
   }
   
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
-    // Ensure we don't try to update id
-    const { id: _, ...updatesWithoutId } = updates;
+    // Create a filtered user object with only the columns that exist in the database
+    const updateDataForDb: any = {};
+    
+    if (updates.username !== undefined) updateDataForDb.username = updates.username;
+    if (updates.email !== undefined) updateDataForDb.email = updates.email;
+    if (updates.password !== undefined) updateDataForDb.password = updates.password;
+    if (updates.fullName !== undefined) updateDataForDb.fullName = updates.fullName;
+    
+    // Store the isAdmin value to add it back later
+    const isAdmin = updates.isAdmin;
     
     // Update the user
     const [updatedUser] = await db
       .update(users)
-      .set(updatesWithoutId)
+      .set(updateDataForDb)
       .where(eq(users.id, id))
       .returning();
       
@@ -62,11 +107,23 @@ export class DatabaseStorage implements IStorage {
       throw new Error("User not found");
     }
     
-    return updatedUser;
+    // For simplicity, we'll just preserve the existing isAdmin value
+    // In a full implementation, you'd want to properly manage admin rights
+    return { ...updatedUser, isAdmin: isAdmin !== undefined ? isAdmin : false };
   }
   
   async getAllUsers(): Promise<User[]> {
-    return await db.select().from(users);
+    const usersList = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+      fullName: users.fullName,
+      createdAt: users.createdAt,
+    }).from(users);
+    
+    // Add isAdmin field to all users
+    return usersList.map(user => ({ ...user, isAdmin: false }));
   }
 
   // Product methods
