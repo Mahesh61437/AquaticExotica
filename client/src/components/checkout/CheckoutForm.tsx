@@ -53,6 +53,8 @@ const formSchema = z.object({
   }),
   country: z.string().min(2, "Country is required"),
   sameAsBilling: z.boolean().default(true),
+  shippingFirstName: z.string().optional(),
+  shippingLastName: z.string().optional(),
   shippingAddress: z.string().optional(),
   shippingCity: z.string().optional(),
   shippingState: z.string().optional(),
@@ -102,6 +104,13 @@ export function CheckoutForm() {
       zipCode: "",
       country: "IN", // India as default country
       sameAsBilling: true,
+      shippingFirstName: "",
+      shippingLastName: "",
+      shippingAddress: "",
+      shippingCity: "",
+      shippingState: "",
+      shippingZipCode: "",
+      shippingCountry: "IN",
       paymentMethod: "credit-card",
       saveInfo: false,
       notes: "",
@@ -138,14 +147,27 @@ export function CheckoutForm() {
             country: data.shippingCountry || "",
           };
 
-      // Create order data
+      // Create order data formatted according to schema requirements
       const orderData = {
-        userId: null, // No user authentication in this demo
         status: "pending",
         total: cart.total.toString(),
         items: cart.items,
-        shippingAddress,
+        shippingAddress: {
+          firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
+          lastName: data.sameAsBilling ? data.lastName : (data.shippingLastName || data.lastName),
+          email: data.email,
+          phone: data.phone,
+          address: data.sameAsBilling ? data.address : (data.shippingAddress || ""),
+          city: data.sameAsBilling ? data.city : (data.shippingCity || ""),
+          state: data.sameAsBilling ? data.state : (data.shippingState || ""),
+          zipCode: data.sameAsBilling ? data.zipCode : (data.shippingZipCode || ""),
+          country: data.sameAsBilling ? data.country : (data.shippingCountry || "IN"),
+        },
         billingAddress: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          phone: data.phone,
           address: data.address,
           city: data.city,
           state: data.state,

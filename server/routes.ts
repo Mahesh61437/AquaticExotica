@@ -135,6 +135,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get user data" });
     }
   });
+  
+  app.post("/api/auth/update-profile", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update user data
+      const updates = req.body;
+      
+      // Optional: validate updates here if needed
+      
+      // Update user profile
+      const updatedUser = await storage.updateUser(userId, updates);
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
 
   // Products
   app.get("/api/products", async (req, res) => {

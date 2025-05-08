@@ -33,6 +33,24 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return user;
   }
+  
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    // Ensure we don't try to update id
+    const { id: _, ...updatesWithoutId } = updates;
+    
+    // Update the user
+    const [updatedUser] = await db
+      .update(users)
+      .set(updatesWithoutId)
+      .where(eq(users.id, id))
+      .returning();
+      
+    if (!updatedUser) {
+      throw new Error("User not found");
+    }
+    
+    return updatedUser;
+  }
 
   // Product methods
   async getAllProducts(): Promise<Product[]> {
