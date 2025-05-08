@@ -9,12 +9,13 @@ import {
 // modify the interface with any CRUD methods
 // you might need
 export interface IStorage {
-  // User methods (keeping existing)
+  // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User>;
+  getAllUsers(): Promise<User[]>; // Admin: Get all users
 
   // Product methods
   getAllProducts(): Promise<Product[]>;
@@ -26,11 +27,16 @@ export interface IStorage {
   getSaleProducts(): Promise<Product[]>;
   searchProducts(query: string): Promise<Product[]>;
   createProduct(product: InsertProduct): Promise<Product>;
+  updateProduct(id: number, updates: Partial<Product>): Promise<Product>; // Admin: Update product
+  deleteProduct(id: number): Promise<void>; // Admin: Delete product
 
   // Category methods
   getAllCategories(): Promise<Category[]>;
   getCategoryBySlug(slug: string): Promise<Category | undefined>;
+  getCategoryById(id: number): Promise<Category | undefined>; // Admin: Get category by ID
   createCategory(category: InsertCategory): Promise<Category>;
+  updateCategory(id: number, updates: Partial<Category>): Promise<Category>; // Admin: Update category
+  deleteCategory(id: number): Promise<void>; // Admin: Delete category
 
   // Order methods
   createOrder(order: InsertOrder): Promise<Order>;

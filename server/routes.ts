@@ -1,9 +1,29 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema } from "@shared/schema";
+import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema, insertCategorySchema } from "@shared/schema";
 import { z } from "zod";
 import { hash, compare } from "bcrypt";
+
+// Admin middleware
+const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  try {
+    const user = await storage.getUser(req.session.userId);
+    
+    if (!user || !user.isAdmin) {
+      return res.status(403).json({ message: "Forbidden: Admin access required" });
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error in admin middleware:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 // Authentication validation schemas
 const loginSchema = z.object({
@@ -394,6 +414,244 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Fetch user orders error:", error);
       res.status(500).json({ message: "Failed to fetch user orders" });
+    }
+  });
+
+  // ADMIN ROUTES
+  // These routes are protected by the isAdmin middleware
+  
+  // Admin: Get all products (with optional filters)
+  app.get("/api/admin/products", isAdmin, async (req, res) => {
+    try {
+      const products = await storage.getAllProducts();
+      res.json(products);
+    } catch (error) {
+      console.error("Admin fetch products error:", error);
+      res.status(500).json({ message: "Failed to fetch products" });
+    }
+  });
+
+  // Admin: Create product
+  app.post("/api/admin/products", isAdmin, async (req, res) => {
+    try {
+      const productData = insertProductSchema.parse(req.body);
+      const product = await storage.createProduct(productData);
+      res.status(201).json(product);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      console.error("Admin create product error:", error);
+      res.status(500).json({ message: "Failed to create product" });
+    }
+  });
+
+  // Admin: Update product
+  app.put("/api/admin/products/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      const product = await storage.getProductById(id);
+      if (!product) {
+        return res.status(404).json({ message: "Product not found" });
+      }
+
+      const productData = insertProductSchema.parse(req.body);
+      // Add update product method to storage interface
+      const updatedProduct = await storage.updateProduct(id, productData);
+      
+      res.json(updatedProduct);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid product data", errors: error.errors });
+      }
+      console.error("Admin update product error:", error);
+      res.status(500).json({ message: "Failed to update product" });
+    }
+  });
+
+  // Admin: Delete product
+  app.delete("/api/admin/products/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid product ID" });
+      }
+
+      // Add delete product method to storage interface
+      await storage.deleteProduct(id);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Admin delete product error:", error);
+      res.status(500).json({ message: "Failed to delete product" });
+    }
+  });
+
+  // Admin: Get all categories
+  app.get("/api/admin/categories", isAdmin, async (req, res) => {
+    try {
+      const categories = await storage.getAllCategories();
+      res.json(categories);
+    } catch (error) {
+      console.error("Admin fetch categories error:", error);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  // Admin: Create category
+  app.post("/api/admin/categories", isAdmin, async (req, res) => {
+    try {
+      const categoryData = insertCategorySchema.parse(req.body);
+      const category = await storage.createCategory(categoryData);
+      res.status(201).json(category);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
+      }
+      console.error("Admin create category error:", error);
+      res.status(500).json({ message: "Failed to create category" });
+    }
+  });
+
+  // Admin: Update category
+  app.put("/api/admin/categories/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+
+      const category = await storage.getCategoryById(id);
+      if (!category) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+
+      const categoryData = insertCategorySchema.parse(req.body);
+      // Add update category method to storage interface
+      const updatedCategory = await storage.updateCategory(id, categoryData);
+      
+      res.json(updatedCategory);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid category data", errors: error.errors });
+      }
+      console.error("Admin update category error:", error);
+      res.status(500).json({ message: "Failed to update category" });
+    }
+  });
+
+  // Admin: Delete category
+  app.delete("/api/admin/categories/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid category ID" });
+      }
+
+      // Add delete category method to storage interface
+      await storage.deleteCategory(id);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error("Admin delete category error:", error);
+      res.status(500).json({ message: "Failed to delete category" });
+    }
+  });
+
+  // Admin: Get all orders
+  app.get("/api/admin/orders", isAdmin, async (req, res) => {
+    try {
+      // Add getAllOrders method to storage interface
+      const orders = await storage.getAllOrders();
+      res.json(orders);
+    } catch (error) {
+      console.error("Admin fetch orders error:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  // Admin: Update order status
+  app.patch("/api/admin/orders/:id", isAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+
+      const order = await storage.getOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+
+      // Add updateOrderStatus method to storage interface
+      const updatedOrder = await storage.updateOrderStatus(id, status);
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      console.error("Admin update order status error:", error);
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Admin: Get all users
+  app.get("/api/admin/users", isAdmin, async (req, res) => {
+    try {
+      // Add getAllUsers method to storage interface
+      const users = await storage.getAllUsers();
+      
+      // Remove passwords from response
+      const usersWithoutPasswords = users.map(user => {
+        const { password, ...userWithoutPassword } = user;
+        return userWithoutPassword;
+      });
+      
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Admin fetch users error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Make user an admin (for development/testing)
+  app.post("/api/admin/make-admin", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const id = parseInt(userId);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const user = await storage.getUser(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Update user to make them an admin
+      const updatedUser = await storage.updateUser(id, { isAdmin: true });
+      
+      // Remove password from response
+      const { password, ...userWithoutPassword } = updatedUser;
+      
+      res.json({
+        ...userWithoutPassword,
+        message: "User is now an admin"
+      });
+    } catch (error) {
+      console.error("Make admin error:", error);
+      res.status(500).json({ message: "Failed to make user an admin" });
     }
   });
 
