@@ -3,7 +3,7 @@ import { CartItem, Cart } from "@shared/schema";
 
 interface CartContextType {
   cart: Cart;
-  addItem: (product: CartItem, quantity?: number) => void;
+  addItem: (product: CartItem, quantity?: number, openCart?: boolean) => void;
   removeItem: (id: number) => void;
   updateQuantity: (id: number, quantity: number) => void;
   clearCart: () => void;
@@ -49,7 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Add item to cart
-  const addItem = (product: CartItem, quantity = 1) => {
+  const addItem = (product: CartItem, quantity = 1, openCart = false) => {
     setCart(prevCart => {
       const existingItemIndex = prevCart.items.findIndex(item => item.id === product.id);
       let newItems;
@@ -70,8 +70,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return { items: newItems, count, total };
     });
 
-    // Open cart when adding an item
-    setIsCartOpen(true);
+    // Only open cart if explicitly requested
+    if (openCart) {
+      setIsCartOpen(true);
+    }
   };
 
   // Remove item from cart

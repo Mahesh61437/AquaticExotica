@@ -139,7 +139,11 @@ export function Header() {
               <SheetContent side="left" className="w-[80vw] sm:max-w-sm">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-center mb-6">
-                    <Link href="/" className="text-2xl font-heading font-bold text-primary">
+                    <Link 
+                      href="/"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-2xl font-heading font-bold text-primary"
+                    >
                       ModernShop
                     </Link>
                     <Button 
@@ -151,14 +155,41 @@ export function Header() {
                     </Button>
                   </div>
                   <nav className="flex flex-col space-y-4">
-                    <Link href="/" className="py-2 border-b border-gray-100 font-medium">Home</Link>
-                    <Link href="/shop" className="py-2 border-b border-gray-100 font-medium">Shop</Link>
+                    <Link 
+                      href="/" 
+                      onClick={() => setIsMobileMenuOpen(false)} 
+                      className="py-2 border-b border-gray-100 font-medium"
+                    >
+                      Home
+                    </Link>
+                    <Link 
+                      href="/shop" 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="py-2 border-b border-gray-100 font-medium"
+                    >
+                      Shop
+                    </Link>
                     {currentUser ? (
                       <>
-                        <Link href="/account" className="py-2 border-b border-gray-100 font-medium">My Account</Link>
-                        <Link href="/my-orders" className="py-2 border-b border-gray-100 font-medium">My Orders</Link>
+                        <Link 
+                          href="/account" 
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="py-2 border-b border-gray-100 font-medium"
+                        >
+                          My Account
+                        </Link>
+                        <Link 
+                          href="/my-orders" 
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="py-2 border-b border-gray-100 font-medium"
+                        >
+                          My Orders
+                        </Link>
                         <button 
-                          onClick={handleSignOut}
+                          onClick={() => {
+                            setIsMobileMenuOpen(false);
+                            handleSignOut();
+                          }}
                           className="py-2 border-b border-gray-100 font-medium text-left flex items-center"
                         >
                           <LogOut className="mr-2 h-4 w-4" />
@@ -167,11 +198,19 @@ export function Header() {
                       </>
                     ) : (
                       <>
-                        <Link href="/login" className="py-2 border-b border-gray-100 font-medium flex items-center">
+                        <Link 
+                          href="/login" 
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="py-2 border-b border-gray-100 font-medium flex items-center"
+                        >
                           <LogIn className="mr-2 h-4 w-4" />
                           <span>Sign In</span>
                         </Link>
-                        <Link href="/signup" className="py-2 border-b border-gray-100 font-medium flex items-center">
+                        <Link 
+                          href="/signup" 
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="py-2 border-b border-gray-100 font-medium flex items-center"
+                        >
                           <User className="mr-2 h-4 w-4" />
                           <span>Sign Up</span>
                         </Link>

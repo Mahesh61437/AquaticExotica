@@ -187,7 +187,7 @@ export function CheckoutForm() {
       // Create order data formatted according to schema requirements
       const orderData = {
         status: "pending",
-        total: cart.total.toString(),
+        total: (cart.total + 150).toString(), // Add shipping cost to the total
         items: cart.items,
         shippingAddress: {
           firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
@@ -791,21 +791,17 @@ export function CheckoutForm() {
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Shipping</span>
-                <span>Calculated at next step</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-gray-600">Tax</span>
-                <span>Calculated at next step</span>
+                <span>₹150.00</span>
               </div>
               <div className="flex justify-between py-3 border-t border-b mt-2 text-lg font-semibold">
                 <span>Total</span>
-                <span>{formatPrice(cart.total)}</span>
+                <span>{formatPrice(cart.total + 150)}</span>
               </div>
             </div>
           </CardContent>
           <CardFooter>
             <p className="text-sm text-gray-500">
-              Shipping and tax will be calculated during checkout based on your location.
+              Flat rate shipping of ₹150 applies to all orders in India.
             </p>
           </CardFooter>
         </Card>

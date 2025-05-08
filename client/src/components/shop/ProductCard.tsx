@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
-import { Heart, ShoppingCart } from "lucide-react";
+import { Check, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
 import { Product } from "@shared/schema";
 import { formatPrice, generateStarRating } from "@/lib/utils";
@@ -11,6 +12,7 @@ interface ProductCardProps {
 
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
+  const [isAdded, setIsAdded] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -23,6 +25,12 @@ export function ProductCard({ product }: ProductCardProps) {
       imageUrl: product.imageUrl,
       quantity: 1
     });
+    
+    // Show added state for 1.5 seconds
+    setIsAdded(true);
+    setTimeout(() => {
+      setIsAdded(false);
+    }, 1500);
   };
 
   return (
@@ -44,13 +52,18 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Quick Actions */}
         <div className="quick-actions">
           <Button 
-            className="flex-1 text-xs py-1" 
+            className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
-          </Button>
-          <Button variant="outline" size="icon" className="ml-2 p-1">
-            <Heart className="h-4 w-4" />
+            {isAdded ? (
+              <>
+                <Check className="h-4 w-4 mr-1" /> Added
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
+              </>
+            )}
           </Button>
         </div>
       </div>
