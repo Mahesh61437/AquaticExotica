@@ -56,10 +56,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = firstAdminSchema.safeParse(req.body);
       
       if (!result.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: result.error.format() 
-        });
+        // Extract the first error message for a simpler error response
+        const errors = result.error.format();
+        let errorMessage = "Please check your information and try again.";
+        
+        // Try to find the first detailed error message
+        for (const field in errors) {
+          if (field !== '_errors' && errors[field]?._errors?.length > 0) {
+            errorMessage = errors[field]._errors[0];
+            break;
+          } else if (field === '_errors' && errors._errors.length > 0) {
+            errorMessage = errors._errors[0];
+            break;
+          }
+        }
+        
+        return res.status(400).json({ message: errorMessage });
       }
       
       const { email, password, fullName, secretKey } = result.data;
@@ -67,7 +79,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the secret key (this is a simple implementation - for production, use environment variables)
       // This is just a basic security measure to prevent anyone from creating admin users
       if (secretKey !== "first-admin-setup-key") {
-        return res.status(403).json({ message: "Invalid secret key" });
+        return res.status(403).json({ message: "Invalid secret key. Please use the correct setup key." });
       }
       
       // Check if any admin users already exist
@@ -76,14 +88,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (existingAdmins.length > 0) {
         return res.status(403).json({ 
-          message: "Admin users already exist. Use the admin panel to create more admin users." 
+          message: "Admin users already exist. Please contact an existing administrator for assistance." 
         });
       }
       
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
       if (existingUser) {
-        return res.status(409).json({ message: "User with this email already exists" });
+        return res.status(409).json({ message: "User with this email already exists. Please use a different email address." });
       }
       
       // Hash password
@@ -110,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("First admin creation error:", error);
-      res.status(500).json({ message: "Failed to create admin account" });
+      res.status(500).json({ message: "Unable to create admin account. Please try again later." });
     }
   });
   
