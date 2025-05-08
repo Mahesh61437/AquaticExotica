@@ -37,15 +37,19 @@ export default function UserManagement() {
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/users");
-      return res.json() as Promise<UserWithoutPassword[]>;
+      return await res.json() as UserWithoutPassword[];
     },
   });
 
   // Update user admin status mutation
   const updateAdminStatusMutation = useMutation({
     mutationFn: async ({ id, isAdmin }: { id: number; isAdmin: boolean }) => {
-      const res = await apiRequest("POST", `/api/admin/make-admin`, { userId: id });
-      return res.json();
+      const res = await apiRequest("POST", `/api/admin/make-admin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: id })
+      });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });

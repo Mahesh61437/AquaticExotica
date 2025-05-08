@@ -34,6 +34,33 @@ import { Label } from "@/components/ui/label";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
+
+// Define order item type
+interface OrderItem {
+  id: number;
+  name: string;
+  price: string;
+  quantity: number;
+  imageUrl: string;
+}
+
+// Define address type
+interface Address {
+  name: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  phone: string;
+}
+
+// Extend Order type with specific properties
+interface OrderWithDetails extends Order {
+  shippingAddress: Address;
+  items: OrderItem[];
+  paymentMethod: string;
+}
 import { Loader2, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +79,7 @@ export default function OrderManagement() {
   const { toast } = useToast();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
 
   // Fetch orders
@@ -60,15 +87,19 @@ export default function OrderManagement() {
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/orders");
-      return res.json() as Promise<Order[]>;
+      return await res.json() as OrderWithDetails[];
     },
   });
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/admin/orders/${id}`, { status });
-      return res.json();
+      const res = await apiRequest("PATCH", `/api/admin/orders/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
@@ -87,12 +118,12 @@ export default function OrderManagement() {
     },
   });
 
-  const handleViewOrder = (order: Order) => {
+  const handleViewOrder = (order: OrderWithDetails) => {
     setSelectedOrder(order);
     setIsViewOpen(true);
   };
 
-  const handleUpdateStatus = (order: Order) => {
+  const handleUpdateStatus = (order: OrderWithDetails) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
     setIsStatusOpen(true);
