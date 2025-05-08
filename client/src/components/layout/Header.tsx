@@ -86,6 +86,11 @@ export function Header() {
                         My Account
                       </Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/my-orders" className="cursor-pointer w-full">
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
@@ -151,6 +156,7 @@ export function Header() {
                     {currentUser ? (
                       <>
                         <Link href="/account" className="py-2 border-b border-gray-100 font-medium">My Account</Link>
+                        <Link href="/my-orders" className="py-2 border-b border-gray-100 font-medium">My Orders</Link>
                         <button 
                           onClick={handleSignOut}
                           className="py-2 border-b border-gray-100 font-medium text-left flex items-center"

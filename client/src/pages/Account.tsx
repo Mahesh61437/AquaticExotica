@@ -375,10 +375,15 @@ export default function Account() {
               </CardHeader>
               <CardContent>
                 <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg text-center">
-                  <p className="text-muted-foreground">You haven't placed any orders yet.</p>
-                  <Button className="mt-4" onClick={() => setLocation("/shop")}>
-                    Start Shopping
-                  </Button>
+                  <p className="text-muted-foreground mb-4">View and track all your recent orders</p>
+                  <div className="flex justify-center gap-4">
+                    <Button onClick={() => setLocation("/my-orders")}>
+                      View My Orders
+                    </Button>
+                    <Button variant="outline" onClick={() => setLocation("/shop")}>
+                      Continue Shopping
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
