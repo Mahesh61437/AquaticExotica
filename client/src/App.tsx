@@ -22,6 +22,8 @@ import Account from "./pages/Account";
 // Orders
 import MyOrders from "./pages/MyOrders";
 import OrderDetail from "./pages/OrderDetail";
+// Admin pages
+import AdminDashboard from "./pages/admin/Dashboard";
 // Test pages
 import SignupTest from "./pages/SignupTest";
 

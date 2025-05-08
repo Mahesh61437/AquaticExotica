@@ -198,4 +198,22 @@ export class DatabaseStorage implements IStorage {
     const [order] = await db.select().from(orders).where(eq(orders.id, id));
     return order || undefined;
   }
+  
+  async getAllOrders(): Promise<Order[]> {
+    return await db.select().from(orders);
+  }
+  
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const [updatedOrder] = await db
+      .update(orders)
+      .set({ status })
+      .where(eq(orders.id, id))
+      .returning();
+      
+    if (!updatedOrder) {
+      throw new Error("Order not found");
+    }
+    
+    return updatedOrder;
+  }
 }
