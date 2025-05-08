@@ -54,24 +54,27 @@ export function truncateText(text: string, maxLength: number): string {
 
 export type StockStatus = 'out-of-stock' | 'low-stock' | 'in-stock';
 
-export function getStockStatus(stockLevel: number): { status: StockStatus; color: string; text: string } {
+export function getStockStatus(stockLevel: number): { status: StockStatus; color: string; text: string; message?: string } {
   if (stockLevel <= 0) {
     return {
       status: 'out-of-stock',
       color: 'bg-red-100 text-red-700 border-red-200',
-      text: 'Out of Stock'
+      text: 'Out of Stock',
+      message: 'This item is currently out of stock. We\'ll notify you when it\'s back in stock.'
     };
   } else if (stockLevel <= 5) {
     return {
       status: 'low-stock',
       color: 'bg-amber-100 text-amber-700 border-amber-200',
-      text: 'Low Stock'
+      text: 'Low Stock',
+      message: 'Only a few items left. Order soon!'
     };
   } else {
     return {
       status: 'in-stock',
       color: 'bg-green-100 text-green-700 border-green-200',
-      text: 'In Stock'
+      text: 'In Stock',
+      message: 'Ready to ship within 24 hours'
     };
   }
 }

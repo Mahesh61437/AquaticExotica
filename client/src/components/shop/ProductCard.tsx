@@ -19,6 +19,9 @@ export function ProductCard({ product }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     
+    // Do not add to cart if the product is out of stock
+    if (product.stock <= 0) return;
+    
     addItem({
       id: product.id,
       name: product.name,
@@ -55,10 +58,16 @@ export function ProductCard({ product }: ProductCardProps) {
           <Button 
             className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
             onClick={handleAddToCart}
+            disabled={product.stock <= 0}
+            title={product.stock <= 0 ? "Out of stock" : ""}
           >
             {isAdded ? (
               <>
                 <Check className="h-4 w-4 mr-1" /> Added
+              </>
+            ) : product.stock <= 0 ? (
+              <>
+                <Package className="h-4 w-4 mr-1" /> Out of Stock
               </>
             ) : (
               <>
@@ -94,10 +103,15 @@ export function ProductCard({ product }: ProductCardProps) {
             {(() => {
               const stockInfo = getStockStatus(product.stock);
               return (
-                <Badge className={`mt-2 ${stockInfo.color}`} variant="outline">
-                  <Package className="h-3 w-3 mr-1" />
-                  {stockInfo.text}
-                </Badge>
+                <div className="mt-2">
+                  <Badge className={`${stockInfo.color}`} variant="outline">
+                    <Package className="h-3 w-3 mr-1" />
+                    {stockInfo.text}
+                  </Badge>
+                  {product.stock <= 5 && product.stock > 0 && (
+                    <p className="text-xs mt-1 text-amber-600 font-medium">Only {product.stock} left!</p>
+                  )}
+                </div>
               );
             })()}
             

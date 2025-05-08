@@ -45,13 +45,26 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
     
+    // Do not add to cart if the product is out of stock
+    if (product.stock <= 0) {
+      toast({
+        title: "Cannot add to cart",
+        description: "This product is currently out of stock.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Make sure the quantity doesn't exceed available stock
+    const finalQuantity = Math.min(quantity, product.stock);
+    
     addItem({
       id: product.id,
       name: product.name,
       price: parseFloat(product.price.toString()),
       imageUrl: product.imageUrl,
-      quantity,
-    }, quantity, true); // Open cart when adding from product detail
+      quantity: finalQuantity,
+    }, finalQuantity, true); // Open cart when adding from product detail
     
     toast({
       title: "Added to cart",
@@ -187,22 +200,47 @@ export default function ProductDetail() {
                 {(() => {
                   const stockInfo = getStockStatus(product.stock);
                   return (
-                    <Badge className={`ml-4 ${stockInfo.color}`} variant="outline">
-                      <Package className="h-3 w-3 mr-1" />
-                      {stockInfo.text} ({product.stock} available)
-                    </Badge>
+                    <div className="ml-4">
+                      <Badge className={`${stockInfo.color}`} variant="outline">
+                        <Package className="h-3 w-3 mr-1" />
+                        {stockInfo.text} ({product.stock} available)
+                      </Badge>
+                      {stockInfo.message && (
+                        <p className="text-xs mt-1 text-gray-600">{stockInfo.message}</p>
+                      )}
+                    </div>
                   );
                 })()}
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                <Button 
-                  className="flex-1"
-                  size="lg"
-                  onClick={handleAddToCart}
-                >
-                  <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-                </Button>
+                {product.stock > 0 ? (
+                  <Button 
+                    className="flex-1"
+                    size="lg"
+                    onClick={handleAddToCart}
+                  >
+                    <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+                  </Button>
+                ) : (
+                  <div className="w-full space-y-3">
+                    <Button 
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => {
+                        toast({
+                          title: "Notification Set",
+                          description: "We'll notify you when this item is back in stock.",
+                        });
+                      }}
+                    >
+                      <Package className="mr-2 h-5 w-5" /> Notify When Available
+                    </Button>
+                    <p className="text-sm text-center text-gray-500">
+                      You'll receive an email when this product is back in stock.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
             
