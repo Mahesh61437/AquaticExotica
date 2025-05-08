@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
+import { useAuth } from "@/context/AuthContext";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -77,20 +78,16 @@ export function CheckoutForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { cart, clearCart } = useCart();
+  const { currentUser, getDefaultAddress } = useAuth();
+  
+  // Track if we should show saved addresses
+  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
+  const [selectedSavedAddress, setSelectedSavedAddress] = useState<string | undefined>(undefined);
 
   // States for dependent dropdown selections
   const [selectedState, setSelectedState] = useState<string>("");
   const [availableCities, setAvailableCities] = useState<{ name: string; state: string }[]>([]);
   
-  // Update available cities when state changes
-  useEffect(() => {
-    if (selectedState) {
-      setAvailableCities(getCitiesByState(selectedState));
-    } else {
-      setAvailableCities([]);
-    }
-  }, [selectedState]);
-
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -116,6 +113,46 @@ export function CheckoutForm() {
       notes: "",
     },
   });
+  
+  // Update available cities when state changes
+  useEffect(() => {
+    if (selectedState) {
+      setAvailableCities(getCitiesByState(selectedState));
+    } else {
+      setAvailableCities([]);
+    }
+  }, [selectedState]);
+  
+  // Check if user has saved addresses and populate form with default address
+  useEffect(() => {
+    if (currentUser) {
+      // Always add the user's email
+      if (currentUser.email) {
+        form.setValue('email', currentUser.email);
+      }
+      
+      // Check if user has saved addresses
+      if (currentUser.addresses && currentUser.addresses.length > 0) {
+        setShowSavedAddresses(true);
+        
+        // Get default address
+        const defaultAddress = getDefaultAddress();
+        if (defaultAddress) {
+          // Pre-fill form with default address
+          form.setValue('firstName', defaultAddress.name.split(' ')[0] || '');
+          form.setValue('lastName', defaultAddress.name.split(' ').slice(1).join(' ') || '');
+          form.setValue('address', defaultAddress.addressLine1);
+          form.setValue('city', defaultAddress.city);
+          form.setValue('state', defaultAddress.state);
+          form.setValue('zipCode', defaultAddress.pinCode);
+          form.setValue('phone', defaultAddress.phone);
+          
+          // Set selected state to update city dropdown
+          setSelectedState(defaultAddress.state);
+        }
+      }
+    }
+  }, [currentUser, form, getDefaultAddress]);
 
   const onSubmit = async (data: FormValues) => {
     if (cart.items.length === 0) {
@@ -176,6 +213,7 @@ export function CheckoutForm() {
         },
         paymentMethod: data.paymentMethod,
         createdAt: new Date().toISOString(),
+        userId: currentUser?.id || null, // Link order to user if authenticated
       };
 
       // Submit order to API
@@ -217,6 +255,48 @@ export function CheckoutForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-6">
               <h2 className="text-2xl font-heading font-bold">Billing Information</h2>
+              
+              {/* Saved addresses section */}
+              {showSavedAddresses && currentUser?.addresses && currentUser.addresses.length > 0 && (
+                <div className="mb-6 p-4 border rounded-md bg-gray-50">
+                  <h3 className="text-lg font-medium mb-2">Your Saved Addresses</h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {currentUser.addresses.map((address) => (
+                      <div 
+                        key={address.id} 
+                        className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${
+                          selectedSavedAddress === address.id ? 'border-primary bg-primary/5' : 'border-gray-200'
+                        }`}
+                        onClick={() => {
+                          // Set the selected address
+                          setSelectedSavedAddress(address.id);
+                          
+                          // Fill in the form with this address
+                          const nameParts = address.name.split(' ');
+                          form.setValue('firstName', nameParts[0] || '');
+                          form.setValue('lastName', nameParts.slice(1).join(' ') || '');
+                          form.setValue('address', address.addressLine1);
+                          form.setValue('city', address.city);
+                          form.setValue('state', address.state);
+                          form.setValue('zipCode', address.pinCode);
+                          form.setValue('phone', address.phone);
+                          
+                          // Update the state to populate cities dropdown
+                          setSelectedState(address.state);
+                        }}
+                      >
+                        <div className="flex justify-between">
+                          <span className="font-medium">{address.name}</span>
+                          {address.isDefault && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Default</span>}
+                        </div>
+                        <p className="text-sm text-gray-600">{address.addressLine1}</p>
+                        <p className="text-sm text-gray-600">{address.city}, {address.state} {address.pinCode}</p>
+                        <p className="text-sm text-gray-600">Phone: {address.phone}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -433,6 +513,36 @@ export function CheckoutForm() {
 
               {!sameAsBilling && (
                 <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="shippingFirstName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>First Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="John" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={form.control}
+                      name="shippingLastName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Last Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Doe" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
                     name="shippingAddress"
