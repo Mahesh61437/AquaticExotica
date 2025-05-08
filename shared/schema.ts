@@ -19,6 +19,7 @@ export const insertUserSchema = createInsertSchema(users).pick({
   email: true,
   password: true,
   fullName: true,
+  isAdmin: true,
 });
 
 // Products table

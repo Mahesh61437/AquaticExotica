@@ -119,10 +119,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = signupSchema.safeParse(req.body);
       
       if (!result.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: result.error.format() 
-        });
+        // Extract the first error message for a simpler error response
+        const errors = result.error.format();
+        let errorMessage = "Please check your information and try again.";
+        
+        // Try to find the first detailed error message
+        for (const field in errors) {
+          if (field !== '_errors' && errors[field]?._errors?.length > 0) {
+            errorMessage = errors[field]._errors[0];
+            break;
+          } else if (field === '_errors' && errors._errors.length > 0) {
+            errorMessage = errors._errors[0];
+            break;
+          }
+        }
+        
+        return res.status(400).json({ message: errorMessage });
       }
       
       const { email, password, fullName } = result.data;
@@ -156,7 +168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error("Signup error:", error);
-      res.status(500).json({ message: "Failed to create account" });
+      res.status(500).json({ message: "Failed to create account. Please try again later." });
     }
   });
 
@@ -165,10 +177,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = loginSchema.safeParse(req.body);
       
       if (!result.success) {
-        return res.status(400).json({ 
-          message: "Validation failed", 
-          errors: result.error.format() 
-        });
+        // Extract the first error message for a simpler error response
+        const errors = result.error.format();
+        let errorMessage = "Please check your login information and try again.";
+        
+        // Try to find the first detailed error message
+        for (const field in errors) {
+          if (field !== '_errors' && errors[field]?._errors?.length > 0) {
+            errorMessage = errors[field]._errors[0];
+            break;
+          } else if (field === '_errors' && errors._errors.length > 0) {
+            errorMessage = errors._errors[0];
+            break;
+          }
+        }
+        
+        return res.status(400).json({ message: errorMessage });
       }
       
       const { email, password } = result.data;
@@ -194,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Login error:", error);
-      res.status(500).json({ message: "Failed to login" });
+      res.status(500).json({ message: "Unable to sign in. Please try again later." });
     }
   });
 
