@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
-import { Check, ShoppingCart } from "lucide-react";
+import { Check, Package, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
 import { Product } from "@shared/schema";
-import { formatPrice, generateStarRating } from "@/lib/utils";
+import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface ProductCardProps {
   product: Product;
@@ -88,6 +89,18 @@ export function ProductCard({ product }: ProductCardProps) {
                 </span>
               )}
             </div>
+            
+            {/* Stock Indicator */}
+            {(() => {
+              const stockInfo = getStockStatus(product.stock);
+              return (
+                <Badge className={`mt-2 ${stockInfo.color}`} variant="outline">
+                  <Package className="h-3 w-3 mr-1" />
+                  {stockInfo.text}
+                </Badge>
+              );
+            })()}
+            
           </div>
           <div className="flex text-yellow-400 text-sm" 
             dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>

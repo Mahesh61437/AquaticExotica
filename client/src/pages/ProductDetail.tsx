@@ -2,8 +2,9 @@ import { useState } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
-import { ShoppingCart, Heart, Star, ChevronRight, Truck, RotateCcw, Shield } from "lucide-react";
+import { ShoppingCart, Package, ChevronRight, Truck, RotateCcw, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Accordion,
   AccordionContent,
@@ -13,7 +14,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
 import { Product } from "@shared/schema";
-import { formatPrice, generateStarRating } from "@/lib/utils";
+import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -183,9 +184,15 @@ export default function ProductDetail() {
                     <span className="text-lg">+</span>
                   </Button>
                 </div>
-                <span className="ml-4 text-sm text-gray-500">
-                  {product.stock} items available
-                </span>
+                {(() => {
+                  const stockInfo = getStockStatus(product.stock);
+                  return (
+                    <Badge className={`ml-4 ${stockInfo.color}`} variant="outline">
+                      <Package className="h-3 w-3 mr-1" />
+                      {stockInfo.text} ({product.stock} available)
+                    </Badge>
+                  );
+                })()}
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">

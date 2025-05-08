@@ -51,3 +51,27 @@ export function truncateText(text: string, maxLength: number): string {
   if (text.length <= maxLength) return text;
   return text.slice(0, maxLength) + '...';
 }
+
+export type StockStatus = 'out-of-stock' | 'low-stock' | 'in-stock';
+
+export function getStockStatus(stockLevel: number): { status: StockStatus; color: string; text: string } {
+  if (stockLevel <= 0) {
+    return {
+      status: 'out-of-stock',
+      color: 'bg-red-100 text-red-700 border-red-200',
+      text: 'Out of Stock'
+    };
+  } else if (stockLevel <= 5) {
+    return {
+      status: 'low-stock',
+      color: 'bg-amber-100 text-amber-700 border-amber-200',
+      text: 'Low Stock'
+    };
+  } else {
+    return {
+      status: 'in-stock',
+      color: 'bg-green-100 text-green-700 border-green-200',
+      text: 'In Stock'
+    };
+  }
+}
