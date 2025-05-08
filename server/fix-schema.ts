@@ -31,7 +31,8 @@ export async function fixSchema() {
 }
 
 // Execute the function if this script is run directly
-if (require.main === module) {
+// Using ESM approach which is different from CommonJS require.main === module
+if (import.meta.url === `file://${process.argv[1]}`) {
   fixSchema()
     .then(() => process.exit(0))
     .catch(error => {

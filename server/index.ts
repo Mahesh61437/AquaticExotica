@@ -67,12 +67,19 @@ app.use((req, res, next) => {
 (async () => {
   // Run database migration and initialize with demo data
   try {
-    // Run the schema migration first
+    // Fix the database schema first
+    console.log("Running database schema migration...");
+    const { fixSchema } = await import("./fix-schema");
+    await fixSchema();
+    console.log("Database schema migration completed successfully");
+    
+    // Then run the standard database migration
     const { runMigration } = await import("./db-migrate");
     await runMigration();
     console.log("Database migration completed");
     
-    // Then initialize with demo data
+    // Finally initialize with demo data
+    console.log("Initializing database with demo data...");
     const { initializeDatabase } = await import("./init-db");
     await initializeDatabase();
     console.log("Database initialization completed");
