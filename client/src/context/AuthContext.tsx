@@ -3,9 +3,9 @@ import {
   User, 
   onAuthStateChanged, 
   signOut as firebaseSignOut,
-  PhoneAuthProvider,
-  RecaptchaVerifier,
-  signInWithPhoneNumber
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile
 } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useToast } from "../hooks/use-toast";
@@ -13,10 +13,9 @@ import { useToast } from "../hooks/use-toast";
 interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
+  signUp: (email: string, password: string, displayName: string) => Promise<User | null>;
+  signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
-  generateRecaptcha: (elementId: string) => RecaptchaVerifier;
-  sendOtp: (phoneNumber: string, recaptchaVerifier: RecaptchaVerifier) => Promise<string>;
-  verifyOtp: (otp: string, verificationId: string) => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -52,48 +51,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const generateRecaptcha = (elementId: string) => {
-    return new RecaptchaVerifier(auth, elementId, {
-      size: "invisible",
-    });
-  };
-
-  const sendOtp = async (phoneNumber: string, recaptchaVerifier: RecaptchaVerifier) => {
+  const signUp = async (email: string, password: string, displayName: string) => {
     try {
-      const phoneProvider = new PhoneAuthProvider(auth);
-      const verificationId = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      
+      // Set the display name
+      if (userCredential.user) {
+        await updateProfile(userCredential.user, { displayName });
+      }
+      
       toast({
-        title: "OTP Sent",
-        description: "We've sent a verification code to your phone",
+        title: "Account created successfully",
+        description: "You have been signed up and logged in",
       });
-      return verificationId.verificationId;
+      
+      return userCredential.user;
     } catch (error: any) {
-      console.error("OTP send error", error);
+      console.error("Signup error", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to send verification code",
+        title: "Sign up failed",
+        description: error.message || "Failed to create account",
         variant: "destructive",
       });
       throw error;
     }
   };
 
-  const verifyOtp = async (otp: string, verificationId: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
-      const credential = PhoneAuthProvider.credential(verificationId, otp);
-      // Import the signInWithCredential function
-      const { signInWithCredential } = await import("firebase/auth");
-      const userCredential = await signInWithCredential(auth, credential);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       toast({
-        title: "Verification successful",
-        description: "You have been signed in successfully",
+        title: "Signed in successfully",
+        description: "Welcome back!",
       });
       return userCredential.user;
     } catch (error: any) {
-      console.error("OTP verification error", error);
+      console.error("Sign in error", error);
       toast({
-        title: "Verification failed",
-        description: error.message || "Invalid verification code",
+        title: "Sign in failed",
+        description: error.message || "Invalid email or password",
         variant: "destructive",
       });
       throw error;
@@ -103,10 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = {
     currentUser,
     loading,
-    signOut,
-    generateRecaptcha,
-    sendOtp,
-    verifyOtp
+    signUp,
+    signIn,
+    signOut
   };
 
   return (

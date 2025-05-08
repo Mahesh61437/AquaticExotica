@@ -36,22 +36,18 @@ export default function Account() {
           <Card className="md:col-span-1">
             <CardHeader className="text-center">
               <Avatar className="w-24 h-24 mx-auto">
-                <AvatarImage src="" alt={currentUser.phoneNumber || "User"} />
+                <AvatarImage src="" alt={currentUser.displayName || "User"} />
                 <AvatarFallback className="text-xl">
-                  {currentUser.phoneNumber ? currentUser.phoneNumber.slice(-2).toUpperCase() : "U"}
+                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
               <CardTitle className="mt-4">{currentUser.displayName || "User"}</CardTitle>
               <CardDescription>
-                {currentUser.email || currentUser.phoneNumber || "No contact info"}
+                {currentUser.email || "No email provided"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="text-sm">
-                  <span className="font-medium">Phone: </span>
-                  {currentUser.phoneNumber || "Not provided"}
-                </div>
                 <div className="text-sm">
                   <span className="font-medium">Email: </span>
                   {currentUser.email || "Not provided"}
