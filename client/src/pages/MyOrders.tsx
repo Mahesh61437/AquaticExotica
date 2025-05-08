@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "wouter";
+import { useLocation } from "wouter";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
@@ -50,7 +50,7 @@ interface Order {
 export default function MyOrders() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useNavigate();
+  const [, navigate] = useLocation();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
