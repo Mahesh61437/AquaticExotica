@@ -40,10 +40,19 @@ export default function Login() {
     try {
       setLoading(true);
       await signIn(data.email, data.password);
+      // If successful, redirect to account page
       setLocation("/account");
     } catch (error: any) {
       console.error("Sign in error:", error);
-      // Toast notification is handled in the signIn function
+      // Toast notification is handled in the signIn function in AuthContext
+      // Additional error handling can be added here if needed
+      if (error.response?.status === 401) {
+        toast({
+          title: "Authentication failed",
+          description: "Please check your email and password",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }

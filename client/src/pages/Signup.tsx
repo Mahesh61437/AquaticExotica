@@ -47,14 +47,30 @@ export default function Signup() {
     try {
       setLoading(true);
       await signUp(data.email, data.password, data.fullName);
-      toast({
-        title: "Account created",
-        description: "Your account has been created successfully",
-      });
+      // If successful, redirect to account page
       setLocation("/account");
     } catch (error: any) {
       console.error("Sign up error:", error);
-      // Toast notification is handled in the signUp function
+      // Handle specific error cases
+      if (error.response?.status === 409) {
+        toast({
+          title: "Registration failed",
+          description: "This email is already registered. Please try logging in instead.",
+          variant: "destructive"
+        });
+      } else if (error.response?.status === 400) {
+        toast({
+          title: "Invalid data",
+          description: "Please check your information and try again.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Registration failed",
+          description: "An error occurred while creating your account.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }

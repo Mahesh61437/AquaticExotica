@@ -42,18 +42,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
     try {
       const user = await apiRequest<User>('/api/auth/signup', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           email,
           password,
           fullName
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        })
       });
       
       setCurrentUser(user);
@@ -75,17 +75,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<User | null> => {
     try {
       const user = await apiRequest<User>('/api/auth/login', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           email,
           password
-        }),
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        })
       });
       
       setCurrentUser(user);
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signOut = async () => {
+  const signOut = async (): Promise<void> => {
     try {
       await apiRequest('/api/auth/logout', {
         method: 'POST'
@@ -118,7 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         title: "Signed out",
         description: "You have been signed out successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign out error", error);
       toast({
         title: "Error",

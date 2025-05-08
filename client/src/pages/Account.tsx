@@ -36,12 +36,12 @@ export default function Account() {
           <Card className="md:col-span-1">
             <CardHeader className="text-center">
               <Avatar className="w-24 h-24 mx-auto">
-                <AvatarImage src="" alt={currentUser.displayName || "User"} />
+                <AvatarImage src="" alt={currentUser.fullName || "User"} />
                 <AvatarFallback className="text-xl">
-                  {currentUser.displayName ? currentUser.displayName.charAt(0).toUpperCase() : "U"}
+                  {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : "U"}
                 </AvatarFallback>
               </Avatar>
-              <CardTitle className="mt-4">{currentUser.displayName || "User"}</CardTitle>
+              <CardTitle className="mt-4">{currentUser.fullName || "User"}</CardTitle>
               <CardDescription>
                 {currentUser.email || "No email provided"}
               </CardDescription>
@@ -53,8 +53,8 @@ export default function Account() {
                   {currentUser.email || "Not provided"}
                 </div>
                 <div className="text-sm">
-                  <span className="font-medium">Member since: </span>
-                  {currentUser.metadata.creationTime ? new Date(currentUser.metadata.creationTime).toLocaleDateString() : "Unknown"}
+                  <span className="font-medium">Username: </span>
+                  {currentUser.username || "Not provided"}
                 </div>
               </div>
             </CardContent>
