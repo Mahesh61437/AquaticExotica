@@ -50,7 +50,7 @@ export default function ProductDetail() {
       price: parseFloat(product.price.toString()),
       imageUrl: product.imageUrl,
       quantity,
-    });
+    }, quantity, true); // Open cart when adding from product detail
     
     toast({
       title: "Added to cart",
@@ -195,13 +195,6 @@ export default function ProductDetail() {
                   onClick={handleAddToCart}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="lg" 
-                  className="border-2"
-                >
-                  <Heart className="mr-2 h-5 w-5" /> Add to Wishlist
                 </Button>
               </div>
             </div>
