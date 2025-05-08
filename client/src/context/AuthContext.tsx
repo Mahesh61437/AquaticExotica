@@ -7,8 +7,8 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber
 } from "firebase/auth";
-import { auth } from "@lib/firebase";
-import { useToast } from "@hooks/use-toast";
+import { auth } from "../lib/firebase";
+import { useToast } from "../hooks/use-toast";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -81,7 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const verifyOtp = async (otp: string, verificationId: string) => {
     try {
       const credential = PhoneAuthProvider.credential(verificationId, otp);
-      const userCredential = await auth.signInWithCredential(credential);
+      // Import the signInWithCredential function
+      const { signInWithCredential } = await import("firebase/auth");
+      const userCredential = await signInWithCredential(auth, credential);
       toast({
         title: "Verification successful",
         description: "You have been signed in successfully",

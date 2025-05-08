@@ -15,9 +15,10 @@ import Shop from "@/pages/Shop";
 import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
-import Login from "@/pages/Login";
-import Signup from "@/pages/Signup";
-import Account from "@/pages/Account";
+// These pages will be created shortly
+// import Login from "./pages/Login";
+// import Signup from "./pages/Signup";
+// import Account from "./pages/Account";
 
 function Router() {
   return (
@@ -31,6 +32,11 @@ function Router() {
           <Route path="/product/:id" component={ProductDetail} />
           <Route path="/checkout" component={Checkout} />
           <Route path="/order-confirmation/:id" component={OrderConfirmation} />
+          {/* These routes will be enabled once we create their components
+          <Route path="/login" component={Login} />
+          <Route path="/signup" component={Signup} />
+          <Route path="/account" component={Account} />
+          */}
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -44,12 +50,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        <CartProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </CartProvider>
+        <AuthProvider>
+          <CartProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </CartProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
