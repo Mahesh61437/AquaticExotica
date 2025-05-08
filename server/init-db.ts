@@ -43,13 +43,13 @@ export async function initializeDatabase() {
     await db.insert(categories).values(demoCategories);
     console.log("Categories initialized successfully");
 
-    // Initialize products
+    // Initialize products with Indian Rupee prices
     const demoProducts: InsertProduct[] = [
       {
         name: "Denim Jacket",
         description: "Stylish denim jacket perfect for layering in all seasons.",
-        price: "75.99",
-        compareAtPrice: "99.99",
+        price: "5999",
+        compareAtPrice: "7499",
         imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Women",
         tags: ["jacket", "denim", "women"],
@@ -63,7 +63,7 @@ export async function initializeDatabase() {
       {
         name: "White Shirt",
         description: "Classic white button-up shirt for formal occasions.",
-        price: "45.00",
+        price: "3499",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Men",
@@ -78,7 +78,7 @@ export async function initializeDatabase() {
       {
         name: "Leather Bag",
         description: "Premium leather crossbody bag in tan color.",
-        price: "129.50",
+        price: "9999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1591561954555-607968c989ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Accessories",
@@ -93,7 +93,7 @@ export async function initializeDatabase() {
       {
         name: "Knit Sweater",
         description: "Casual knit sweater in neutral beige tone.",
-        price: "65.00",
+        price: "4999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Women",
@@ -108,8 +108,8 @@ export async function initializeDatabase() {
       {
         name: "Sunglasses",
         description: "Designer sunglasses with dark frames.",
-        price: "85.00",
-        compareAtPrice: "110.00",
+        price: "6499",
+        compareAtPrice: "8999",
         imageUrl: "https://images.pexels.com/photos/701877/pexels-photo-701877.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         category: "Accessories",
         tags: ["sunglasses", "accessories"],
@@ -123,7 +123,7 @@ export async function initializeDatabase() {
       {
         name: "White Sneakers",
         description: "Premium leather sneakers in white.",
-        price: "95.00",
+        price: "7499",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Footwear",
@@ -138,7 +138,7 @@ export async function initializeDatabase() {
       {
         name: "Leather Watch",
         description: "Classic wristwatch with leather strap.",
-        price: "159.99",
+        price: "11999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1524805444758-089113d48a6d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Accessories",
@@ -153,7 +153,7 @@ export async function initializeDatabase() {
       {
         name: "Windbreaker Jacket",
         description: "Lightweight windbreaker jacket in navy blue.",
-        price: "79.50",
+        price: "5999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Men",
@@ -168,7 +168,7 @@ export async function initializeDatabase() {
       {
         name: "Cashmere Sweater",
         description: "Premium cashmere sweater for ultimate comfort.",
-        price: "120.00",
+        price: "8999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150&q=80",
         category: "Women",
@@ -183,7 +183,7 @@ export async function initializeDatabase() {
       {
         name: "Leather Wallet",
         description: "High quality leather wallet with card compartments.",
-        price: "55.00",
+        price: "3999",
         compareAtPrice: null,
         imageUrl: "https://images.pexels.com/photos/1152077/pexels-photo-1152077.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
         category: "Accessories",
@@ -198,8 +198,8 @@ export async function initializeDatabase() {
       {
         name: "Beanie Hat",
         description: "Knitted beanie hat in autumn colors.",
-        price: "25.00",
-        compareAtPrice: "35.00",
+        price: "1999",
+        compareAtPrice: "2999",
         imageUrl: "https://images.unsplash.com/photo-1576871337622-98d48d1cf531?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150&q=80",
         category: "Accessories",
         tags: ["hat", "beanie", "accessories"],
@@ -213,7 +213,7 @@ export async function initializeDatabase() {
       {
         name: "Silver Jewelry Set",
         description: "Set of silver minimalist jewelry pieces.",
-        price: "89.99",
+        price: "6999",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&h=150&q=80",
         category: "Accessories",
