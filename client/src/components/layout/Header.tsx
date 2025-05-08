@@ -4,14 +4,28 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, User, ShoppingBag, Menu, X } from "lucide-react";
+import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut } from "lucide-react"; 
+import { useAuth } from "../../context/AuthContext";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function Header() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { cart, setIsCartOpen } = useCart();
+  const { currentUser, signOut } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const handleSignOut = async () => {
+    await signOut();
+    setLocation("/");
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,9 +65,51 @@ export function Header() {
             </button>
             
             {/* User Account */}
-            <Link href="/account" className="text-gray-600 hover:text-primary transition">
-              <User size={20} />
-            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="text-gray-600 hover:text-primary transition">
+                  {currentUser ? (
+                    <div className="relative">
+                      <User size={20} />
+                      <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-500 rounded-full"></span>
+                    </div>
+                  ) : (
+                    <User size={20} />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {currentUser ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/account" className="cursor-pointer w-full">
+                        My Account
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/login" className="cursor-pointer w-full">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        <span>Sign In</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/signup" className="cursor-pointer w-full">
+                        <User className="mr-2 h-4 w-4" />
+                        <span>Sign Up</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {/* Shopping Cart */}
             <button 
@@ -92,6 +148,29 @@ export function Header() {
                   <nav className="flex flex-col space-y-4">
                     <Link href="/" className="py-2 border-b border-gray-100 font-medium">Home</Link>
                     <Link href="/shop" className="py-2 border-b border-gray-100 font-medium">Shop</Link>
+                    {currentUser ? (
+                      <>
+                        <Link href="/account" className="py-2 border-b border-gray-100 font-medium">My Account</Link>
+                        <button 
+                          onClick={handleSignOut}
+                          className="py-2 border-b border-gray-100 font-medium text-left flex items-center"
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link href="/login" className="py-2 border-b border-gray-100 font-medium flex items-center">
+                          <LogIn className="mr-2 h-4 w-4" />
+                          <span>Sign In</span>
+                        </Link>
+                        <Link href="/signup" className="py-2 border-b border-gray-100 font-medium flex items-center">
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Sign Up</span>
+                        </Link>
+                      </>
+                    )}
                   </nav>
                 </div>
               </SheetContent>
