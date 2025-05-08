@@ -38,7 +38,9 @@ export default function CategoryManagement() {
   const { data: categories, isLoading } = useQuery({
     queryKey: ["/api/admin/categories"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/categories");
+      const res = await apiRequest("GET", "/api/admin/categories", {
+        method: "GET"
+      });
       return await res.json() as Category[];
     },
   });

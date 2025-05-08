@@ -54,7 +54,9 @@ export default function ProductManagement() {
   const { data: products, isLoading } = useQuery({
     queryKey: ["/api/admin/products"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/products");
+      const res = await apiRequest("GET", "/api/admin/products", {
+        method: "GET"
+      });
       return await res.json() as Product[];
     },
   });

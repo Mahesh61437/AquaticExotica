@@ -36,7 +36,9 @@ export default function UserManagement() {
   const { data: users, isLoading } = useQuery({
     queryKey: ["/api/admin/users"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/users");
+      const res = await apiRequest("GET", "/api/admin/users", {
+        method: "GET"
+      });
       return await res.json() as UserWithoutPassword[];
     },
   });

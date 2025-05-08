@@ -86,7 +86,9 @@ export default function OrderManagement() {
   const { data: orders, isLoading } = useQuery({
     queryKey: ["/api/admin/orders"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/orders");
+      const res = await apiRequest("GET", "/api/admin/orders", {
+        method: "GET"
+      });
       return await res.json() as OrderWithDetails[];
     },
   });
