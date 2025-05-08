@@ -1,0 +1,46 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
+export function formatPrice(price: number | string): string {
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(numPrice);
+}
+
+export function generateStarRating(rating: number | string): string {
+  const numRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+  const fullStars = Math.floor(numRating);
+  const hasHalfStar = numRating - fullStars >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+  
+  let starsHtml = '';
+  
+  // Full stars
+  for (let i = 0; i < fullStars; i++) {
+    starsHtml += '<i class="fa-solid fa-star"></i>';
+  }
+  
+  // Half star
+  if (hasHalfStar) {
+    starsHtml += '<i class="fa-solid fa-star-half-stroke"></i>';
+  }
+  
+  // Empty stars
+  for (let i = 0; i < emptyStars; i++) {
+    starsHtml += '<i class="fa-regular fa-star"></i>';
+  }
+  
+  return starsHtml;
+}
+
+export function truncateText(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  return text.slice(0, maxLength) + '...';
+}
