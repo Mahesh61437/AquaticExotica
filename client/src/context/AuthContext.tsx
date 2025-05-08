@@ -3,11 +3,24 @@ import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
 
 // Define our user interface
+interface Address {
+  id?: string;
+  name: string;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  pinCode: string;
+  phone: string;
+  isDefault: boolean;
+}
+
 interface User {
   id: number;
   username: string;
   email: string;
   fullName: string;
+  addresses?: Address[];
 }
 
 interface AuthContextType {
