@@ -143,10 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAuth() {
+// Fix the Fast Refresh incompatibility by moving to a named constant export
+const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-}
+};
+
+export { useAuthContext as useAuth };

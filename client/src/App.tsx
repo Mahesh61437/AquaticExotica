@@ -19,6 +19,8 @@ import OrderConfirmation from "@/pages/OrderConfirmation";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Account from "./pages/Account";
+// Test pages
+import SignupTest from "./pages/SignupTest";
 
 function Router() {
   return (
@@ -35,6 +37,7 @@ function Router() {
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/account" component={Account} />
+          <Route path="/signup-test" component={SignupTest} />
           <Route component={NotFound} />
         </Switch>
       </main>
