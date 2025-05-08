@@ -22,8 +22,21 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    const [user] = await db.select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+      fullName: users.fullName,
+      createdAt: users.createdAt,
+    }).from(users).where(eq(users.email, email));
+    
+    if (user) {
+      // Set isAdmin to false by default if not present
+      return { ...user, isAdmin: false };
+    }
+    
+    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
