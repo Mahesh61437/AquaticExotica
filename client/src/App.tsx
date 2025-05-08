@@ -24,6 +24,7 @@ import MyOrders from "./pages/MyOrders";
 import OrderDetail from "./pages/OrderDetail";
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
+import AdminSetup from "./pages/AdminSetup";
 // Test pages
 import SignupTest from "./pages/SignupTest";
 
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/my-orders" component={MyOrders} />
           <Route path="/orders/:id" component={OrderDetail} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin-setup" component={AdminSetup} />
           <Route path="/signup-test" component={SignupTest} />
           <Route component={NotFound} />
         </Switch>

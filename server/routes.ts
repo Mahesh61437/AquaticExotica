@@ -37,11 +37,83 @@ const signupSchema = z.object({
   fullName: z.string().min(2, "Full name is required")
 });
 
+// First admin creation schema
+const firstAdminSchema = z.object({
+  email: z.string().email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  fullName: z.string().min(2, "Full name is required"),
+  secretKey: z.string().min(1, "Secret key is required")
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // put application routes here
   // prefix all routes with /api
 
   // Authentication routes
+  // Special endpoint to create the first admin user
+  app.post("/api/auth/create-first-admin", async (req: Request, res: Response) => {
+    try {
+      const result = firstAdminSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Validation failed", 
+          errors: result.error.format() 
+        });
+      }
+      
+      const { email, password, fullName, secretKey } = result.data;
+      
+      // Verify the secret key (this is a simple implementation - for production, use environment variables)
+      // This is just a basic security measure to prevent anyone from creating admin users
+      if (secretKey !== "first-admin-setup-key") {
+        return res.status(403).json({ message: "Invalid secret key" });
+      }
+      
+      // Check if any admin users already exist
+      const allUsers = await storage.getAllUsers();
+      const existingAdmins = allUsers.filter(user => user.isAdmin);
+      
+      if (existingAdmins.length > 0) {
+        return res.status(403).json({ 
+          message: "Admin users already exist. Use the admin panel to create more admin users." 
+        });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(409).json({ message: "User with this email already exists" });
+      }
+      
+      // Hash password
+      const hashedPassword = await hash(password, 10);
+      
+      // Create admin user
+      const user = await storage.createUser({
+        email,
+        password: hashedPassword,
+        username: email.split('@')[0], // Use part of email as username
+        fullName,
+        isAdmin: true, // Make this user an admin
+      });
+      
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
+      
+      // Do not set session automatically after signup
+      // Admin will need to sign in manually
+      
+      res.status(201).json({
+        ...userWithoutPassword,
+        message: "Admin account created successfully. Please sign in."
+      });
+    } catch (error) {
+      console.error("First admin creation error:", error);
+      res.status(500).json({ message: "Failed to create admin account" });
+    }
+  });
+  
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
       const result = signupSchema.safeParse(req.body);
