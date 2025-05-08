@@ -1,38 +1,41 @@
-import { db, pool } from "./db";
+import { db } from './db';
 
-async function fixSchema() {
+// Function to check and fix the database schema
+export async function fixSchema() {
+  console.log('Checking and fixing database schema...');
+  
   try {
-    console.log("Starting database schema fix...");
-    
     // Check if is_admin column exists in users table
-    const checkResult = await pool.query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = 'users' AND column_name = 'is_admin'
+    const userColumns = await db.execute(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users'
     `);
     
-    if (checkResult.rowCount === 0) {
-      console.log("Missing 'is_admin' column detected, adding it now...");
-      
-      // Add is_admin column if it doesn't exist
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT false
+    const columnNames = userColumns.rows.map(row => row.column_name);
+    
+    // Add is_admin column if it doesn't exist
+    if (!columnNames.includes('is_admin')) {
+      console.log('Adding is_admin column to users table...');
+      await db.execute(`
+        ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE
       `);
-      
-      console.log("Added 'is_admin' column to users table successfully");
-    } else {
-      console.log("The 'is_admin' column already exists, no action needed");
+      console.log('Added is_admin column to users table');
     }
     
-    console.log("Database schema fix completed successfully!");
+    console.log('Database schema check completed successfully');
   } catch (error) {
-    console.error("Error fixing database schema:", error);
-  } finally {
-    await pool.end();
+    console.error('Error fixing database schema:', error);
+    throw error;
   }
 }
 
-fixSchema().then(() => {
-  console.log("Schema fix process completed");
-});
+// Execute the function if this script is run directly
+if (require.main === module) {
+  fixSchema()
+    .then(() => process.exit(0))
+    .catch(error => {
+      console.error('Error fixing schema:', error);
+      process.exit(1);
+    });
+}

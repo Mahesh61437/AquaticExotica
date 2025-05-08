@@ -30,100 +30,130 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      password: users.password,
-      fullName: users.fullName,
-      createdAt: users.createdAt,
-    }).from(users).where(eq(users.username, username));
-    
-    if (user) {
-      // Set isAdmin to false by default if not present
-      return { ...user, isAdmin: false };
+    try {
+      // Import at function level to avoid circular dependencies
+      const { getUserByUsernameViaSQL } = await import('./db-utils');
+      
+      const user = await getUserByUsernameViaSQL(username);
+      return user || undefined;
+    } catch (error) {
+      console.error('Error in getUserByUsername:', error);
+      return undefined;
     }
-    
-    return undefined;
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      password: users.password,
-      fullName: users.fullName,
-      createdAt: users.createdAt,
-    }).from(users).where(eq(users.email, email));
-    
-    if (user) {
-      // Set isAdmin to false by default if not present
-      return { ...user, isAdmin: false };
+    try {
+      // Import at function level to avoid circular dependencies
+      const { getUserByEmailViaSQL } = await import('./db-utils');
+      
+      const user = await getUserByEmailViaSQL(email);
+      return user || undefined;
+    } catch (error) {
+      console.error('Error in getUserByEmail:', error);
+      return undefined;
     }
-    
-    return undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Create an object with only the fields that exist in the database
-    const userDataForDb = {
-      username: insertUser.username,
-      email: insertUser.email,
-      password: insertUser.password,
-      full_name: insertUser.fullName,
-      is_admin: insertUser.isAdmin || false
-    };
+    // Import at function level to avoid circular dependencies
+    const { createUserViaSQL } = await import('./db-utils');
     
-    // Insert the user data
-    const [dbUser] = await db
-      .insert(users)
-      .values(userDataForDb as any) // Type assertion to avoid compiler errors
-      .returning();
+    // Use our SQL utility function
+    const user = await createUserViaSQL(
+      insertUser.username,
+      insertUser.email,
+      insertUser.password,
+      insertUser.fullName,
+      insertUser.isAdmin || false
+    );
     
-    // Return the user with proper field mapping
-    return {
-      id: dbUser.id,
-      username: dbUser.username,
-      email: dbUser.email,
-      password: dbUser.password,
-      fullName: dbUser.full_name as string, // Type assertion for correct mapping
-      createdAt: dbUser.created_at as Date, // Type assertion for correct mapping
-      isAdmin: dbUser.is_admin as boolean // Type assertion for correct mapping
-    };
+    if (!user) {
+      throw new Error("Failed to create user");
+    }
+    
+    return user;
   }
   
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
-    // Map camelCase to snake_case for the database
-    const updateDataForDb: any = {};
-    
-    if (updates.username !== undefined) updateDataForDb.username = updates.username;
-    if (updates.email !== undefined) updateDataForDb.email = updates.email;
-    if (updates.password !== undefined) updateDataForDb.password = updates.password;
-    if (updates.fullName !== undefined) updateDataForDb.full_name = updates.fullName;
-    if (updates.isAdmin !== undefined) updateDataForDb.is_admin = updates.isAdmin;
-    
-    // Update the user
-    const [dbUser] = await db
-      .update(users)
-      .set(updateDataForDb)
-      .where(eq(users.id, id))
-      .returning();
+    try {
+      // Use a raw SQL query to update the user
+      const fields = [];
+      const values = [];
+      const params = [];
+      let paramIndex = 1;
       
-    if (!dbUser) {
-      throw new Error("User not found");
+      if (updates.username !== undefined) {
+        fields.push('username = $' + paramIndex);
+        values.push(updates.username);
+        params.push(`$${paramIndex++}`);
+      }
+      
+      if (updates.email !== undefined) {
+        fields.push('email = $' + paramIndex);
+        values.push(updates.email);
+        params.push(`$${paramIndex++}`);
+      }
+      
+      if (updates.password !== undefined) {
+        fields.push('password = $' + paramIndex);
+        values.push(updates.password);
+        params.push(`$${paramIndex++}`);
+      }
+      
+      if (updates.fullName !== undefined) {
+        fields.push('full_name = $' + paramIndex);
+        values.push(updates.fullName);
+        params.push(`$${paramIndex++}`);
+      }
+      
+      if (updates.isAdmin !== undefined) {
+        fields.push('is_admin = $' + paramIndex);
+        values.push(updates.isAdmin);
+        params.push(`$${paramIndex++}`);
+      }
+      
+      if (fields.length === 0) {
+        throw new Error("No valid fields provided for update");
+      }
+      
+      const query = `
+        UPDATE users 
+        SET ${fields.join(', ')} 
+        WHERE id = $${paramIndex} 
+        RETURNING id, username, email, password, full_name, created_at, is_admin
+      `;
+      
+      const result = await db.execute<{
+        id: number;
+        username: string;
+        email: string;
+        password: string;
+        full_name: string;
+        created_at: Date;
+        is_admin: boolean;
+      }>(query, [...values, id]);
+      
+      if (result.rows.length === 0) {
+        throw new Error("User not found");
+      }
+      
+      const user = result.rows[0];
+      
+      // Transform the database fields to the application format
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        password: user.password,
+        fullName: user.full_name,
+        createdAt: user.created_at,
+        isAdmin: user.is_admin
+      };
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
     }
-    
-    // Return the user with proper field mapping
-    return {
-      id: dbUser.id,
-      username: dbUser.username,
-      email: dbUser.email,
-      password: dbUser.password,
-      fullName: dbUser.full_name as string, // Type assertion for correct mapping
-      createdAt: dbUser.created_at as Date, // Type assertion for correct mapping
-      isAdmin: dbUser.is_admin as boolean // Type assertion for correct mapping
-    };
   }
   
   async getAllUsers(): Promise<User[]> {
