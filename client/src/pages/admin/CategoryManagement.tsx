@@ -75,8 +75,12 @@ export default function CategoryManagement() {
   // Update category mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Category> }) => {
-      const res = await apiRequest("PUT", `/api/admin/categories/${id}`, data);
-      return res.json();
+      const res = await apiRequest("PUT", `/api/admin/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -100,7 +104,10 @@ export default function CategoryManagement() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/categories/${id}`);
+      await apiRequest("DELETE", `/api/admin/categories/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" }
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });

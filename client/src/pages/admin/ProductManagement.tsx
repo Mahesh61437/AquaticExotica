@@ -282,7 +282,7 @@ export default function ProductManagement() {
                           getStockStatus(product.stock).status === 'in-stock'
                             ? 'default'
                             : getStockStatus(product.stock).status === 'low-stock'
-                            ? 'warning'
+                            ? 'outline'
                             : 'destructive'
                         }
                       >
