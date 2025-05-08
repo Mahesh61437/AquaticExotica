@@ -19,10 +19,17 @@ async function runMigration() {
   try {
     // Create tables directly based on schema using raw SQL with the pool
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
+      -- Drop the users table if it exists to ensure clean migration
+      DROP TABLE IF EXISTS users CASCADE;
+      
+      -- Recreate the users table with all required columns
+      CREATE TABLE users (
         id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
-        password TEXT NOT NULL
+        email TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL,
+        full_name TEXT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
       
       CREATE TABLE IF NOT EXISTS products (
@@ -49,7 +56,11 @@ async function runMigration() {
         image_url TEXT NOT NULL
       );
       
-      CREATE TABLE IF NOT EXISTS orders (
+      -- Drop orders table since it depends on users
+      DROP TABLE IF EXISTS orders CASCADE;
+      
+      -- Recreate orders table with reference to updated users table
+      CREATE TABLE orders (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
         status TEXT NOT NULL,
@@ -59,6 +70,15 @@ async function runMigration() {
         billing_address JSONB NOT NULL,
         payment_method TEXT NOT NULL,
         created_at TEXT NOT NULL
+      );
+      
+      -- Create the session table for connect-pg-simple
+      DROP TABLE IF EXISTS "session";
+      CREATE TABLE "session" (
+        "sid" varchar NOT NULL COLLATE "default",
+        "sess" json NOT NULL,
+        "expire" timestamp(6) NOT NULL,
+        CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
       );
     `);
     
