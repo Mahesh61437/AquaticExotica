@@ -51,6 +51,10 @@ export class DatabaseStorage implements IStorage {
     
     return updatedUser;
   }
+  
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
 
   // Product methods
   async getAllProducts(): Promise<Product[]> {
@@ -95,6 +99,35 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return product;
   }
+  
+  async updateProduct(id: number, updates: Partial<Product>): Promise<Product> {
+    // Ensure we don't try to update id
+    const { id: _, ...updatesWithoutId } = updates;
+    
+    // Update the product
+    const [updatedProduct] = await db
+      .update(products)
+      .set(updatesWithoutId)
+      .where(eq(products.id, id))
+      .returning();
+      
+    if (!updatedProduct) {
+      throw new Error("Product not found");
+    }
+    
+    return updatedProduct;
+  }
+  
+  async deleteProduct(id: number): Promise<void> {
+    const result = await db
+      .delete(products)
+      .where(eq(products.id, id));
+      
+    // If delete operation did not affect any rows, the product does not exist
+    if (!result) {
+      throw new Error("Product not found");
+    }
+  }
 
   // Category methods
   async getAllCategories(): Promise<Category[]> {
@@ -105,6 +138,11 @@ export class DatabaseStorage implements IStorage {
     const [category] = await db.select().from(categories).where(eq(categories.slug, slug));
     return category || undefined;
   }
+  
+  async getCategoryById(id: number): Promise<Category | undefined> {
+    const [category] = await db.select().from(categories).where(eq(categories.id, id));
+    return category || undefined;
+  }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const [category] = await db
@@ -112,6 +150,35 @@ export class DatabaseStorage implements IStorage {
       .values(insertCategory)
       .returning();
     return category;
+  }
+  
+  async updateCategory(id: number, updates: Partial<Category>): Promise<Category> {
+    // Ensure we don't try to update id
+    const { id: _, ...updatesWithoutId } = updates;
+    
+    // Update the category
+    const [updatedCategory] = await db
+      .update(categories)
+      .set(updatesWithoutId)
+      .where(eq(categories.id, id))
+      .returning();
+      
+    if (!updatedCategory) {
+      throw new Error("Category not found");
+    }
+    
+    return updatedCategory;
+  }
+  
+  async deleteCategory(id: number): Promise<void> {
+    const result = await db
+      .delete(categories)
+      .where(eq(categories.id, id));
+      
+    // If delete operation did not affect any rows, the category does not exist
+    if (!result) {
+      throw new Error("Category not found");
+    }
   }
 
   // Order methods

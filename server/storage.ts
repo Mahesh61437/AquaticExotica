@@ -42,6 +42,8 @@ export interface IStorage {
   createOrder(order: InsertOrder): Promise<Order>;
   getOrdersByUserId(userId: number): Promise<Order[]>;
   getOrderById(id: number): Promise<Order | undefined>;
+  getAllOrders(): Promise<Order[]>; // Admin: Get all orders
+  updateOrderStatus(id: number, status: string): Promise<Order>; // Admin: Update order status
 }
 
 export class MemStorage implements IStorage {
@@ -304,10 +306,15 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id,
+      isAdmin: false, // Default to non-admin user
       createdAt: new Date() 
     };
     this.users.set(id, user);
     return user;
+  }
+  
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.users.values());
   }
   
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
@@ -380,9 +387,47 @@ export class MemStorage implements IStorage {
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
     const id = this.productCurrentId++;
-    const product: Product = { ...insertProduct, id };
+    
+    // Ensure all boolean fields have default values if not provided
+    const product: Product = { 
+      ...insertProduct, 
+      id,
+      isNew: insertProduct.isNew ?? false,
+      isSale: insertProduct.isSale ?? false,
+      isFeatured: insertProduct.isFeatured ?? false,
+      isTrending: insertProduct.isTrending ?? false,
+      compareAtPrice: insertProduct.compareAtPrice ?? null
+    };
+    
     this.products.set(id, product);
     return product;
+  }
+  
+  async updateProduct(id: number, updates: Partial<Product>): Promise<Product> {
+    const product = await this.getProductById(id);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+    
+    // Update the product with new data
+    const updatedProduct = { ...product, ...updates };
+    
+    // Ensure we don't overwrite the id
+    updatedProduct.id = id;
+    
+    // Save back to storage
+    this.products.set(id, updatedProduct);
+    
+    return updatedProduct;
+  }
+  
+  async deleteProduct(id: number): Promise<void> {
+    const product = await this.getProductById(id);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+    
+    this.products.delete(id);
   }
 
   // Category methods
@@ -395,6 +440,10 @@ export class MemStorage implements IStorage {
       (category) => category.slug === slug
     );
   }
+  
+  async getCategoryById(id: number): Promise<Category | undefined> {
+    return this.categories.get(id);
+  }
 
   async createCategory(insertCategory: InsertCategory): Promise<Category> {
     const id = this.categoryCurrentId++;
@@ -402,11 +451,43 @@ export class MemStorage implements IStorage {
     this.categories.set(id, category);
     return category;
   }
+  
+  async updateCategory(id: number, updates: Partial<Category>): Promise<Category> {
+    const category = await this.getCategoryById(id);
+    if (!category) {
+      throw new Error("Category not found");
+    }
+    
+    // Update the category with new data
+    const updatedCategory = { ...category, ...updates };
+    
+    // Ensure we don't overwrite the id
+    updatedCategory.id = id;
+    
+    // Save back to storage
+    this.categories.set(id, updatedCategory);
+    
+    return updatedCategory;
+  }
+  
+  async deleteCategory(id: number): Promise<void> {
+    const category = await this.getCategoryById(id);
+    if (!category) {
+      throw new Error("Category not found");
+    }
+    
+    this.categories.delete(id);
+  }
 
   // Order methods
   async createOrder(insertOrder: InsertOrder): Promise<Order> {
     const id = this.orderCurrentId++;
-    const order: Order = { ...insertOrder, id };
+    // Ensure userId is null if not provided
+    const order: Order = { 
+      ...insertOrder, 
+      id, 
+      userId: insertOrder.userId ?? null 
+    };
     this.orders.set(id, order);
     return order;
   }
@@ -419,6 +500,25 @@ export class MemStorage implements IStorage {
 
   async getOrderById(id: number): Promise<Order | undefined> {
     return this.orders.get(id);
+  }
+  
+  async getAllOrders(): Promise<Order[]> {
+    return Array.from(this.orders.values());
+  }
+  
+  async updateOrderStatus(id: number, status: string): Promise<Order> {
+    const order = await this.getOrderById(id);
+    if (!order) {
+      throw new Error("Order not found");
+    }
+    
+    // Update only the status
+    const updatedOrder = { ...order, status };
+    
+    // Save back to storage
+    this.orders.set(id, updatedOrder);
+    
+    return updatedOrder;
   }
 }
 
