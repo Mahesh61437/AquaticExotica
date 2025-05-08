@@ -37,6 +37,21 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Run database migration and initialize with demo data
+  try {
+    // Run the schema migration first
+    const { runMigration } = await import("./db-migrate");
+    await runMigration();
+    console.log("Database migration completed");
+    
+    // Then initialize with demo data
+    const { initializeDatabase } = await import("./init-db");
+    await initializeDatabase();
+    console.log("Database initialization completed");
+  } catch (error) {
+    console.error("Database setup failed:", error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
