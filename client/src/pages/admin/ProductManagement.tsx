@@ -55,15 +55,19 @@ export default function ProductManagement() {
     queryKey: ["/api/admin/products"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/products");
-      return res.json() as Promise<Product[]>;
+      return await res.json() as Product[];
     },
   });
 
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertProduct) => {
-      const res = await apiRequest("POST", "/api/admin/products", data);
-      return res.json();
+      const res = await apiRequest("POST", "/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });

@@ -20,6 +20,7 @@ interface User {
   username: string;
   email: string;
   fullName: string;
+  isAdmin: boolean;
   addresses?: Address[];
 }
 

@@ -44,6 +44,7 @@ function Router() {
           <Route path="/account" component={Account} />
           <Route path="/my-orders" component={MyOrders} />
           <Route path="/orders/:id" component={OrderDetail} />
+          <Route path="/admin" component={AdminDashboard} />
           <Route path="/signup-test" component={SignupTest} />
           <Route component={NotFound} />
         </Switch>

@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut } from "lucide-react"; 
-import { useAuth } from "../../context/AuthContext";
+import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard } from "lucide-react"; 
+import { useAuth } from "@/context/AuthContext";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,6 +91,14 @@ export function Header() {
                         My Orders
                       </Link>
                     </DropdownMenuItem>
+                    {currentUser.isAdmin && (
+                      <DropdownMenuItem asChild>
+                        <Link href="/admin" className="cursor-pointer w-full">
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Admin Dashboard</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
                       <LogOut className="mr-2 h-4 w-4" />
@@ -185,6 +193,16 @@ export function Header() {
                         >
                           My Orders
                         </Link>
+                        {currentUser.isAdmin && (
+                          <Link 
+                            href="/admin" 
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className="py-2 border-b border-gray-100 font-medium flex items-center"
+                          >
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        )}
                         <button 
                           onClick={() => {
                             setIsMobileMenuOpen(false);

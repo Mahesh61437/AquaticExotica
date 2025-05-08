@@ -39,15 +39,19 @@ export default function CategoryManagement() {
     queryKey: ["/api/admin/categories"],
     queryFn: async () => {
       const res = await apiRequest("GET", "/api/admin/categories");
-      return res.json() as Promise<Category[]>;
+      return await res.json() as Category[];
     },
   });
 
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const res = await apiRequest("POST", "/api/admin/categories", data);
-      return res.json();
+      const res = await apiRequest("POST", "/api/admin/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
