@@ -66,64 +66,83 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Create a filtered user object with only the columns that exist in the database
+    // Create an object with only the fields that exist in the database
     const userDataForDb = {
       username: insertUser.username,
       email: insertUser.email,
       password: insertUser.password,
-      fullName: insertUser.fullName,
+      full_name: insertUser.fullName,
+      is_admin: insertUser.isAdmin || false
     };
     
     // Insert the user data
-    const [user] = await db
+    const [dbUser] = await db
       .insert(users)
-      .values(userDataForDb)
+      .values(userDataForDb as any) // Type assertion to avoid compiler errors
       .returning();
     
-    // Return the user with the isAdmin value added
-    return { ...user, isAdmin: insertUser.isAdmin || false };
+    // Return the user with proper field mapping
+    return {
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name as string, // Type assertion for correct mapping
+      createdAt: dbUser.created_at as Date, // Type assertion for correct mapping
+      isAdmin: dbUser.is_admin as boolean // Type assertion for correct mapping
+    };
   }
   
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
-    // Create a filtered user object with only the columns that exist in the database
+    // Map camelCase to snake_case for the database
     const updateDataForDb: any = {};
     
     if (updates.username !== undefined) updateDataForDb.username = updates.username;
     if (updates.email !== undefined) updateDataForDb.email = updates.email;
     if (updates.password !== undefined) updateDataForDb.password = updates.password;
-    if (updates.fullName !== undefined) updateDataForDb.fullName = updates.fullName;
-    
-    // Store the isAdmin value to add it back later
-    const isAdmin = updates.isAdmin;
+    if (updates.fullName !== undefined) updateDataForDb.full_name = updates.fullName;
+    if (updates.isAdmin !== undefined) updateDataForDb.is_admin = updates.isAdmin;
     
     // Update the user
-    const [updatedUser] = await db
+    const [dbUser] = await db
       .update(users)
       .set(updateDataForDb)
       .where(eq(users.id, id))
       .returning();
       
-    if (!updatedUser) {
+    if (!dbUser) {
       throw new Error("User not found");
     }
     
-    // For simplicity, we'll just preserve the existing isAdmin value
-    // In a full implementation, you'd want to properly manage admin rights
-    return { ...updatedUser, isAdmin: isAdmin !== undefined ? isAdmin : false };
+    // Return the user with proper field mapping
+    return {
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name as string, // Type assertion for correct mapping
+      createdAt: dbUser.created_at as Date, // Type assertion for correct mapping
+      isAdmin: dbUser.is_admin as boolean // Type assertion for correct mapping
+    };
   }
   
   async getAllUsers(): Promise<User[]> {
-    const usersList = await db.select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      password: users.password,
-      fullName: users.fullName,
-      createdAt: users.createdAt,
-    }).from(users);
+    // Use raw SQL query to get all fields from the database
+    const result = await db.execute(
+      'SELECT id, username, email, password, full_name, created_at, is_admin FROM users'
+    );
+    const usersList = result.rows as any[];
     
-    // Add isAdmin field to all users
-    return usersList.map(user => ({ ...user, isAdmin: false }));
+    // Map the snake_case fields to camelCase for each user
+    return usersList.map(dbUser => ({
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name,
+      createdAt: dbUser.created_at,
+      isAdmin: dbUser.is_admin || false
+    }));
   }
 
   // Product methods
