@@ -7,10 +7,9 @@ interface ProductGridProps {
   category?: string;
   filter?: string;
   searchQuery?: string;
-  sortOption?: string;
 }
 
-export function ProductGrid({ category, filter, searchQuery, sortOption = "default" }: ProductGridProps) {
+export function ProductGrid({ category, filter, searchQuery }: ProductGridProps) {
   // Determine the correct endpoint based on props
   let endpoint = "/api/products";
   if (category) {
@@ -25,22 +24,6 @@ export function ProductGrid({ category, filter, searchQuery, sortOption = "defau
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: [endpoint],
-  });
-
-  // Apply sorting
-  const sortedProducts = [...products].sort((a, b) => {
-    switch (sortOption) {
-      case "price-low-high":
-        return parseFloat(a.price.toString()) - parseFloat(b.price.toString());
-      case "price-high-low":
-        return parseFloat(b.price.toString()) - parseFloat(a.price.toString());
-      case "popular":
-        return parseFloat(b.rating.toString()) - parseFloat(a.rating.toString());
-      case "newest":
-        return a.isNew ? -1 : b.isNew ? 1 : 0;
-      default:
-        return 0;
-    }
   });
 
   if (isLoading) {
@@ -59,7 +42,7 @@ export function ProductGrid({ category, filter, searchQuery, sortOption = "defau
     );
   }
 
-  if (sortedProducts.length === 0) {
+  if (products.length === 0) {
     return (
       <div className="text-center py-10">
         <h3 className="text-xl font-medium mb-2">No products found</h3>
@@ -74,7 +57,7 @@ export function ProductGrid({ category, filter, searchQuery, sortOption = "defau
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {sortedProducts.map((product) => (
+      {products.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>

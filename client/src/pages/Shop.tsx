@@ -15,11 +15,8 @@ export default function Shop() {
   const urlParams = new URLSearchParams(window.location.search);
   const searchQuery = urlParams.get("search") || "";
   const filterParam = urlParams.get("filter") || "";
-  const sortParam = urlParams.get("sort") || "default";
 
   // State for filters
-  const [sortOption, setSortOption] = useState(sortParam);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
@@ -74,18 +71,14 @@ export default function Shop() {
                 variant="outline" 
                 className="mt-4 md:mt-0 md:hidden"
               >
-                <Filter className="h-4 w-4 mr-2" /> Filters & Sort
+                <Filter className="h-4 w-4 mr-2" /> Filters
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[90vw] sm:max-w-md">
               <div className="p-4">
-                <h2 className="text-xl font-heading font-bold mb-6">Filters & Sorting</h2>
+                <h2 className="text-xl font-heading font-bold mb-6">Filters</h2>
                 <ProductFilters
-                  onSortChange={setSortOption}
-                  onPriceChange={setPriceRange}
                   onCategoryChange={setActiveCategories}
-                  activeSort={sortOption}
-                  activePrice={priceRange}
                   activeCategories={activeCategories}
                 />
               </div>
@@ -97,11 +90,7 @@ export default function Shop() {
           {/* Desktop Filters */}
           <div className="hidden md:block">
             <ProductFilters
-              onSortChange={setSortOption}
-              onPriceChange={setPriceRange}
               onCategoryChange={setActiveCategories}
-              activeSort={sortOption}
-              activePrice={priceRange}
               activeCategories={activeCategories}
             />
           </div>
@@ -112,7 +101,6 @@ export default function Shop() {
               category={params?.category} 
               filter={filterParam} 
               searchQuery={searchQuery}
-              sortOption={sortOption}
             />
           </div>
         </div>

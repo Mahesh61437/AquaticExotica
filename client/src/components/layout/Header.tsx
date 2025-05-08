@@ -38,15 +38,6 @@ export function Header() {
             <Link href="/shop" className={`font-medium hover:text-primary transition ${location === '/shop' ? 'text-primary' : ''}`}>
               Shop
             </Link>
-            <Link href="/shop/women" className={`font-medium hover:text-primary transition ${location === '/shop/women' ? 'text-primary' : ''}`}>
-              Women
-            </Link>
-            <Link href="/shop/men" className={`font-medium hover:text-primary transition ${location === '/shop/men' ? 'text-primary' : ''}`}>
-              Men
-            </Link>
-            <Link href="/shop/accessories" className={`font-medium hover:text-primary transition ${location === '/shop/accessories' ? 'text-primary' : ''}`}>
-              Accessories
-            </Link>
           </nav>
           
           {/* Right Actions */}
@@ -101,10 +92,6 @@ export function Header() {
                   <nav className="flex flex-col space-y-4">
                     <Link href="/" className="py-2 border-b border-gray-100 font-medium">Home</Link>
                     <Link href="/shop" className="py-2 border-b border-gray-100 font-medium">Shop</Link>
-                    <Link href="/shop/women" className="py-2 border-b border-gray-100 font-medium">Women</Link>
-                    <Link href="/shop/men" className="py-2 border-b border-gray-100 font-medium">Men</Link>
-                    <Link href="/shop/accessories" className="py-2 border-b border-gray-100 font-medium">Accessories</Link>
-                    <Link href="/shop/footwear" className="py-2 border-b border-gray-100 font-medium">Footwear</Link>
                   </nav>
                 </div>
               </SheetContent>
