@@ -61,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
     try {
-      const user = await apiRequest<User>('/api/auth/signup', {
+      const response = await apiRequest<User & { message?: string }>('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -73,14 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       });
       
-      setCurrentUser(user);
+      // Do not set current user after signup
+      // User must log in manually
       
       toast({
         title: "Account created successfully",
-        description: "You have been signed up and logged in",
+        description: "Please sign in with your new account",
       });
       
-      return user;
+      return response;
     } catch (error: any) {
       console.error("Signup error", error);
       toast({

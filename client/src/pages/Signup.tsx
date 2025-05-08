@@ -47,8 +47,18 @@ export default function Signup() {
     try {
       setLoading(true);
       await signUp(data.email, data.password, data.fullName);
-      // If successful, redirect to account page
-      setLocation("/account");
+      
+      // On successful signup, redirect to login page instead of account page
+      toast({
+        title: "Account created",
+        description: "Your account has been created. Please sign in.",
+      });
+      
+      // Add a small delay before redirecting to ensure the toast is seen
+      setTimeout(() => {
+        setLocation("/login");
+      }, 1500);
+      
     } catch (error: any) {
       console.error("Sign up error:", error);
       // Handle specific error cases

@@ -55,10 +55,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove password from response
       const { password: _, ...userWithoutPassword } = user;
       
-      // Set session
-      req.session.userId = user.id;
+      // Do not set session automatically after signup
+      // User will need to sign in manually
       
-      res.status(201).json(userWithoutPassword);
+      res.status(201).json({
+        ...userWithoutPassword,
+        message: "Account created successfully. Please sign in."
+      });
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ message: "Failed to create account" });
