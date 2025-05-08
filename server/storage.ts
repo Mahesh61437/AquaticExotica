@@ -94,8 +94,8 @@ export class MemStorage implements IStorage {
       {
         name: "Denim Jacket",
         description: "Stylish denim jacket perfect for layering in all seasons.",
-        price: "75.99",
-        compareAtPrice: "99.99",
+        price: "₹3,699",
+        compareAtPrice: "₹4,999",
         imageUrl: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Women",
         tags: ["jacket", "denim", "women"],
@@ -109,7 +109,7 @@ export class MemStorage implements IStorage {
       {
         name: "White Shirt",
         description: "Classic white button-up shirt for formal occasions.",
-        price: "45.00",
+        price: "₹2,199",
         compareAtPrice: null,
         imageUrl: "https://images.unsplash.com/photo-1598033129183-c4f50c736f10?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&h=650&q=80",
         category: "Men",

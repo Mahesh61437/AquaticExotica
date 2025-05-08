@@ -64,10 +64,15 @@ export default function Signup() {
       // Handle specific error cases
       if (error.response?.status === 409) {
         toast({
-          title: "Registration failed",
-          description: "This email is already registered. Please try logging in instead.",
+          title: "Account already exists",
+          description: "This email is already registered. Please sign in instead.",
           variant: "destructive"
         });
+        
+        // Add a small delay before redirecting to login page
+        setTimeout(() => {
+          setLocation("/login");
+        }, 1500);
       } else if (error.response?.status === 400) {
         toast({
           title: "Invalid data",
@@ -77,7 +82,7 @@ export default function Signup() {
       } else {
         toast({
           title: "Registration failed",
-          description: "An error occurred while creating your account.",
+          description: error.message || "An error occurred while creating your account.",
           variant: "destructive"
         });
       }

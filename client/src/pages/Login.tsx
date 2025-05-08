@@ -40,8 +40,8 @@ export default function Login() {
     try {
       setLoading(true);
       await signIn(data.email, data.password);
-      // If successful, redirect to account page
-      setLocation("/account");
+      // If successful, redirect to homepage
+      setLocation("/");
     } catch (error: any) {
       console.error("Sign in error:", error);
       // Toast notification is handled in the signIn function in AuthContext

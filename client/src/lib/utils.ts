@@ -6,6 +6,12 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatPrice(price: number | string): string {
+  // If the price is already a string with the ₹ symbol, return it as is
+  if (typeof price === 'string' && price.includes('₹')) {
+    return price;
+  }
+  
+  // Otherwise, format it properly as INR
   const numPrice = typeof price === 'string' ? parseFloat(price) : price;
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
