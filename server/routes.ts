@@ -294,20 +294,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders
   app.post("/api/orders", async (req, res) => {
     try {
-      const orderData = insertOrderSchema.parse(req.body);
+      // Use safeParse to handle validation errors gracefully
+      const validationResult = insertOrderSchema.safeParse(req.body);
       
-      // Set the current timestamp for order creation
-      const orderWithTimestamp = {
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid order data", 
+          errors: validationResult.error.format() 
+        });
+      }
+      
+      // Get the validated order data
+      const orderData = validationResult.data;
+      
+      // If user is authenticated, ensure the userId is correctly set
+      if (req.session.userId) {
+        orderData.userId = req.session.userId;
+      }
+      
+      // Set the current timestamp for order creation and ensure status is pending
+      const orderWithMetadata = {
         ...orderData,
+        status: "pending", // Always set initial status to pending
         createdAt: new Date().toISOString(),
       };
       
-      const order = await storage.createOrder(orderWithTimestamp);
+      // Create the order in the database
+      const order = await storage.createOrder(orderWithMetadata);
+      
       res.status(201).json(order);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid order data", errors: error.errors });
-      }
+      console.error("Order creation error:", error);
       res.status(500).json({ message: "Failed to create order" });
     }
   });
@@ -324,22 +341,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Order not found" });
       }
       
+      // Security check: If the order belongs to a user, ensure the authenticated user matches
+      if (order.userId !== null && req.session.userId) {
+        // If the order has a userId, only that user can access it
+        if (order.userId !== req.session.userId) {
+          return res.status(403).json({ message: "You don't have permission to view this order" });
+        }
+      }
+      
       res.json(order);
     } catch (error) {
+      console.error("Fetch order error:", error);
       res.status(500).json({ message: "Failed to fetch order" });
     }
   });
 
+  // Get current user's orders
+  app.get("/api/my-orders", async (req, res) => {
+    // Check if user is authenticated
+    if (!req.session.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    
+    try {
+      const userId = req.session.userId;
+      const orders = await storage.getOrdersByUserId(userId);
+      res.json(orders);
+    } catch (error) {
+      console.error("Fetch user orders error:", error);
+      res.status(500).json({ message: "Failed to fetch your orders" });
+    }
+  });
+  
+  // Admin or API route - get orders for any user (should be restricted in production)
   app.get("/api/users/:userId/orders", async (req, res) => {
     try {
       const userId = parseInt(req.params.userId);
       if (isNaN(userId)) {
         return res.status(400).json({ message: "Invalid user ID" });
       }
+      
+      // Security check - user can only access their own orders
+      if (req.session.userId && req.session.userId !== userId) {
+        return res.status(403).json({ message: "You don't have permission to access these orders" });
+      }
 
       const orders = await storage.getOrdersByUserId(userId);
       res.json(orders);
     } catch (error) {
+      console.error("Fetch user orders error:", error);
       res.status(500).json({ message: "Failed to fetch user orders" });
     }
   });
