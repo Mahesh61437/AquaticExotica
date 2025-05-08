@@ -154,6 +154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         password: hashedPassword,
         username: email.split('@')[0], // Use part of email as username
         fullName,
+        isAdmin: false, // Explicitly set isAdmin to false for new users
       });
       
       // Remove password from response
