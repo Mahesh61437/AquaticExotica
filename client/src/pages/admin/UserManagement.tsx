@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
 import { Loader2, UserCog } from "lucide-react";
@@ -33,12 +33,9 @@ export default function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
 
   // Fetch users
-  const { data: users, isLoading } = useQuery({
+  const { data: users, isLoading } = useQuery<UserWithoutPassword[]>({
     queryKey: ["/api/admin/users"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/users");
-      return await res.json() as UserWithoutPassword[];
-    },
+    queryFn: getQueryFn({ on401: "throw" }),
   });
 
   // Update user admin status mutation - grant admin
@@ -67,11 +64,7 @@ export default function UserManagement() {
   // Update user admin status mutation - revoke admin
   const revokeAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/admin/revoke-admin`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: id })
-      });
+      const res = await apiRequest("POST", `/api/admin/revoke-admin`, { userId: id });
       return await res.json();
     },
     onSuccess: () => {
