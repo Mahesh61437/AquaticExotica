@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatPrice } from "@/lib/utils";
+import { indianStates, getCitiesByState, validatePinCode, validateIndianPhone } from "@/lib/india-states";
 import {
   Card,
   CardContent,
@@ -41,19 +42,28 @@ const formSchema = z.object({
   firstName: z.string().min(2, "First name is required"),
   lastName: z.string().min(2, "Last name is required"),
   email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Valid phone number is required"),
+  phone: z.string().refine(validateIndianPhone, {
+    message: "Please enter a valid 10-digit Indian mobile number (starting with 6-9)",
+  }),
   address: z.string().min(5, "Address is required"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
-  zipCode: z.string().min(5, "Zip code is required"),
+  zipCode: z.string().refine(validatePinCode, {
+    message: "Please enter a valid 6-digit Indian PIN code",
+  }),
   country: z.string().min(2, "Country is required"),
   sameAsBilling: z.boolean().default(true),
   shippingAddress: z.string().optional(),
   shippingCity: z.string().optional(),
   shippingState: z.string().optional(),
-  shippingZipCode: z.string().optional(),
+  shippingZipCode: z.string().optional().refine(
+    (val) => !val || validatePinCode(val),
+    {
+      message: "Please enter a valid 6-digit Indian PIN code",
+    }
+  ),
   shippingCountry: z.string().optional(),
-  paymentMethod: z.enum(["credit-card", "paypal", "bank-transfer"]),
+  paymentMethod: z.enum(["credit-card", "upi", "net-banking", "cod"]),
   saveInfo: z.boolean().default(false),
   notes: z.string().optional(),
 });
@@ -66,6 +76,19 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const { cart, clearCart } = useCart();
 
+  // States for dependent dropdown selections
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [availableCities, setAvailableCities] = useState<{ name: string; state: string }[]>([]);
+  
+  // Update available cities when state changes
+  useEffect(() => {
+    if (selectedState) {
+      setAvailableCities(getCitiesByState(selectedState));
+    } else {
+      setAvailableCities([]);
+    }
+  }, [selectedState]);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -77,7 +100,7 @@ export function CheckoutForm() {
       city: "",
       state: "",
       zipCode: "",
-      country: "US",
+      country: "IN", // India as default country
       sameAsBilling: true,
       paymentMethod: "credit-card",
       saveInfo: false,
@@ -134,7 +157,10 @@ export function CheckoutForm() {
       };
 
       // Submit order to API
-      const response = await apiRequest("POST", "/api/orders", orderData);
+      const response = await apiRequest("/api/orders", {
+        method: "POST",
+        body: JSON.stringify(orderData),
+      });
       const order = await response.json();
 
       // Clear cart and show success
@@ -247,13 +273,30 @@ export function CheckoutForm() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="city"
+                  name="state"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>City</FormLabel>
-                      <FormControl>
-                        <Input placeholder="New York" {...field} />
-                      </FormControl>
+                      <FormLabel>State</FormLabel>
+                      <Select 
+                        onValueChange={(value) => {
+                          field.onChange(value);
+                          setSelectedState(value);
+                        }}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select state" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {indianStates.map((state) => (
+                            <SelectItem key={state.code} value={state.code}>
+                              {state.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -261,13 +304,34 @@ export function CheckoutForm() {
 
                 <FormField
                   control={form.control}
-                  name="state"
+                  name="city"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>State / Province</FormLabel>
-                      <FormControl>
-                        <Input placeholder="NY" {...field} />
-                      </FormControl>
+                      <FormLabel>City</FormLabel>
+                      <Select 
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                        disabled={!selectedState}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {availableCities.length > 0 ? (
+                            availableCities.map((city) => (
+                              <SelectItem key={city.name} value={city.name}>
+                                {city.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem disabled value="none">
+                              No cities available
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -280,10 +344,13 @@ export function CheckoutForm() {
                   name="zipCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ZIP / Postal Code</FormLabel>
+                      <FormLabel>PIN Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="10001" {...field} />
+                        <Input placeholder="600001" maxLength={6} {...field} />
                       </FormControl>
+                      <FormDescription>
+                        Enter a 6-digit Indian PIN code
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -298,6 +365,7 @@ export function CheckoutForm() {
                       <Select 
                         onValueChange={field.onChange} 
                         defaultValue={field.value}
+                        disabled={true} // Lock to India only
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -305,10 +373,7 @@ export function CheckoutForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="US">United States</SelectItem>
-                          <SelectItem value="CA">Canada</SelectItem>
-                          <SelectItem value="UK">United Kingdom</SelectItem>
-                          <SelectItem value="AU">Australia</SelectItem>
+                          <SelectItem value="IN">India</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -363,13 +428,27 @@ export function CheckoutForm() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="shippingCity"
+                      name="shippingState"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>City</FormLabel>
-                          <FormControl>
-                            <Input placeholder="New York" {...field} />
-                          </FormControl>
+                          <FormLabel>State</FormLabel>
+                          <Select 
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select state" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {indianStates.map((state) => (
+                                <SelectItem key={state.code} value={state.code}>
+                                  {state.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -377,12 +456,12 @@ export function CheckoutForm() {
 
                     <FormField
                       control={form.control}
-                      name="shippingState"
+                      name="shippingCity"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>State / Province</FormLabel>
+                          <FormLabel>City</FormLabel>
                           <FormControl>
-                            <Input placeholder="NY" {...field} />
+                            <Input placeholder="Mumbai" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -396,10 +475,13 @@ export function CheckoutForm() {
                       name="shippingZipCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>ZIP / Postal Code</FormLabel>
+                          <FormLabel>PIN Code</FormLabel>
                           <FormControl>
-                            <Input placeholder="10001" {...field} />
+                            <Input placeholder="600001" maxLength={6} {...field} />
                           </FormControl>
+                          <FormDescription>
+                            Enter a 6-digit Indian PIN code
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -413,7 +495,8 @@ export function CheckoutForm() {
                           <FormLabel>Country</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value || "US"}
+                            defaultValue="IN"
+                            disabled={true}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -421,10 +504,7 @@ export function CheckoutForm() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="US">United States</SelectItem>
-                              <SelectItem value="CA">Canada</SelectItem>
-                              <SelectItem value="UK">United Kingdom</SelectItem>
-                              <SelectItem value="AU">Australia</SelectItem>
+                              <SelectItem value="IN">India</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -456,23 +536,31 @@ export function CheckoutForm() {
                             <RadioGroupItem value="credit-card" />
                           </FormControl>
                           <FormLabel className="font-normal">
-                            Credit Card
+                            Credit/Debit Card
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
                           <FormControl>
-                            <RadioGroupItem value="paypal" />
+                            <RadioGroupItem value="upi" />
                           </FormControl>
                           <FormLabel className="font-normal">
-                            PayPal
+                            UPI (Google Pay, PhonePe, Paytm, etc.)
                           </FormLabel>
                         </FormItem>
                         <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
                           <FormControl>
-                            <RadioGroupItem value="bank-transfer" />
+                            <RadioGroupItem value="net-banking" />
                           </FormControl>
                           <FormLabel className="font-normal">
-                            Bank Transfer
+                            Net Banking
+                          </FormLabel>
+                        </FormItem>
+                        <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
+                          <FormControl>
+                            <RadioGroupItem value="cod" />
+                          </FormControl>
+                          <FormLabel className="font-normal">
+                            Cash on Delivery
                           </FormLabel>
                         </FormItem>
                       </RadioGroup>
