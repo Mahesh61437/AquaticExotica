@@ -34,23 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const signOut = async () => {
-    try {
-      await firebaseSignOut(auth);
-      toast({
-        title: "Signed out",
-        description: "You have been signed out successfully",
-      });
-    } catch (error) {
-      console.error("Sign out error", error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive",
-      });
-    }
-  };
-
   const signUp = async (email: string, password: string, displayName: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -93,6 +76,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
       throw error;
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully",
+      });
+    } catch (error) {
+      console.error("Sign out error", error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      });
     }
   };
 
