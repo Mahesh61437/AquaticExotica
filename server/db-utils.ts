@@ -1,6 +1,62 @@
 import { db } from './db';
 import { User } from '@shared/schema';
 
+// Utility function to get a user by their ID
+export async function getUserByIdViaSQL(id: number): Promise<User | null> {
+  try {
+    // Use direct string-based query without parameter placeholders
+    const query = `
+      SELECT id, username, email, password, full_name, created_at
+      FROM users 
+      WHERE id = ${id}
+    `;
+    
+    const result = await db.execute(query);
+    
+    if (!result.rows || result.rows.length === 0) {
+      return null;
+    }
+    
+    // Type casting the database result
+    const user: {
+      id: number;
+      username: string;
+      email: string;
+      password: string;
+      full_name: string;
+      created_at: Date;
+    } = result.rows[0] as any;
+    
+    // Try to get is_admin separately
+    let isAdmin = false;
+    try {
+      const adminQuery = `SELECT is_admin FROM users WHERE id = ${user.id}`;
+      const adminResult = await db.execute(adminQuery);
+      
+      if (adminResult.rows && adminResult.rows.length > 0) {
+        isAdmin = (adminResult.rows[0] as any).is_admin === true;
+      }
+    } catch (e) {
+      console.log('Could not retrieve is_admin field, defaulting to false');
+      // Continue even if this fails - we can default isAdmin to false
+    }
+    
+    // Transform the database fields to the application format
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      password: user.password,
+      fullName: user.full_name,
+      createdAt: user.created_at,
+      isAdmin: isAdmin
+    };
+  } catch (error) {
+    console.error('Error getting user by ID via SQL:', error);
+    throw error;
+  }
+}
+
 // Utility function to create a user directly via SQL
 export async function createUserViaSQL(
   username: string, 

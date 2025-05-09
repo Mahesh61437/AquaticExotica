@@ -12,21 +12,16 @@ import { IStorage } from "./storage";
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select({
-      id: users.id,
-      username: users.username,
-      email: users.email,
-      password: users.password,
-      fullName: users.fullName,
-      createdAt: users.createdAt,
-    }).from(users).where(eq(users.id, id));
-    
-    if (user) {
-      // Set isAdmin to false by default if not present
-      return { ...user, isAdmin: false };
+    try {
+      // Import at function level to avoid circular dependencies
+      const { getUserByIdViaSQL } = await import('./db-utils');
+      
+      const user = await getUserByIdViaSQL(id);
+      return user || undefined;
+    } catch (error) {
+      console.error('Error in getUser:', error);
+      return undefined;
     }
-    
-    return undefined;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
