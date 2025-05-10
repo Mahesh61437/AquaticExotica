@@ -2,107 +2,128 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Mail } from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Loader2, Bell } from "lucide-react";
+import { Product } from "@shared/schema";
 
 interface StockNotificationFormProps {
-  productId: number;
-  productName: string;
+  product: Product;
+  onSuccess?: () => void;
 }
 
-export default function StockNotificationForm({ productId, productName }: StockNotificationFormProps) {
-  const { toast } = useToast();
+export function StockNotificationForm({ product, onSuccess }: StockNotificationFormProps) {
   const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [subscribed, setSubscribed] = useState(false);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simple email validation
+    if (!email) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       toast({
-        title: "Invalid email",
+        title: "Error",
         description: "Please enter a valid email address",
         variant: "destructive"
       });
       return;
     }
     
-    setLoading(true);
+    setIsSubmitting(true);
     
     try {
       const response = await fetch("/api/stock-notifications/subscribe", {
         method: "POST",
-        headers: { 
-          'Content-Type': 'application/json' 
+        headers: {
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email,
-          productId,
-          productName
-        }),
-        credentials: "include"
+          productId: product.id,
+          productName: product.name
+        })
       });
       
       if (response.ok) {
-        setSubscribed(true);
         toast({
-          title: "Notification set up",
-          description: "We'll email you when this product is back in stock",
+          title: "Success",
+          description: "You'll be notified when this product is back in stock.",
         });
+        
+        setEmail("");
+        
+        if (onSuccess) {
+          onSuccess();
+        }
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to subscribe");
+        throw new Error(errorData.message || "Failed to subscribe to stock notifications");
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong",
+        description: error instanceof Error ? error.message : "Failed to subscribe to stock notifications",
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
   
-  if (subscribed) {
-    return (
-      <div className="mt-4 p-4 bg-green-50 rounded-md border border-green-200 text-green-800">
-        <div className="flex items-center space-x-2">
-          <Mail className="h-5 w-5" />
-          <p className="font-medium">We'll notify you when this product is back in stock</p>
-        </div>
-        <p className="text-sm mt-1">An email will be sent to {email}</p>
-      </div>
-    );
-  }
-  
   return (
-    <div className="mt-4">
-      <h3 className="font-semibold text-sm mb-2">Get notified when this product is back in stock</h3>
-      <form onSubmit={handleSubmit} className="flex space-x-2">
-        <Input
-          type="email"
-          placeholder="Your email address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="flex-1"
-          disabled={loading}
-        />
-        <Button type="submit" disabled={loading}>
-          {loading ? (
+    <Card>
+      <CardHeader>
+        <CardTitle>Get notified when back in stock</CardTitle>
+        <CardDescription>
+          We'll email you once this item is available.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isSubmitting}
+            />
+          </div>
+        </form>
+      </CardContent>
+      <CardFooter>
+        <Button 
+          type="submit" 
+          onClick={handleSubmit} 
+          disabled={isSubmitting}
+          className="w-full"
+        >
+          {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting
+              Submitting...
             </>
           ) : (
-            "Notify Me"
+            <>
+              <Bell className="mr-2 h-4 w-4" />
+              Notify Me
+            </>
           )}
         </Button>
-      </form>
-    </div>
+      </CardFooter>
+    </Card>
   );
 }

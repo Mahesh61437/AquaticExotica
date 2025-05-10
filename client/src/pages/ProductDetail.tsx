@@ -17,7 +17,7 @@ import { Product } from "@shared/schema";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
-import StockNotificationForm from "@/components/product/StockNotificationForm";
+import { StockNotificationForm } from "@/components/product/StockNotificationForm";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -226,8 +226,7 @@ export default function ProductDetail() {
                 ) : (
                   <div className="w-full">
                     <StockNotificationForm 
-                      productId={product.id} 
-                      productName={product.name}
+                      product={product}
                     />
                   </div>
                 )}

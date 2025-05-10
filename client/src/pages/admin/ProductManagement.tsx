@@ -55,18 +55,28 @@ export default function ProductManagement() {
   const { data: products, isLoading } = useQuery({
     queryKey: ["/api/admin/products"],
     queryFn: async () => {
-      return await apiRequest<Product[]>("/api/admin/products");
+      const res = await fetch("/api/admin/products", {
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Failed to fetch products");
+      return await res.json() as Product[];
     },
   });
 
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertProduct) => {
-      return await apiRequest("/api/admin/products", {
+      const res = await fetch("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to create product");
+      }
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
@@ -90,11 +100,17 @@ export default function ProductManagement() {
   // Update product mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertProduct> }) => {
-      return await apiRequest(`/api/admin/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update product");
+      }
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
@@ -118,10 +134,15 @@ export default function ProductManagement() {
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/products/${id}`, {
+      const res = await fetch(`/api/admin/products/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete product");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
