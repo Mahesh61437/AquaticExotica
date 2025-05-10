@@ -1,21 +1,20 @@
 import { db } from './db';
 import { createUserViaSQL } from './db-utils';
-import { scrypt, randomBytes } from 'crypto';
-import { promisify } from 'util';
+import { hash } from 'bcrypt';
 
-const scryptAsync = promisify(scrypt);
-
+// Use bcrypt for hashing to match the comparison method in routes.ts
 async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${buf.toString("hex")}.${salt}`;
+  // Use bcrypt with 10 rounds of salting (standard recommended value)
+  return await hash(password, 10);
 }
 
 export async function initializeDatabase() {
   try {
     // Check if the database already has users
-    const countResult = await db.execute<{ count: number }>('SELECT COUNT(*) as count FROM users');
-    const count = parseInt(countResult.rows[0].count.toString(), 10);
+    const countResult = await db.execute('SELECT COUNT(*) as count FROM users');
+    const countValue = countResult.rows && countResult.rows[0] ? 
+                      (countResult.rows[0] as { count: string | number }).count : "0";
+    const count = parseInt(countValue.toString(), 10);
     
     if (count > 0) {
       console.log("Database already contains users, checking for admin user...");
@@ -28,7 +27,9 @@ export async function initializeDatabase() {
         return { rows: [{ count: "0" }] };
       });
       
-      const adminCount = parseInt(adminCheckResult.rows[0].count.toString(), 10);
+      const countValue = adminCheckResult.rows && adminCheckResult.rows[0] ? 
+                        (adminCheckResult.rows[0] as { count: string | number }).count : "0";
+      const adminCount = parseInt(countValue.toString(), 10);
       
       if (adminCount === 0) {
         console.log("No admin users found, creating default admin...");
