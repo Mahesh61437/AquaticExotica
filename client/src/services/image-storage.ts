@@ -11,13 +11,7 @@ import { FirebaseApp } from "firebase/app";
 
 // Initialize Firebase Storage
 const firebase = app as FirebaseApp;
-let storage: FirebaseStorage;
-try {
-  storage = getStorage(firebase);
-} catch (error) {
-  console.error("Error initializing Firebase Storage:", error);
-  throw new Error("Failed to initialize Firebase Storage");
-}
+const storage: FirebaseStorage = getStorage(firebase);
 
 /**
  * Type definitions for image upload
@@ -98,10 +92,9 @@ export async function deleteImage(url: string | undefined): Promise<void> {
     // Firebase Storage URLs follow this pattern:
     // https://firebasestorage.googleapis.com/v0/b/[PROJECT_ID].appspot.com/o/[PATH]?alt=media&token=[TOKEN]
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
-    const projectId = app.options.projectId;
     
-    // We've already checked url is not undefined above, but TypeScript needs reassurance
-    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(projectId)) {
+    // We've already checked url is not undefined above, but TypeScript needs more reassurance
+    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(String(firebase.options.projectId))) {
       throw new Error('Invalid Firebase Storage URL');
     }
     
@@ -137,10 +130,9 @@ export function getStorageRefFromUrl(url: string | undefined): ReturnType<typeof
     
     // Extract the path from the URL
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
-    const projectId = app.options.projectId;
     
-    // We've already checked url is not undefined above, but TypeScript needs reassurance
-    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(projectId)) {
+    // We've already checked url is not undefined above, but TypeScript needs more reassurance
+    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(String(firebase.options.projectId))) {
       return null;
     }
     
