@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { AuthCartIntegration } from "@/components/auth/AuthCartIntegration";
 import { ThemeProvider } from "next-themes";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -33,6 +34,8 @@ function Router() {
     <div className="flex flex-col min-h-screen">
       <Header />
       <main className="flex-1">
+        {/* This component handles cart merging when users log in */}
+        <AuthCartIntegration />
         <Switch>
           <Route path="/" component={Home} />
           <Route path="/shop" component={Shop} />
