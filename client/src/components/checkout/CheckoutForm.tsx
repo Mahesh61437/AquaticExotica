@@ -223,12 +223,13 @@ export function CheckoutForm() {
       });
       const order = await response.json();
 
-      // Clear cart and show success
+      // Clear cart and show success with message about stock check
       clearCart();
       
       toast({
-        title: "Order placed successfully!",
-        description: `Your order #${order.id} has been confirmed.`,
+        title: "Order received successfully!",
+        description: "We are currently checking if the stock is available for your order. We will contact you shortly via WhatsApp with the details.",
+        duration: 6000, // Show for longer so user can read message
       });
 
       // Redirect to confirmation page

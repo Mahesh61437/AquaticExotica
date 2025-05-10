@@ -48,7 +48,17 @@ export default function OrderConfirmation() {
 
   // Parse order items from JSON if needed
   const orderItems = Array.isArray(order.items) ? order.items : [];
-  const shippingAddress = typeof order.shippingAddress === 'object' ? order.shippingAddress : {};
+  
+  // Ensure shipping address is properly typed with default values
+  const shippingAddress: {
+    address?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  } = typeof order.shippingAddress === 'object' && order.shippingAddress 
+    ? order.shippingAddress as any 
+    : {};
   
   return (
     <>
@@ -74,9 +84,17 @@ export default function OrderConfirmation() {
           <div className="text-center mb-8">
             <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h1 className="text-3xl font-heading font-bold mb-2">Thank You for Your Order!</h1>
-            <p className="text-xl text-gray-600">
-              Your order #{order.id} has been confirmed
+            <p className="text-xl text-gray-600 mb-2">
+              Your order #{order.id} has been received
             </p>
+            <div className="bg-blue-50 text-blue-700 p-4 rounded-lg mt-4 max-w-lg mx-auto">
+              <p className="font-medium mb-1">Stock Check in Progress</p>
+              <p className="text-sm">
+                We are currently checking if the stock is available for your order. 
+                We will contact you shortly via WhatsApp with further details about 
+                availability, payment options, and delivery.
+              </p>
+            </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -90,9 +108,9 @@ export default function OrderConfirmation() {
                 </div>
               </div>
               <div className="text-sm text-gray-600 ml-7">
-                <p>{`${shippingAddress.address}`}</p>
-                <p>{`${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zipCode}`}</p>
-                <p>{`${shippingAddress.country}`}</p>
+                <p>{shippingAddress.address || 'N/A'}</p>
+                <p>{`${shippingAddress.city || 'N/A'}, ${shippingAddress.state || 'N/A'} ${shippingAddress.zipCode || 'N/A'}`}</p>
+                <p>{shippingAddress.country || 'India'}</p>
               </div>
             </div>
             
@@ -111,8 +129,8 @@ export default function OrderConfirmation() {
                 </span>
               </div>
               <div className="flex items-center justify-between mb-2">
-                <span className="ml-7 text-sm text-gray-600">Payment Method</span>
-                <span className="text-sm capitalize">{order.paymentMethod.replace("-", " ")}</span>
+                <span className="ml-7 text-sm text-gray-600">Payment Status</span>
+                <span className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Pending confirmation</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="ml-7 text-sm text-gray-600">Order Status</span>
