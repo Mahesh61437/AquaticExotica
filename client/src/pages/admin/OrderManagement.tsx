@@ -27,6 +27,7 @@ import { Loader2, Eye, PenLine } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 // Define order item type
 interface OrderItem {
@@ -232,8 +233,8 @@ export default function OrderManagement() {
               header: "Customer",
               accessor: (order: Order) => (
                 <div>
-                  <p className="font-medium">{order.customer_name || "N/A"}</p>
-                  <p className="text-sm text-muted-foreground">{order.customer_email || "No email"}</p>
+                  <p className="font-medium">{order.customerName || "N/A"}</p>
+                  <p className="text-sm text-muted-foreground">{order.customerEmail || "No email"}</p>
                 </div>
               )
             },
@@ -306,9 +307,9 @@ export default function OrderManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-1">
-                      <p><span className="font-medium">Name:</span> {selectedOrder.customer_name || 'N/A'}</p>
-                      <p><span className="font-medium">Email:</span> {selectedOrder.customer_email || 'N/A'}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedOrder.customer_phone || 'N/A'}</p>
+                      <p><span className="font-medium">Name:</span> {selectedOrder.customerName || 'N/A'}</p>
+                      <p><span className="font-medium">Email:</span> {selectedOrder.customerEmail || 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedOrder.customerPhone || 'N/A'}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -343,7 +344,7 @@ export default function OrderManagement() {
                         </tr>
                       </thead>
                       <tbody>
-                        {selectedOrder.items.map((item: any, index: number) => (
+                        {(selectedOrder.items as any[])?.map((item: any, index: number) => (
                           <tr key={index} className="border-b">
                             <td className="p-2 flex items-center gap-2">
                               {item.imageUrl && (
