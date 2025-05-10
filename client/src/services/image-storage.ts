@@ -5,7 +5,7 @@ import {
   getDownloadURL,
   deleteObject
 } from "firebase/storage";
-import { app } from "@/lib/firebase";
+import app from "@/lib/firebase";
 
 // Initialize Firebase Storage
 const storage = getStorage(app);
@@ -78,7 +78,7 @@ export function uploadImage(
  * @param url Full URL of the image to delete
  * @returns Promise that resolves when the image is deleted
  */
-export async function deleteImage(url: string): Promise<void> {
+export async function deleteImage(url: string | undefined): Promise<void> {
   try {
     // Extract the path from the URL
     // Firebase Storage URLs follow this pattern:

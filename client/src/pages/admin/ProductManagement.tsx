@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
 import { StockNotifier } from "@/components/admin/StockNotifier";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 import {
   Select,
   SelectContent,
@@ -531,14 +532,19 @@ export default function ProductManagement() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="imageUrl">Image URL *</Label>
-                <Input
-                  id="imageUrl"
-                  value={formData.imageUrl || ""}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  placeholder="https://example.com/image.jpg"
-                  required
+                <Label htmlFor="imageUpload">Product Image *</Label>
+                <ImageUpload
+                  initialImage={formData.imageUrl || ""}
+                  onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
+                  onImageRemoved={() => setFormData({ ...formData, imageUrl: "" })}
+                  folder="products"
+                  className="w-full"
                 />
+                {!formData.imageUrl && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Upload a product image (required)
+                  </p>
+                )}
               </div>
               
               <div className="space-y-2">
