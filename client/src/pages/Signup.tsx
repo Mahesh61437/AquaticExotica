@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -29,9 +29,16 @@ type SignupFormValues = z.infer<typeof signupSchema>;
 
 export default function Signup() {
   const [, setLocation] = useLocation();
-  const { signUp } = useAuth();
+  const { signUp, currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  
+  // Redirect to home page if user is already logged in
+  useEffect(() => {
+    if (currentUser) {
+      setLocation("/");
+    }
+  }, [currentUser, setLocation]);
   
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),

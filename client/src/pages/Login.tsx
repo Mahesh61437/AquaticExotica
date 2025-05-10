@@ -24,19 +24,26 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, setLocation] = useLocation();
-  const { signIn } = useAuth();
+  const { signIn, currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fromCheckout, setFromCheckout] = useState(false);
   
-  // Check if user was redirected from checkout page
+  // Check if user is already authenticated, and if redirected from checkout
   useEffect(() => {
+    // If user is already logged in, redirect to home page
+    if (currentUser) {
+      setLocation("/");
+      return;
+    }
+    
+    // Otherwise, check if they were redirected from checkout
     const returnToCheckout = sessionStorage.getItem('returnToCheckout');
     if (returnToCheckout === 'true') {
       setFromCheckout(true);
       // Keep the flag in session storage until successful login
     }
-  }, []);
+  }, [currentUser, setLocation]);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
