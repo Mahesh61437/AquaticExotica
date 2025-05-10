@@ -549,7 +549,8 @@ export default function ProductManagement() {
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       value={formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? 'url' : 'upload'}
                       onChange={(e) => {
-                        if (e.target.value === 'url' && !formData.imageUrl?.startsWith('http')) {
+                        // Create a default empty URL if switching to URL mode
+                        if (e.target.value === 'url') {
                           setFormData({ ...formData, imageUrl: "" });
                         }
                       }}
@@ -559,7 +560,8 @@ export default function ProductManagement() {
                     </select>
                   </div>
                   
-                  {formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? (
+                  {(formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) || 
+                   (document.getElementById('imageType') as HTMLSelectElement)?.value === 'url' ? (
                     <div className="space-y-2">
                       <Label htmlFor="imageUrl">Image URL</Label>
                       <Input

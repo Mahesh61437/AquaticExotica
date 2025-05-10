@@ -32,10 +32,10 @@ export default function AdminDashboard() {
       try {
         // Get counts for all entities
         const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.all([
-          fetch('/api/admin/products'),
-          fetch('/api/admin/categories'),
-          fetch('/api/admin/orders'),
-          fetch('/api/admin/users')
+          fetch('/api/admin/products?limit=1000'),
+          fetch('/api/admin/categories?limit=1000'),
+          fetch('/api/admin/orders?limit=1000'),
+          fetch('/api/admin/users?limit=1000')
         ]);
         
         const products = await productsRes.json();
@@ -44,10 +44,10 @@ export default function AdminDashboard() {
         const users = await usersRes.json();
         
         setStats({
-          products: Array.isArray(products) ? products.length : 0,
-          categories: Array.isArray(categories) ? categories.length : 0,
-          orders: Array.isArray(orders) ? orders.length : 0,
-          users: Array.isArray(users) ? users.length : 0
+          products: products.data?.length || 0,
+          categories: categories.data?.length || 0,
+          orders: orders.data?.length || 0,
+          users: users.data?.length || 0
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
