@@ -22,7 +22,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
 import { StockNotifier } from "@/components/admin/StockNotifier";
-import { ImageUpload } from "@/components/admin/ImageUpload";
 import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
 import {
   Select,
