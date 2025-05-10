@@ -24,11 +24,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Product, InsertProduct } from "@shared/schema";
-import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
 import { StockNotifier } from "@/components/admin/StockNotifier";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 export default function ProductManagement() {
   const { toast } = useToast();
@@ -62,6 +74,30 @@ export default function ProductManagement() {
       return await res.json() as Product[];
     },
   });
+  
+  // Fetch categories for dropdown
+  const { data: categories, isLoading: categoriesLoading } = useQuery({
+    queryKey: ["/api/admin/categories"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/categories", {
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return await res.json();
+    },
+  });
+  
+  // Get unique tags from existing products for tag suggestions
+  const uniqueTags = products?.reduce((acc: string[], product) => {
+    if (product.tags) {
+      product.tags.forEach(tag => {
+        if (!acc.includes(tag)) {
+          acc.push(tag);
+        }
+      });
+    }
+    return acc;
+  }, []) || [];
 
   // Create product mutation
   const createMutation = useMutation({
@@ -376,13 +412,30 @@ export default function ProductManagement() {
               
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
-                <Input
-                  id="category"
+                <Select
                   value={formData.category || ""}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                  placeholder="E.g. Women, Men, Accessories"
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
                   required
-                />
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriesLoading ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : categories && categories.length > 0 ? (
+                      categories.map((category) => (
+                        <SelectItem key={category.id} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="default" disabled>No categories found</SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             
