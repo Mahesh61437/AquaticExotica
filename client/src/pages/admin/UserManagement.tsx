@@ -77,7 +77,13 @@ export default function UserManagement() {
   // Update user admin status mutation - grant admin
   const grantAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/admin/make-admin`, { userId: id });
+      const res = await fetch("/api/admin/make-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: id }),
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Failed to grant admin privileges");
       return await res.json();
     },
     onSuccess: () => {
@@ -100,7 +106,13 @@ export default function UserManagement() {
   // Update user admin status mutation - revoke admin
   const revokeAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await apiRequest("POST", `/api/admin/revoke-admin`, { userId: id });
+      const res = await fetch("/api/admin/revoke-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: id }),
+        credentials: "include"
+      });
+      if (!res.ok) throw new Error("Failed to revoke admin privileges");
       return await res.json();
     },
     onSuccess: () => {
