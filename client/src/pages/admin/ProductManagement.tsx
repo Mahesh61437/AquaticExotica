@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Product, InsertProduct } from "@shared/schema";
-import { Loader2, Plus, Edit, Trash2, Tag } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Tag, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
@@ -93,9 +93,9 @@ export default function ProductManagement() {
   });
   
   // Get unique tags from existing products for tag suggestions
-  const uniqueTags = products?.reduce((acc: string[], product) => {
+  const uniqueTags = productsResponse?.data?.reduce((acc: string[], product: Product) => {
     if (product.tags) {
-      product.tags.forEach(tag => {
+      product.tags.forEach((tag: string) => {
         if (!acc.includes(tag)) {
           acc.push(tag);
         }
@@ -281,8 +281,17 @@ export default function ProductManagement() {
   const handleRemoveTag = (tag: string) => {
     setFormData({
       ...formData,
-      tags: formData.tags?.filter((t) => t !== tag) || [],
+      tags: formData.tags?.filter((t: string) => t !== tag) || [],
     });
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleLimitChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setCurrentPage(1); // Reset to first page when changing limit
   };
 
   return (
@@ -301,94 +310,109 @@ export default function ProductManagement() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Flags</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products && products.length > 0 ? (
-                products.map((product) => (
-                  <TableRow key={product.id}>
-                    <TableCell>
-                      <img 
-                        src={product.imageUrl} 
-                        alt={product.name}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>
-                      {formatPrice(product.price)}
-                      {product.compareAtPrice && (
-                        <span className="ml-2 text-sm line-through text-muted-foreground">
-                          {formatPrice(product.compareAtPrice)}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{product.category}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          getStockStatus(product.stock).status === 'in-stock'
-                            ? 'default'
-                            : getStockStatus(product.stock).status === 'low-stock'
-                            ? 'outline'
-                            : 'destructive'
-                        }
-                      >
-                        {product.stock} {getStockStatus(product.stock).text}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {product.isNew && <Badge variant="outline">New</Badge>}
-                        {product.isSale && <Badge variant="outline">Sale</Badge>}
-                        {product.isFeatured && <Badge variant="outline">Featured</Badge>}
-                        {product.isTrending && <Badge variant="outline">Trending</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="icon"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6">
-                    No products found. Add your first product to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {productsResponse && (
+        <DataTable 
+          data={productsResponse.data || []}
+          columns={[
+            {
+              header: "Image",
+              accessor: (product: Product) => (
+                product.imageUrl ? (
+                  <img 
+                    src={product.imageUrl} 
+                    alt={product.name} 
+                    className="h-12 w-12 object-cover rounded" 
+                  />
+                ) : (
+                  <div className="h-12 w-12 bg-muted flex items-center justify-center rounded">
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )
+              )
+            },
+            {
+              header: "Name",
+              accessor: "name",
+              className: "font-medium"
+            },
+            {
+              header: "Price",
+              accessor: (product: Product) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">{formatPrice(product.price)}</span>
+                  {product.compareAtPrice && (
+                    <span className="text-sm text-muted-foreground line-through">
+                      {formatPrice(product.compareAtPrice)}
+                    </span>
+                  )}
+                </div>
+              )
+            },
+            {
+              header: "Category",
+              accessor: "category"
+            },
+            {
+              header: "Stock",
+              accessor: (product: Product) => (
+                <Badge
+                  variant={
+                    getStockStatus(product.stock).status === 'in-stock'
+                      ? 'default'
+                      : getStockStatus(product.stock).status === 'low-stock'
+                      ? 'outline'
+                      : 'destructive'
+                  }
+                >
+                  {product.stock} {getStockStatus(product.stock).text}
+                </Badge>
+              )
+            },
+            {
+              header: "Flags",
+              accessor: (product: Product) => (
+                <div className="flex gap-1 flex-wrap">
+                  {product.isNew && <Badge variant="outline">New</Badge>}
+                  {product.isSale && <Badge variant="outline">Sale</Badge>}
+                  {product.isFeatured && <Badge variant="outline">Featured</Badge>}
+                  {product.isTrending && <Badge variant="outline">Trending</Badge>}
+                </div>
+              )
+            },
+            {
+              header: "Actions",
+              accessor: (product: Product) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleEdit(product)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDelete(product.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+              className: "text-right"
+            }
+          ]}
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            totalCount: productsResponse.pagination?.totalCount || 0,
+            totalPages: productsResponse.pagination?.totalPages || 1
+          }}
+          isLoading={isLoading}
+          emptyMessage="No products found. Add your first product to get started."
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -562,7 +586,7 @@ export default function ProductManagement() {
                 )}
                 
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {formData.tags?.map((tag) => (
+                  {formData.tags?.map((tag: string) => (
                     <Badge key={tag} variant="secondary" className="gap-1">
                       {tag}
                       <button 
