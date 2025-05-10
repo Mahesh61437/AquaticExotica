@@ -74,6 +74,32 @@ export const orders = pgTable("orders", {
   totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
 });
 
+// Create a more explicit schema for order creation that handles string/number conversions
+export const orderValidationSchema = z.object({
+  userId: z.number().nullable().optional(),
+  status: z.string(),
+  total: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseFloat(val) : val
+  ),
+  items: z.union([z.string(), z.array(z.any())]).transform(val => 
+    typeof val === 'string' ? val : JSON.stringify(val)
+  ),
+  shippingAddress: z.union([z.string(), z.record(z.any())]).transform(val => 
+    typeof val === 'string' ? val : JSON.stringify(val)
+  ),
+  billingAddress: z.union([z.string(), z.record(z.any())]).transform(val => 
+    typeof val === 'string' ? val : JSON.stringify(val)
+  ),
+  paymentMethod: z.string(),
+  createdAt: z.string(),
+  customerName: z.string().optional(),
+  customerEmail: z.string().email().optional(),
+  customerPhone: z.string().optional(),
+  totalAmount: z.union([z.string(), z.number()]).transform(val => 
+    typeof val === 'string' ? parseFloat(val) : val
+  ).optional(),
+});
+
 export const insertOrderSchema = createInsertSchema(orders).omit({
   id: true,
 });

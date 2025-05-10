@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema, insertCategorySchema } from "@shared/schema";
+import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema, insertCategorySchema, orderValidationSchema } from "@shared/schema";
 import { z } from "zod";
 import { hash, compare } from "bcrypt";
 import { sendOrderNotification } from "./email-service";
@@ -482,54 +482,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Orders
+  // Orders - Completely rewritten order creation endpoint
   app.post("/api/orders", async (req, res) => {
     try {
       console.log("Order creation request body:", JSON.stringify(req.body, null, 2));
       
-      // Use safeParse to handle validation errors gracefully
-      const validationResult = insertOrderSchema.safeParse(req.body);
+      // First use our flexible validation schema that handles string/object conversions
+      const preValidationResult = orderValidationSchema.safeParse(req.body);
       
-      if (!validationResult.success) {
-        console.error("Order validation failed:", JSON.stringify(validationResult.error.format(), null, 2));
+      if (!preValidationResult.success) {
+        console.error("Order pre-validation failed:", JSON.stringify(preValidationResult.error.format(), null, 2));
         return res.status(400).json({ 
-          message: "Invalid order data", 
-          errors: validationResult.error.format() 
+          message: "Invalid order data format", 
+          errors: preValidationResult.error.format() 
         });
       }
       
-      // Get the validated order data
-      const orderData = validationResult.data;
-      console.log("Validated order data:", JSON.stringify(orderData, null, 2));
+      // Get the pre-validated data with proper types
+      const orderData = preValidationResult.data;
       
       // If user is authenticated, ensure the userId is correctly set
       if (req.session.userId) {
         orderData.userId = req.session.userId;
       }
       
-      // Set the current timestamp for order creation and ensure status is pending
-      const orderWithMetadata = {
-        ...orderData,
-        status: "pending", // Always set initial status to pending
-        createdAt: new Date().toISOString(),
-      };
-      
-      // Create the order in the database
-      const order = await storage.createOrder(orderWithMetadata);
-      
-      // Send email notification to admin about the new order
-      try {
-        await sendOrderNotification(order);
-        console.log(`Order notification email sent for order #${order.id}`);
-      } catch (emailError) {
-        console.error("Failed to send order notification email:", emailError);
-        // Don't fail the order if email fails - just log the error
+      // Ensure timestamp and status
+      if (!orderData.createdAt) {
+        orderData.createdAt = new Date().toISOString();
       }
       
-      res.status(201).json(order);
+      // Always set status to pending for new orders
+      orderData.status = "pending";
+      
+      console.log("Processed order data before database insert:", JSON.stringify(orderData, null, 2));
+      
+      // Create the order in the database
+      try {
+        const order = await storage.createOrder(orderData);
+        console.log("Order created successfully:", order);
+        
+        // Send email notification to admin about the new order
+        try {
+          await sendOrderNotification(order);
+          console.log(`Order notification email sent for order #${order.id}`);
+        } catch (emailError) {
+          console.error("Failed to send order notification email:", emailError);
+          // Don't fail the order if email fails - just log the error
+        }
+        
+        res.status(201).json(order);
+      } catch (dbError) {
+        console.error("Database error creating order:", dbError);
+        res.status(500).json({ 
+          message: "Database error creating order", 
+          error: String(dbError) 
+        });
+      }
     } catch (error) {
-      console.error("Order creation error:", error);
-      res.status(500).json({ message: "Failed to create order", error: String(error) });
+      console.error("Unexpected error in order creation:", error);
+      res.status(500).json({ 
+        message: "Failed to create order", 
+        error: String(error) 
+      });
     }
   });
 
