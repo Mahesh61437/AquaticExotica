@@ -41,7 +41,6 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url' | 'firebase'>('upload');
   const [formData, setFormData] = useState<Partial<InsertProduct>>({
     name: "",
     description: "",
@@ -247,12 +246,7 @@ export default function ProductManagement() {
       isTrending: product.isTrending,
     });
     
-    // Set the image source type based on the URL
-    if (product.imageUrl?.startsWith('http') && !product.imageUrl?.includes('firebasestorage')) {
-      setImageSourceType('url');
-    } else {
-      setImageSourceType('upload');
-    }
+    // Image will only be Firebase Storage URLs
     
     setIsOpen(true);
   };
@@ -306,7 +300,6 @@ export default function ProductManagement() {
     });
     setEditingProduct(null);
     setTagInput("");
-    setImageSourceType('upload');
   };
 
   const handleAddTag = () => {
@@ -553,73 +546,32 @@ export default function ProductManagement() {
               <div className="space-y-2">
                 <Label htmlFor="imageOptions">Product Image</Label>
                 <div className="space-y-4">
-                  <div className="flex flex-col space-y-2">
-                    <Label htmlFor="imageType">Image Source</Label>
-                    <select 
-                      id="imageType"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={imageSourceType}
-                      onChange={(e) => {
-                        // Set the image source type
-                        setImageSourceType(e.target.value as 'upload' | 'url' | 'firebase');
-                        
-                        // Create a default empty URL if switching to URL mode
-                        if (e.target.value === 'url' || e.target.value === 'firebase') {
-                          setFormData({ ...formData, imageUrl: "" });
-                        }
-                      }}
-                    >
-                      <option value="upload">Upload Image</option>
-                      <option value="url">External URL</option>
-                      <option value="firebase">Firebase Storage</option>
-                    </select>
-                  </div>
+                  <FirebaseImageSelector
+                    initialImage={formData.imageUrl}
+                    onImageSelected={(url) => setFormData({ ...formData, imageUrl: url })}
+                    className="w-full"
+                  />
                   
-                  {imageSourceType === 'firebase' ? (
-                    <FirebaseImageSelector
-                      initialImage={formData.imageUrl}
-                      onImageSelected={(url) => setFormData({ ...formData, imageUrl: url })}
-                      className="w-full"
-                    />
-                  ) : imageSourceType === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="imageUrl">Image URL</Label>
-                      <Input
-                        id="imageUrl"
-                        value={formData.imageUrl || ""}
-                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                        placeholder="https://example.com/image.jpg"
+                  {formData.imageUrl && (
+                    <div className="mt-2 relative w-full h-48 border rounded-md overflow-hidden">
+                      <img 
+                        src={formData.imageUrl} 
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
+                        }}
                       />
-                      {formData.imageUrl && (
-                        <div className="mt-2 relative w-full h-48 border rounded-md overflow-hidden">
-                          <img 
-                            src={formData.imageUrl} 
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
-                            }}
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2"
-                            onClick={() => setFormData({ ...formData, imageUrl: "" })}
-                            type="button"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <Button
+                        variant="destructive"
+                        size="icon"
+                        className="absolute top-2 right-2"
+                        onClick={() => setFormData({ ...formData, imageUrl: "" })}
+                        type="button"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
-                  ) : (
-                    <ImageUpload
-                      initialImage={formData.imageUrl || ""}
-                      onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
-                      onImageRemoved={() => setFormData({ ...formData, imageUrl: "" })}
-                      folder="products"
-                      className="w-full"
-                    />
                   )}
                 </div>
               </div>
