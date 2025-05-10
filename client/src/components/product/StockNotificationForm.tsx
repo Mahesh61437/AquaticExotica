@@ -33,12 +33,17 @@ export default function StockNotificationForm({ productId, productName }: StockN
     setLoading(true);
     
     try {
-      const response = await apiRequest("POST", "/api/stock-notifications/subscribe", {
-        email,
-        productId,
-        productName
-      }, {
-        headers: { 'Content-Type': 'application/json' }
+      const response = await fetch("/api/stock-notifications/subscribe", {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          email,
+          productId,
+          productName
+        }),
+        credentials: "include"
       });
       
       if (response.ok) {

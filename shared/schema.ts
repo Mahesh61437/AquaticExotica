@@ -67,6 +67,11 @@ export const orders = pgTable("orders", {
   billingAddress: jsonb("billing_address").notNull(),
   paymentMethod: text("payment_method").notNull(),
   createdAt: text("created_at").notNull(),
+  // Customer information for email notifications
+  customerName: text("customer_name"),
+  customerEmail: text("customer_email"),
+  customerPhone: text("customer_phone"),
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }),
 });
 
 export const insertOrderSchema = createInsertSchema(orders).omit({

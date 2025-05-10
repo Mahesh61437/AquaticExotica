@@ -48,24 +48,43 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
  * Notify admin about a new order
  */
 export async function sendOrderNotification(order: Order): Promise<boolean> {
+  // Parse the order items as JSON if it's a string
+  const items = typeof order.items === 'string' 
+    ? JSON.parse(order.items as string) 
+    : (order.items as any[] || []);
+    
   // Format order items for the email
-  const orderItemsHtml = order.items
-    .map(item => `
+  const orderItemsHtml = items
+    .map((item: any) => `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${item.price.toFixed(2)}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${(item.price * item.quantity).toFixed(2)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${Number(item.price).toFixed(2)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${(Number(item.price) * item.quantity).toFixed(2)}</td>
       </tr>
     `)
     .join('');
 
+  // Parse shipping address if it's a string
+  const shippingAddressObj = typeof order.shippingAddress === 'string'
+    ? JSON.parse(order.shippingAddress as string)
+    : (order.shippingAddress as any || {});
+
   // Format the address for display
-  const shippingAddress = order.shippingAddress ? 
-    `${order.shippingAddress.addressLine1}, 
-     ${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + ', ' : ''}
-     ${order.shippingAddress.city}, ${order.shippingAddress.state}, 
-     ${order.shippingAddress.pinCode}` : 'Not provided';
+  const shippingAddress = shippingAddressObj && Object.keys(shippingAddressObj).length > 0 
+    ? `${shippingAddressObj.addressLine1 || ''}, 
+       ${shippingAddressObj.addressLine2 ? shippingAddressObj.addressLine2 + ', ' : ''}
+       ${shippingAddressObj.city || ''}, ${shippingAddressObj.state || ''}, 
+       ${shippingAddressObj.pinCode || ''}` 
+    : 'Not provided';
+
+  // Get customer information from order or use placeholders
+  const customerName = order.customerName || 'Customer';
+  const customerEmail = order.customerEmail || 'Not provided';
+  const customerPhone = order.customerPhone || 'Not provided';
+  
+  // Calculate total amount
+  const totalAmount = order.totalAmount || Number(order.total) || 0;
 
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -85,10 +104,10 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
         minute: 'numeric',
         hour12: true
       })}</p>
-      <p><strong>Customer:</strong> ${order.customerName}</p>
-      <p><strong>Email:</strong> ${order.customerEmail}</p>
-      <p><strong>Phone:</strong> ${order.customerPhone || 'Not provided'}</p>
-      <p><strong>Total Amount:</strong> ₹${order.totalAmount.toFixed(2)}</p>
+      <p><strong>Customer:</strong> ${customerName}</p>
+      <p><strong>Email:</strong> ${customerEmail}</p>
+      <p><strong>Phone:</strong> ${customerPhone}</p>
+      <p><strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}</p>
       
       <h3 style="color: #555;">Shipping Address:</h3>
       <p>${shippingAddress}</p>
