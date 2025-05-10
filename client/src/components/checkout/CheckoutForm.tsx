@@ -216,6 +216,12 @@ export function CheckoutForm() {
         paymentMethod: "pending", // Set default payment status
         createdAt: new Date().toISOString(),
         userId: currentUser?.id || null, // Link order to user if authenticated
+        
+        // Add customer information for email notifications
+        customerName: `${data.firstName} ${data.lastName}`,
+        customerEmail: data.email,
+        customerPhone: data.phone,
+        totalAmount: cart.total + 150, // Add shipping cost to the total
       };
 
       // Log the order data before submitting (for debugging)

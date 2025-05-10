@@ -107,7 +107,7 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
       <p><strong>Customer:</strong> ${customerName}</p>
       <p><strong>Email:</strong> ${customerEmail}</p>
       <p><strong>Phone:</strong> ${customerPhone}</p>
-      <p><strong>Total Amount:</strong> ₹${totalAmount.toFixed(2)}</p>
+      <p><strong>Total Amount:</strong> ₹${typeof totalAmount === 'number' ? totalAmount.toFixed(2) : totalAmount}</p>
       
       <h3 style="color: #555;">Shipping Address:</h3>
       <p>${shippingAddress}</p>
