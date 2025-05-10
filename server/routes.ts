@@ -730,12 +730,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const page = parseInt(req.query.page as string) || 1; // Default to page 1
       const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const query = req.query.query as string || ''; // Search query
       const offset = (page - 1) * limit;
       
-      // Get total count and paginated categories
-      const categories = await storage.getAllCategories();
-      const totalCount = categories.length;
-      const paginatedCategories = categories.slice(offset, offset + limit);
+      // Get all categories
+      const allCategories = await storage.getAllCategories();
+      
+      // Filter by search query if provided
+      const filteredCategories = query 
+        ? allCategories.filter(category => 
+            category.name.toLowerCase().includes(query.toLowerCase()) || 
+            category.slug.toLowerCase().includes(query.toLowerCase()) ||
+            (category.description && category.description.toLowerCase().includes(query.toLowerCase()))
+          )
+        : allCategories;
+      
+      // Total count after filtering
+      const totalCount = filteredCategories.length;
+      
+      // Apply pagination
+      const paginatedCategories = filteredCategories.slice(offset, offset + limit);
       
       res.json({
         data: paginatedCategories,

@@ -25,7 +25,6 @@ export default function CategoryManagement() {
   const [formData, setFormData] = useState<Partial<InsertCategory>>({
     name: "",
     slug: "",
-    description: "",
     imageUrl: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -177,7 +176,6 @@ export default function CategoryManagement() {
     setFormData({
       name: category.name,
       slug: category.slug,
-      description: category.description,
       imageUrl: category.imageUrl,
     });
     setIsOpen(true);
@@ -213,7 +211,6 @@ export default function CategoryManagement() {
     setFormData({
       name: "",
       slug: "",
-      description: "",
       imageUrl: "",
     });
     setEditingCategory(null);
@@ -292,14 +289,7 @@ export default function CategoryManagement() {
               header: "Slug",
               accessor: "slug"
             },
-            {
-              header: "Description",
-              accessor: (category: Category) => (
-                <div className="max-w-md truncate">
-                  {category.description || "No description"}
-                </div>
-              )
-            },
+
             {
               header: "Actions",
               accessor: (category: Category) => (
@@ -381,16 +371,7 @@ export default function CategoryManagement() {
               />
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Category description"
-                rows={3}
-              />
-            </div>
+
             
             <div className="space-y-2">
               <Label htmlFor="imageUrl">Image URL</Label>
