@@ -18,10 +18,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { apiRequest, queryClient, getQueryFn } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { User } from "@shared/schema";
-import { Loader2, UserCog } from "lucide-react";
+import { Loader2, UserCog, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -49,17 +51,21 @@ export default function UserManagement() {
   const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<UserWithoutPassword>>({
     queryKey: ["/api/admin/users", currentPage, itemsPerPage, searchEmail],
     queryFn: async ({ queryKey }) => {
-      const [_, page, limit, email] = queryKey;
+      const basePath = queryKey[0] as string;
+      const page = queryKey[1] as number;
+      const limit = queryKey[2] as number;
+      const email = queryKey[3] as string;
+      
       const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
+        page: String(page),
+        limit: String(limit),
       });
       
       if (email) {
-        params.append('email', email.toString());
+        params.append('email', email);
       }
       
-      const res = await fetch(`/api/admin/users?${params.toString()}`, {
+      const res = await fetch(`${basePath}?${params.toString()}`, {
         credentials: "include"
       });
       
@@ -82,7 +88,7 @@ export default function UserManagement() {
       });
       setIsOpen(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to grant admin privileges: ${error.message}`,
@@ -105,7 +111,7 @@ export default function UserManagement() {
       });
       setIsOpen(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to revoke admin privileges: ${error.message}`,
@@ -227,6 +233,72 @@ export default function UserManagement() {
               )}
             </TableBody>
           </Table>
+          
+          {/* Pagination Controls */}
+          {usersResponse && usersResponse.pagination && (
+            <div className="flex items-center justify-between py-4 px-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="itemsPerPage">Show</Label>
+                <Select
+                  value={itemsPerPage.toString()}
+                  onValueChange={(value) => setItemsPerPage(Number(value))}
+                >
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue placeholder={itemsPerPage.toString()} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  of {usersResponse.pagination.totalCount} entries
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <span className="mx-2 text-sm">
+                  Page {currentPage} of {usersResponse.pagination.totalPages}
+                </span>
+                
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === usersResponse.pagination.totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(usersResponse.pagination.totalPages)}
+                  disabled={currentPage === usersResponse.pagination.totalPages}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

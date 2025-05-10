@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, PaginationProps } from "@/components/admin/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -62,16 +55,28 @@ export default function ProductManagement() {
     isTrending: false,
   });
   const [tagInput, setTagInput] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch products
-  const { data: products, isLoading } = useQuery({
-    queryKey: ["/api/admin/products"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/products", {
+  // Fetch products with pagination
+  const { data: productsResponse, isLoading } = useQuery({
+    queryKey: ["/api/admin/products", currentPage, itemsPerPage],
+    queryFn: async ({ queryKey }) => {
+      const basePath = queryKey[0] as string;
+      const page = queryKey[1] as number;
+      const limit = queryKey[2] as number;
+      
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit)
+      });
+      
+      const res = await fetch(`${basePath}?${params.toString()}`, {
         credentials: "include"
       });
+      
       if (!res.ok) throw new Error("Failed to fetch products");
-      return await res.json() as Product[];
+      return await res.json();
     },
   });
   
