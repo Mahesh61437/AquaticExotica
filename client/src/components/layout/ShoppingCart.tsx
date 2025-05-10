@@ -112,14 +112,13 @@ export function ShoppingCart() {
                       <Link href="/checkout">Checkout Now</Link>
                     </Button>
                   </SheetClose>
-                  <SheetClose asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full"
-                    >
-                      Continue Shopping
-                    </Button>
-                  </SheetClose>
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={() => setIsCartOpen(false)}
+                  >
+                    Continue Shopping
+                  </Button>
                 </div>
               </div>
             </div>

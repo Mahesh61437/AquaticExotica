@@ -49,21 +49,27 @@ export default function Login() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setLoading(true);
-      await signIn(data.email, data.password);
+      const user = await signIn(data.email, data.password);
       
-      // Check if user was coming from checkout
-      if (fromCheckout) {
-        // Clear the flag
-        sessionStorage.removeItem('returnToCheckout');
-        // Redirect back to checkout page after login
-        toast({
-          title: "Logged in successfully",
-          description: "Redirecting to checkout...",
-        });
-        setLocation("/checkout");
-      } else {
-        // Otherwise, redirect to homepage
-        setLocation("/");
+      if (user) {
+        // Check if user was coming from checkout
+        if (fromCheckout) {
+          // Clear the flag
+          sessionStorage.removeItem('returnToCheckout');
+          // Redirect back to checkout page after login
+          toast({
+            title: "Logged in successfully",
+            description: "Redirecting to checkout...",
+          });
+          setLocation("/checkout");
+        } else {
+          // Otherwise, redirect to homepage
+          toast({
+            title: "Logged in successfully",
+            description: "Welcome back!",
+          });
+          setLocation("/");
+        }
       }
     } catch (error: any) {
       console.error("Sign in error:", error);
