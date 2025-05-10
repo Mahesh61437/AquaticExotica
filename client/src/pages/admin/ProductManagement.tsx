@@ -40,6 +40,7 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url'>('upload');
   const [formData, setFormData] = useState<Partial<InsertProduct>>({
     name: "",
     description: "",
@@ -296,6 +297,7 @@ export default function ProductManagement() {
     });
     setEditingProduct(null);
     setTagInput("");
+    setImageSourceType('upload');
   };
 
   const handleAddTag = () => {
@@ -547,8 +549,11 @@ export default function ProductManagement() {
                     <select 
                       id="imageType"
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      value={formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? 'url' : 'upload'}
+                      value={imageSourceType}
                       onChange={(e) => {
+                        // Set the image source type
+                        setImageSourceType(e.target.value as 'upload' | 'url');
+                        
                         // Create a default empty URL if switching to URL mode
                         if (e.target.value === 'url') {
                           setFormData({ ...formData, imageUrl: "" });
@@ -560,8 +565,7 @@ export default function ProductManagement() {
                     </select>
                   </div>
                   
-                  {(formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) || 
-                   (document.getElementById('imageType') as HTMLSelectElement)?.value === 'url' ? (
+                  {(imageSourceType === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage'))) ? (
                     <div className="space-y-2">
                       <Label htmlFor="imageUrl">Image URL</Label>
                       <Input

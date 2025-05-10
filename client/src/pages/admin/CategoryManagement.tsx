@@ -23,6 +23,7 @@ export default function CategoryManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url'>('upload');
   const [formData, setFormData] = useState<Partial<InsertCategory>>({
     name: "",
     slug: "",
@@ -400,8 +401,7 @@ export default function CategoryManagement() {
                   </select>
                 </div>
                 
-                {(formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) || 
-                 (document.getElementById('categoryImageType') as HTMLSelectElement)?.value === 'url' ? (
+                {document.getElementById('categoryImageType')?.value === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) ? (
                   <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL</Label>
                     <Input
