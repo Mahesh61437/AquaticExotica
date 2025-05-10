@@ -138,6 +138,8 @@ export function CheckoutForm() {
         // Get default address
         const defaultAddress = getDefaultAddress();
         if (defaultAddress) {
+          console.log("Default address found:", defaultAddress);
+          
           // Pre-fill form with default address
           form.setValue('firstName', defaultAddress.name.split(' ')[0] || '');
           form.setValue('lastName', defaultAddress.name.split(' ').slice(1).join(' ') || '');
@@ -148,6 +150,7 @@ export function CheckoutForm() {
           form.setValue('phone', defaultAddress.phone);
           
           // Set selected state to update city dropdown
+          setSelectedState(defaultAddress.state);
           setSelectedState(defaultAddress.state);
         }
       }
