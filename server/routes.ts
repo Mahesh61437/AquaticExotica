@@ -626,12 +626,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const page = parseInt(req.query.page as string) || 1; // Default to page 1
       const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const query = req.query.query as string || ''; // Search query
       const offset = (page - 1) * limit;
       
-      // Get total count and paginated products
-      const products = await storage.getAllProducts();
-      const totalCount = products.length;
-      const paginatedProducts = products.slice(offset, offset + limit);
+      // Get all products
+      const allProducts = await storage.getAllProducts();
+      
+      // Filter by search query if provided
+      const filteredProducts = query 
+        ? allProducts.filter(product => 
+            product.name.toLowerCase().includes(query.toLowerCase()) || 
+            product.description.toLowerCase().includes(query.toLowerCase()) ||
+            product.category.toLowerCase().includes(query.toLowerCase()) ||
+            (product.tags && product.tags.some(tag => 
+              tag.toLowerCase().includes(query.toLowerCase())
+            ))
+          )
+        : allProducts;
+      
+      // Total count after filtering
+      const totalCount = filteredProducts.length;
+      
+      // Apply pagination
+      const paginatedProducts = filteredProducts.slice(offset, offset + limit);
       
       res.json({
         data: paginatedProducts,

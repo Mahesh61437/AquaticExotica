@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DataTable, PaginationProps } from "@/components/admin/DataTable";
 import {
   Dialog,
@@ -57,19 +57,40 @@ export default function ProductManagement() {
   const [tagInput, setTagInput] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
-  // Fetch products with pagination
+  // Fetch products with pagination and search
   const { data: productsResponse, isLoading } = useQuery({
-    queryKey: ["/api/admin/products", currentPage, itemsPerPage],
+    queryKey: ["/api/admin/products", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
       const limit = queryKey[2] as number;
+      const query = queryKey[3] as string;
       
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit)
       });
+      
+      if (query) {
+        params.append('query', query);
+      }
       
       const res = await fetch(`${basePath}?${params.toString()}`, {
         credentials: "include"
@@ -313,6 +334,11 @@ export default function ProductManagement() {
       {productsResponse && (
         <DataTable 
           data={productsResponse.data || []}
+          searchField={{
+            placeholder: "Search products...",
+            value: searchQuery,
+            onChange: setSearchQuery
+          }}
           columns={[
             {
               header: "Image",
@@ -564,7 +590,7 @@ export default function ProductManagement() {
                   <div className="mt-2">
                     <p className="text-xs text-muted-foreground mb-1">Suggested tags (click to add):</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {uniqueTags.map((tag) => (
+                      {uniqueTags.map((tag: string) => (
                         <Badge 
                           key={tag} 
                           variant="outline" 

@@ -1,12 +1,5 @@
-import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useState, useEffect } from "react";
+import { DataTable, PaginationProps } from "@/components/admin/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -18,42 +11,83 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { Textarea } from "@/components/ui/textarea";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Category, InsertCategory } from "@shared/schema";
-import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 export default function CategoryManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [formData, setFormData] = useState<InsertCategory>({
+  const [formData, setFormData] = useState<Partial<InsertCategory>>({
     name: "",
     slug: "",
+    description: "",
     imageUrl: "",
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
-  // Fetch categories
-  const { data: categories, isLoading } = useQuery({
-    queryKey: ["/api/admin/categories"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/categories", {
-        method: "GET",
+  // Fetch categories with pagination and search
+  const { data: categoriesResponse, isLoading } = useQuery({
+    queryKey: ["/api/admin/categories", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryFn: async ({ queryKey }) => {
+      const basePath = queryKey[0] as string;
+      const page = queryKey[1] as number;
+      const limit = queryKey[2] as number;
+      const query = queryKey[3] as string;
+      
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit)
+      });
+      
+      if (query) {
+        params.append('query', query);
+      }
+      
+      const res = await fetch(`${basePath}?${params.toString()}`, {
         credentials: "include"
       });
-      return await res.json() as Category[];
+      
+      if (!res.ok) throw new Error("Failed to fetch categories");
+      return await res.json();
     },
   });
-
+  
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      return await apiRequest("/api/admin/categories", {
+      const res = await fetch("/api/admin/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to create category");
+      }
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -65,7 +99,7 @@ export default function CategoryManagement() {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to create category: ${error.message}`,
@@ -76,12 +110,18 @@ export default function CategoryManagement() {
 
   // Update category mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<Category> }) => {
-      return await apiRequest(`/api/admin/categories/${id}`, {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertCategory> }) => {
+      const res = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
+        body: JSON.stringify(data),
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update category");
+      }
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -93,7 +133,7 @@ export default function CategoryManagement() {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to update category: ${error.message}`,
@@ -105,10 +145,15 @@ export default function CategoryManagement() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest(`/api/admin/categories/${id}`, {
+      const res = await fetch(`/api/admin/categories/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete category");
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -118,7 +163,7 @@ export default function CategoryManagement() {
         description: "Category deleted successfully",
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to delete category: ${error.message}`,
@@ -132,13 +177,14 @@ export default function CategoryManagement() {
     setFormData({
       name: category.name,
       slug: category.slug,
+      description: category.description,
       imageUrl: category.imageUrl,
     });
     setIsOpen(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm("Are you sure you want to delete this category? This will NOT delete the products in this category.")) {
+    if (window.confirm("Are you sure you want to delete this category? This will also affect all products assigned to this category.")) {
       deleteMutation.mutate(id);
     }
   };
@@ -147,7 +193,7 @@ export default function CategoryManagement() {
     e.preventDefault();
     
     // Validate form data
-    if (!formData.name || !formData.slug || !formData.imageUrl) {
+    if (!formData.name || !formData.slug) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -159,7 +205,7 @@ export default function CategoryManagement() {
     if (editingCategory) {
       updateMutation.mutate({ id: editingCategory.id, data: formData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(formData as InsertCategory);
     }
   };
 
@@ -167,17 +213,33 @@ export default function CategoryManagement() {
     setFormData({
       name: "",
       slug: "",
+      description: "",
       imageUrl: "",
     });
     setEditingCategory(null);
   };
 
-  // Auto-generate slug from name
-  const generateSlug = (name: string) => {
-    return name.toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s_-]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+  const handleGenerateSlug = () => {
+    if (formData.name) {
+      const slug = formData.name
+        .toLowerCase()
+        .replace(/[^\w\s]/gi, '')
+        .replace(/\s+/g, '-');
+      
+      setFormData({
+        ...formData,
+        slug,
+      });
+    }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleLimitChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setCurrentPage(1); // Reset to first page when changing limit
   };
 
   return (
@@ -196,68 +258,82 @@ export default function CategoryManagement() {
         </Button>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Image</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Slug</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories && categories.length > 0 ? (
-                categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell>
-                      <img 
-                        src={category.imageUrl} 
-                        alt={category.name}
-                        className="h-12 w-12 object-cover rounded"
-                      />
-                    </TableCell>
-                    <TableCell className="font-medium">{category.name}</TableCell>
-                    <TableCell>{category.slug}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="h-9 w-9 p-0 md:h-8 md:w-8" 
-                          onClick={() => handleEdit(category)}
-                          aria-label={`Edit ${category.name}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="sm"
-                          className="h-9 w-9 p-0 md:h-8 md:w-8"
-                          onClick={() => handleDelete(category.id)}
-                          aria-label={`Delete ${category.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6">
-                    No categories found. Add your first category to get started.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {categoriesResponse && (
+        <DataTable 
+          data={categoriesResponse.data || []}
+          searchField={{
+            placeholder: "Search categories...",
+            value: searchQuery,
+            onChange: setSearchQuery
+          }}
+          columns={[
+            {
+              header: "Image",
+              accessor: (category: Category) => (
+                category.imageUrl ? (
+                  <img 
+                    src={category.imageUrl} 
+                    alt={category.name} 
+                    className="h-12 w-12 object-cover rounded" 
+                  />
+                ) : (
+                  <div className="h-12 w-12 bg-muted flex items-center justify-center rounded">
+                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                )
+              )
+            },
+            {
+              header: "Name",
+              accessor: "name",
+              className: "font-medium"
+            },
+            {
+              header: "Slug",
+              accessor: "slug"
+            },
+            {
+              header: "Description",
+              accessor: (category: Category) => (
+                <div className="max-w-md truncate">
+                  {category.description || "No description"}
+                </div>
+              )
+            },
+            {
+              header: "Actions",
+              accessor: (category: Category) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleEdit(category)}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    onClick={() => handleDelete(category.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+              className: "text-right"
+            }
+          ]}
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            totalCount: categoriesResponse.pagination?.totalCount || 0,
+            totalPages: categoriesResponse.pagination?.totalPages || 1
+          }}
+          isLoading={isLoading}
+          emptyMessage="No categories found. Add your first category to get started."
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
       )}
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -276,61 +352,58 @@ export default function CategoryManagement() {
               <Label htmlFor="name">Category Name *</Label>
               <Input
                 id="name"
-                value={formData.name}
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setFormData({ 
-                    ...formData, 
-                    name,
-                    // Auto-generate slug if not editing an existing category
-                    ...(editingCategory ? {} : { slug: generateSlug(name) })
-                  });
-                }}
+                value={formData.name || ""}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Category name"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="slug">Slug *</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="slug">Slug *</Label>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleGenerateSlug}
+                  className="text-xs py-1 px-2 h-7"
+                >
+                  Generate from Name
+                </Button>
+              </div>
               <Input
                 id="slug"
-                value={formData.slug}
+                value={formData.slug || ""}
                 onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                 placeholder="category-slug"
                 required
               />
-              <p className="text-sm text-muted-foreground">
-                The slug is used in URLs and should be unique
-              </p>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL *</Label>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description || ""}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Category description"
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="imageUrl">Image URL</Label>
               <Input
                 id="imageUrl"
-                value={formData.imageUrl}
+                value={formData.imageUrl || ""}
                 onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
                 placeholder="https://example.com/image.jpg"
-                required
               />
             </div>
             
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsOpen(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
