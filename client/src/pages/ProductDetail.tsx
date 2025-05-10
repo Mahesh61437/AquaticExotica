@@ -17,6 +17,7 @@ import { Product } from "@shared/schema";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import StockNotificationForm from "@/components/product/StockNotificationForm";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -223,22 +224,11 @@ export default function ProductDetail() {
                     <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                   </Button>
                 ) : (
-                  <div className="w-full space-y-3">
-                    <Button 
-                      className="w-full"
-                      variant="outline"
-                      onClick={() => {
-                        toast({
-                          title: "Notification Set",
-                          description: "We'll notify you when this item is back in stock.",
-                        });
-                      }}
-                    >
-                      <Package className="mr-2 h-5 w-5" /> Notify When Available
-                    </Button>
-                    <p className="text-sm text-center text-gray-500">
-                      You'll receive an email when this product is back in stock.
-                    </p>
+                  <div className="w-full">
+                    <StockNotificationForm 
+                      productId={product.id} 
+                      productName={product.name}
+                    />
                   </div>
                 )}
               </div>

@@ -1,19 +1,14 @@
 import sgMail from '@sendgrid/mail';
-import { Order } from '@shared/schema';
 import { log } from './vite';
+import { Order } from '@shared/schema';
 
 // Initialize SendGrid with API key
-if (process.env.SENDGRID_API_KEY) {
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("SENDGRID_API_KEY is not set in environment variables");
+} else {
   sgMail.setApiKey(process.env.SENDGRID_API_KEY);
   log('SendGrid initialized', 'email-service');
-} else {
-  log('WARNING: SendGrid API key not found. Email notifications will not be sent.', 'email-service');
 }
-
-// Define email sender address - Update with your verified sender
-const FROM_EMAIL = 'notifications@yourdomain.com';
-// Define admin email to receive notifications - Update with your admin email
-const ADMIN_EMAIL = 'admin@example.com';
 
 interface EmailOptions {
   to: string;
@@ -26,20 +21,21 @@ interface EmailOptions {
  * Send an email using SendGrid
  */
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    log('Email not sent: SendGrid API key not configured', 'email-service');
-    return false;
-  }
-
   try {
-    await sgMail.send({
+    if (!process.env.SENDGRID_API_KEY) {
+      console.error("Cannot send email: SENDGRID_API_KEY is not set");
+      return false;
+    }
+
+    const msg = {
       to: options.to,
-      from: FROM_EMAIL,
+      from: 'info@elegantclothing.in', // Replace with your verified sender
       subject: options.subject,
+      text: options.text || 'Please view this email in a modern email client that supports HTML',
       html: options.html,
-      text: options.text || '',
-    });
-    
+    };
+
+    await sgMail.send(msg);
     log(`Email sent to ${options.to}`, 'email-service');
     return true;
   } catch (error) {
@@ -52,90 +48,76 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
  * Notify admin about a new order
  */
 export async function sendOrderNotification(order: Order): Promise<boolean> {
-  // Format items for email
-  const itemsList = JSON.parse(order.items as unknown as string)
-    .map((item: any) => `
+  // Format order items for the email
+  const orderItemsHtml = order.items
+    .map(item => `
       <tr>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.name}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${item.price}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd;">${item.quantity}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${item.price * item.quantity}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${item.price.toFixed(2)}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹${(item.price * item.quantity).toFixed(2)}</td>
       </tr>
     `)
     .join('');
 
-  // Parse shipping address
-  const shippingAddress = JSON.parse(order.shippingAddress as unknown as string);
-  
-  // Create HTML email content
-  const html = `
+  // Format the address for display
+  const shippingAddress = order.shippingAddress ? 
+    `${order.shippingAddress.addressLine1}, 
+     ${order.shippingAddress.addressLine2 ? order.shippingAddress.addressLine2 + ', ' : ''}
+     ${order.shippingAddress.city}, ${order.shippingAddress.state}, 
+     ${order.shippingAddress.pinCode}` : 'Not provided';
+
+  const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1 style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">New Order Received!</h1>
+      <h2 style="color: #333; border-bottom: 2px solid #eeeeee; padding-bottom: 10px;">
+        New Order #${order.id}
+      </h2>
       
-      <div style="padding: 20px;">
-        <h2>Order #${order.id} Details</h2>
-        <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</p>
-        <p><strong>Total Amount:</strong> ₹${order.total}</p>
-        <p><strong>Customer:</strong> ${shippingAddress.firstName} ${shippingAddress.lastName}</p>
-        <p><strong>Email:</strong> ${shippingAddress.email}</p>
-        <p><strong>Phone:</strong> ${shippingAddress.phone}</p>
-        
-        <h3>Shipping Address</h3>
-        <p>
-          ${shippingAddress.address}<br>
-          ${shippingAddress.city}, ${shippingAddress.state}<br>
-          ${shippingAddress.zipCode}, ${shippingAddress.country}
-        </p>
-        
-        <h3>Order Items</h3>
-        <table style="width: 100%; border-collapse: collapse;">
-          <thead>
-            <tr style="background-color: #f8f9fa;">
-              <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
-              <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd;">Price</th>
-              <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd;">Quantity</th>
-              <th style="padding: 12px 8px; text-align: left; border-bottom: 2px solid #ddd;">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsList}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="3" style="padding: 12px 8px; text-align: right;"><strong>Total:</strong></td>
-              <td style="padding: 12px 8px;"><strong>₹${order.total}</strong></td>
-            </tr>
-          </tfoot>
-        </table>
-        
-        <div style="margin-top: 30px; background-color: #f8f9fa; padding: 15px; border-radius: 5px;">
-          <p style="margin: 0;">Please check this order and contact the customer via WhatsApp to confirm stock availability.</p>
-        </div>
-      </div>
+      <p>A new order has been placed on Elegant Clothing.</p>
       
-      <div style="background-color: #4f46e5; color: white; padding: 15px; text-align: center;">
-        <p style="margin: 0;">© ${new Date().getFullYear()} Your Store Name. All rights reserved.</p>
-      </div>
+      <h3 style="color: #555;">Order Details:</h3>
+      <p><strong>Order ID:</strong> ${order.id}</p>
+      <p><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString('en-IN', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true
+      })}</p>
+      <p><strong>Customer:</strong> ${order.customerName}</p>
+      <p><strong>Email:</strong> ${order.customerEmail}</p>
+      <p><strong>Phone:</strong> ${order.customerPhone || 'Not provided'}</p>
+      <p><strong>Total Amount:</strong> ₹${order.totalAmount.toFixed(2)}</p>
+      
+      <h3 style="color: #555;">Shipping Address:</h3>
+      <p>${shippingAddress}</p>
+      
+      <h3 style="color: #555;">Order Items:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr style="background-color: #f5f5f5;">
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Product</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Quantity</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Price</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 2px solid #ddd;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${orderItemsHtml}
+        </tbody>
+      </table>
+      
+      <p style="margin-top: 30px; padding-top: 10px; border-top: 1px solid #eee;">
+        Please log in to the admin dashboard to process this order.
+      </p>
     </div>
   `;
 
-  // Simplified text version for email clients that don't support HTML
-  const text = `
-    New Order Received!
-    
-    Order #${order.id} Details
-    Date: ${new Date(order.createdAt).toLocaleString()}
-    Total Amount: ₹${order.total}
-    Customer: ${shippingAddress.firstName} ${shippingAddress.lastName}
-    
-    Please log in to your admin dashboard to see full details.
-  `;
-
   return sendEmail({
-    to: ADMIN_EMAIL,
-    subject: `New Order #${order.id} Received`,
-    html,
-    text,
+    to: 'admin@elegantclothing.in', // Change to the actual admin email
+    subject: `New Order #${order.id} - Elegant Clothing`,
+    html: emailHtml
   });
 }
 
@@ -143,45 +125,34 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
  * Send notification about stock update to customers
  */
 export async function sendStockNotification(email: string, productName: string): Promise<boolean> {
-  const html = `
+  const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1 style="background-color: #4f46e5; color: white; padding: 20px; text-align: center;">Product Now Available!</h1>
+      <h2 style="color: #333; border-bottom: 2px solid #eeeeee; padding-bottom: 10px;">
+        Product Back in Stock!
+      </h2>
       
-      <div style="padding: 20px;">
-        <h2>Good News!</h2>
-        <p>We're happy to inform you that <strong>${productName}</strong> is now back in stock.</p>
-        <p>Visit our store to place your order before it's gone again!</p>
-        
-        <div style="margin: 30px 0; text-align: center;">
-          <a href="https://yourstore.com/product" style="background-color: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-            Shop Now
-          </a>
-        </div>
-        
-        <p>Thank you for your patience and continued interest in our products.</p>
+      <p>Good news! The product you were interested in is now back in stock:</p>
+      
+      <div style="background-color: #f9f9f9; border-radius: 5px; padding: 15px; margin: 20px 0;">
+        <h3 style="color: #333; margin-top: 0;">${productName}</h3>
+        <p>This item is now available for purchase on our website.</p>
       </div>
       
-      <div style="background-color: #4f46e5; color: white; padding: 15px; text-align: center;">
-        <p style="margin: 0;">© ${new Date().getFullYear()} Your Store Name. All rights reserved.</p>
-      </div>
+      <p>
+        <a href="https://elegantclothing.in" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+          Shop Now
+        </a>
+      </p>
+      
+      <p style="color: #777; font-size: 0.9em; margin-top: 30px;">
+        This is an automated notification. You received this email because you requested to be notified when this product became available again.
+      </p>
     </div>
-  `;
-
-  const text = `
-    Product Now Available!
-    
-    Good News!
-    We're happy to inform you that ${productName} is now back in stock.
-    
-    Visit our store to place your order before it's gone again!
-    
-    Thank you for your patience and continued interest in our products.
   `;
 
   return sendEmail({
     to: email,
-    subject: `${productName} Is Now Available!`,
-    html,
-    text,
+    subject: `${productName} is Back in Stock! - Elegant Clothing`,
+    html: emailHtml
   });
 }

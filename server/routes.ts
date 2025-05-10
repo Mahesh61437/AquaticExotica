@@ -846,6 +846,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock Notification Routes
+  
+  // Subscribe to stock notifications for a product
+  app.post("/api/stock-notifications/subscribe", async (req, res) => {
+    try {
+      const { email, productId, productName } = req.body;
+      
+      // Validate request
+      if (!email || !productId || !productName) {
+        return res.status(400).json({ 
+          message: "Missing required fields: email, productId, and productName are required" 
+        });
+      }
+      
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+      
+      const success = await subscribeToStockNotification(email, productId, productName);
+      
+      if (success) {
+        res.status(200).json({ 
+          message: "Successfully subscribed to stock notifications",
+          productId,
+          email
+        });
+      } else {
+        res.status(500).json({ message: "Failed to subscribe to stock notifications" });
+      }
+    } catch (error) {
+      console.error("Stock notification subscription error:", error);
+      res.status(500).json({ message: "An error occurred while processing your request" });
+    }
+  });
+  
+  // Admin route to mark a product as back in stock and notify subscribers
+  app.post("/api/stock-notifications/notify", isAdmin, async (req, res) => {
+    try {
+      const { productId, productName } = req.body;
+      
+      if (!productId || !productName) {
+        return res.status(400).json({ 
+          message: "Missing required fields: productId and productName are required" 
+        });
+      }
+      
+      const success = await notifyProductBackInStock(productId, productName);
+      
+      if (success) {
+        res.status(200).json({ 
+          message: "Successfully notified subscribers about product being back in stock",
+          productId
+        });
+      } else {
+        res.status(500).json({ 
+          message: "Failed to notify subscribers" 
+        });
+      }
+    } catch (error) {
+      console.error("Stock notification error:", error);
+      res.status(500).json({ message: "An error occurred while processing your request" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
