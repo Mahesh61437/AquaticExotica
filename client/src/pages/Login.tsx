@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -27,6 +27,16 @@ export default function Login() {
   const { signIn } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [fromCheckout, setFromCheckout] = useState(false);
+  
+  // Check if user was redirected from checkout page
+  useEffect(() => {
+    const returnToCheckout = sessionStorage.getItem('returnToCheckout');
+    if (returnToCheckout === 'true') {
+      setFromCheckout(true);
+      // Keep the flag in session storage until successful login
+    }
+  }, []);
   
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
