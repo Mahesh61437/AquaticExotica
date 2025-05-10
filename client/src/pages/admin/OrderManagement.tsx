@@ -1,12 +1,5 @@
-import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { useState, useEffect } from "react";
+import { DataTable, PaginationProps } from "@/components/admin/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -25,15 +18,15 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Loader2, Eye, PenLine } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
+import { useToast } from "@/hooks/use-toast";
 
 // Define order item type
 interface OrderItem {
@@ -55,18 +48,6 @@ interface Address {
   phone: string;
 }
 
-// Extend Order type with specific properties
-interface OrderWithDetails extends Order {
-  shippingAddress: Address;
-  items: OrderItem[];
-  paymentMethod: string;
-}
-import { Loader2, Eye } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { formatPrice } from "@/lib/utils";
-
-// Order status colors
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-300",
   processing: "bg-blue-100 text-blue-800 border-blue-300",
@@ -79,39 +60,84 @@ export default function OrderManagement() {
   const { toast } = useToast();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithDetails | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+  
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
 
-  // Fetch orders
-  const { data: orders, isLoading } = useQuery({
-    queryKey: ["/api/admin/orders"],
-    queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/orders", {
-        method: "GET"
+  // Fetch orders with pagination and search
+  const { data: ordersResponse, isLoading } = useQuery({
+    queryKey: ["/api/admin/orders", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryFn: async ({ queryKey }) => {
+      const basePath = queryKey[0] as string;
+      const page = queryKey[1] as number;
+      const limit = queryKey[2] as number;
+      const query = queryKey[3] as string;
+      
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit)
       });
-      return await res.json() as OrderWithDetails[];
+      
+      if (query) {
+        params.append('query', query);
+      }
+      
+      const res = await fetch(`${basePath}?${params.toString()}`, {
+        credentials: "include"
+      });
+      
+      if (!res.ok) throw new Error("Failed to fetch orders");
+      return await res.json();
     },
   });
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const res = await apiRequest("PATCH", `/api/admin/orders/${id}`, {
+      const res = await fetch(`/api/admin/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ status }),
+        credentials: "include"
       });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to update order status");
+      }
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+      // Invalidate query to refresh orders list
+      const queryKey = ["/api/admin/orders", currentPage, itemsPerPage, debouncedSearchQuery];
+      queryKey.forEach((_, index) => {
+        const partialKey = queryKey.slice(0, index + 1);
+        queryClient.invalidateQueries({ queryKey: partialKey });
+      });
+      
       toast({
-        title: "Success",
-        description: "Order status updated successfully",
+        title: "Status Updated",
+        description: "Order status has been updated successfully",
       });
       setIsStatusOpen(false);
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Error",
         description: `Failed to update order status: ${error.message}`,
@@ -120,12 +146,38 @@ export default function OrderManagement() {
     },
   });
 
-  const handleViewOrder = (order: OrderWithDetails) => {
+  const getStatusBadge = (status: string) => {
+    const colorClass = statusColors[status.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-300";
+    return (
+      <span className={`px-2 py-1 text-xs rounded-full border ${colorClass}`}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </span>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const handleViewOrder = (order: Order) => {
     setSelectedOrder(order);
     setIsViewOpen(true);
   };
 
-  const handleUpdateStatus = (order: OrderWithDetails) => {
+  const handleUpdateStatus = (order: Order) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
     setIsStatusOpen(true);
@@ -146,24 +198,13 @@ export default function OrderManagement() {
     updateStatusMutation.mutate({ id: selectedOrder.id, status: newStatus });
   };
 
-  const getStatusBadge = (status: string) => {
-    const colorClass = statusColors[status.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-300";
-    return (
-      <span className={`px-2 py-1 text-xs rounded-full border ${colorClass}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
-      </span>
-    );
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+  const handleLimitChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setCurrentPage(1); // Reset to first page when changing limit
   };
 
   return (
@@ -172,68 +213,81 @@ export default function OrderManagement() {
         <h2 className="text-2xl font-bold">Order Management</h2>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders && orders.length > 0 ? (
-                orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>#{order.id}</TableCell>
-                    <TableCell>{formatDate(order.createdAt)}</TableCell>
-                    <TableCell>
-                      {order.shippingAddress.name}
-                      <div className="text-xs text-muted-foreground">
-                        {order.userId ? `User ID: ${order.userId}` : "Guest checkout"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatPrice(order.total)}</TableCell>
-                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewOrder(order)}
-                      >
-                        <Eye className="mr-1 h-4 w-4" /> View
-                      </Button>
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={() => handleUpdateStatus(order)}
-                      >
-                        Update Status
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
-                    No orders found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
+      {ordersResponse && (
+        <DataTable 
+          data={ordersResponse.data || []}
+          searchField={{
+            placeholder: "Search orders...",
+            value: searchQuery,
+            onChange: setSearchQuery
+          }}
+          columns={[
+            {
+              header: "Order ID",
+              accessor: (order: Order) => (
+                <span className="font-medium">#{order.id}</span>
+              )
+            },
+            {
+              header: "Customer",
+              accessor: (order: Order) => (
+                <div>
+                  <p className="font-medium">{order.customer_name || "N/A"}</p>
+                  <p className="text-sm text-muted-foreground">{order.customer_email || "No email"}</p>
+                </div>
+              )
+            },
+            {
+              header: "Date",
+              accessor: (order: Order) => formatDate(order.createdAt)
+            },
+            {
+              header: "Total",
+              accessor: (order: Order) => formatCurrency(Number(order.total) || 0)
+            },
+            {
+              header: "Status",
+              accessor: (order: Order) => getStatusBadge(order.status)
+            },
+            {
+              header: "Actions",
+              accessor: (order: Order) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleViewOrder(order)}
+                    title="View Order"
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleUpdateStatus(order)}
+                    title="Update Status"
+                  >
+                    <PenLine className="h-4 w-4" />
+                  </Button>
+                </div>
+              ),
+              className: "text-right"
+            }
+          ]}
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            totalCount: ordersResponse.pagination.totalCount,
+            totalPages: ordersResponse.pagination.totalPages
+          }}
+          isLoading={isLoading}
+          emptyMessage="No orders found."
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
       )}
 
-      {/* Order Details Dialog */}
+      {/* View Order Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -243,109 +297,102 @@ export default function OrderManagement() {
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Shipping Details</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {selectedOrder && (
-                    <address className="not-italic">
-                      <p className="font-medium">{selectedOrder.shippingAddress.name}</p>
-                      <p>{selectedOrder.shippingAddress.addressLine1}</p>
-                      {selectedOrder.shippingAddress.addressLine2 && (
-                        <p>{selectedOrder.shippingAddress.addressLine2}</p>
-                      )}
-                      <p>
-                        {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state}
-                      </p>
-                      <p>{selectedOrder.shippingAddress.pinCode}</p>
-                      <p className="mt-2">Phone: {selectedOrder.shippingAddress.phone}</p>
-                    </address>
-                  )}
-                </CardContent>
-              </Card>
+          {selectedOrder && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Customer Information</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      <p><span className="font-medium">Name:</span> {selectedOrder.customer_name || 'N/A'}</p>
+                      <p><span className="font-medium">Email:</span> {selectedOrder.customer_email || 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedOrder.customer_phone || 'N/A'}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Order Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1">
+                      <p><span className="font-medium">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
+                      <p><span className="font-medium">Total:</span> {formatCurrency(Number(selectedOrder.total) || 0)}</p>
+                      <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder.createdAt)}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Order Information</CardTitle>
+                  <CardTitle className="text-base">Order Items</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {selectedOrder && (
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span>{getStatusBadge(selectedOrder.status)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Payment Method:</span>
-                        <span>{selectedOrder.paymentMethod}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Total Amount:</span>
-                        <span className="font-medium">{formatPrice(selectedOrder.total)}</span>
-                      </div>
-                    </div>
-                  )}
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[400px] border-collapse">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left p-2">Product</th>
+                          <th className="text-right p-2">Price</th>
+                          <th className="text-right p-2">Quantity</th>
+                          <th className="text-right p-2">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {selectedOrder.items.map((item: any, index: number) => (
+                          <tr key={index} className="border-b">
+                            <td className="p-2 flex items-center gap-2">
+                              {item.imageUrl && (
+                                <img 
+                                  src={item.imageUrl} 
+                                  alt={item.name} 
+                                  className="w-10 h-10 object-cover rounded" 
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium">{item.name}</p>
+                                <p className="text-sm text-muted-foreground">ID: {item.id}</p>
+                              </div>
+                            </td>
+                            <td className="p-2 text-right">{formatCurrency(Number(item.price))}</td>
+                            <td className="p-2 text-right">{item.quantity}</td>
+                            <td className="p-2 text-right">{formatCurrency(Number(item.price) * item.quantity)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="font-medium">
+                          <td colSpan={3} className="p-2 text-right">Total:</td>
+                          <td className="p-2 text-right">{formatCurrency(Number(selectedOrder.total))}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </CardContent>
               </Card>
+              
+              <div className="flex justify-end gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsViewOpen(false)}
+                >
+                  Close
+                </Button>
+                <Button 
+                  onClick={() => {
+                    setIsViewOpen(false);
+                    handleUpdateStatus(selectedOrder);
+                  }}
+                >
+                  Update Status
+                </Button>
+              </div>
             </div>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Items</CardTitle>
-                <CardDescription>
-                  {selectedOrder?.items.length} item(s) in this order
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead className="text-right">Subtotal</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedOrder?.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <img 
-                              src={item.imageUrl} 
-                              alt={item.name}
-                              className="h-10 w-10 object-cover rounded"
-                            />
-                            <div>{item.name}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatPrice(item.price)}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell className="text-right">
-                          {formatPrice(parseFloat(item.price) * item.quantity)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-            
-            <DialogFooter>
-              <Button onClick={() => setIsViewOpen(false)}>
-                Close
-              </Button>
-              <Button onClick={() => {
-                setIsViewOpen(false);
-                handleUpdateStatus(selectedOrder!);
-              }}>
-                Update Status
-              </Button>
-            </DialogFooter>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
