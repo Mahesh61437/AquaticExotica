@@ -27,15 +27,45 @@ import { Badge } from "@/components/ui/badge";
 
 interface UserWithoutPassword extends Omit<User, 'password'> {}
 
+interface PaginatedResponse<T> {
+  data: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
 export default function UserManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
+  const [searchEmail, setSearchEmail] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Fetch users
-  const { data: users, isLoading } = useQuery<UserWithoutPassword[]>({
-    queryKey: ["/api/admin/users"],
-    queryFn: getQueryFn({ on401: "throw" }),
+  // Fetch users with pagination and search
+  const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<UserWithoutPassword>>({
+    queryKey: ["/api/admin/users", currentPage, itemsPerPage, searchEmail],
+    queryFn: async ({ queryKey }) => {
+      const [_, page, limit, email] = queryKey;
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+      
+      if (email) {
+        params.append('email', email.toString());
+      }
+      
+      const res = await fetch(`/api/admin/users?${params.toString()}`, {
+        credentials: "include"
+      });
+      
+      if (!res.ok) throw new Error("Failed to fetch users");
+      return await res.json();
+    },
   });
 
   // Update user admin status mutation - grant admin
@@ -108,10 +138,41 @@ export default function UserManagement() {
     }).format(d);
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchEmail(e.target.value);
+    setCurrentPage(1); // Reset to first page on new search
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
+
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold">User Management</h2>
+        
+        <div className="w-full md:w-auto flex items-center gap-2">
+          <div className="relative w-full md:w-64">
+            <Input 
+              type="text" 
+              placeholder="Search by email..."
+              value={searchEmail}
+              onChange={handleSearchChange}
+              className="pl-10"
+            />
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -132,8 +193,8 @@ export default function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users && users.length > 0 ? (
-                users.map((user) => (
+              {usersResponse && usersResponse.data.length > 0 ? (
+                usersResponse.data.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.fullName}</TableCell>
                     <TableCell>{user.email}</TableCell>

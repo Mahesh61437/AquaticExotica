@@ -711,8 +711,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Get all categories
   app.get("/api/admin/categories", isAdmin, async (req, res) => {
     try {
+      const page = parseInt(req.query.page as string) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const offset = (page - 1) * limit;
+      
+      // Get total count and paginated categories
       const categories = await storage.getAllCategories();
-      res.json(categories);
+      const totalCount = categories.length;
+      const paginatedCategories = categories.slice(offset, offset + limit);
+      
+      res.json({
+        data: paginatedCategories,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      });
     } catch (error) {
       console.error("Admin fetch categories error:", error);
       res.status(500).json({ message: "Failed to fetch categories" });
@@ -837,16 +853,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Get all users
   app.get("/api/admin/users", isAdmin, async (req, res) => {
     try {
-      // Add getAllUsers method to storage interface
-      const users = await storage.getAllUsers();
+      // Get query parameters
+      const page = parseInt(req.query.page as string) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const email = req.query.email as string || ''; // Search by email
+      const offset = (page - 1) * limit;
+      
+      // Get all users
+      const allUsers = await storage.getAllUsers();
+      
+      // Filter by email if provided
+      const filteredUsers = email 
+        ? allUsers.filter(user => user.email.toLowerCase().includes(email.toLowerCase()))
+        : allUsers;
+      
+      // Total count after filtering
+      const totalCount = filteredUsers.length;
+      
+      // Apply pagination
+      const paginatedUsers = filteredUsers.slice(offset, offset + limit);
       
       // Remove passwords from response
-      const usersWithoutPasswords = users.map(user => {
+      const usersWithoutPasswords = paginatedUsers.map(user => {
         const { password, ...userWithoutPassword } = user;
         return userWithoutPassword;
       });
       
-      res.json(usersWithoutPasswords);
+      res.json({
+        data: usersWithoutPasswords,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      });
     } catch (error) {
       console.error("Admin fetch users error:", error);
       res.status(500).json({ message: "Failed to fetch users" });
