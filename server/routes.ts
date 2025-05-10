@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema, insertCategorySchema } from "@shared/schema";
 import { z } from "zod";
 import { hash, compare } from "bcrypt";
+import { sendOrderNotification } from "./email-service";
+import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
 
 // Admin middleware
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -453,6 +455,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create the order in the database
       const order = await storage.createOrder(orderWithMetadata);
+      
+      // Send email notification to admin about the new order
+      try {
+        await sendOrderNotification(order);
+        console.log(`Order notification email sent for order #${order.id}`);
+      } catch (emailError) {
+        console.error("Failed to send order notification email:", emailError);
+        // Don't fail the order if email fails - just log the error
+      }
       
       res.status(201).json(order);
     } catch (error) {
