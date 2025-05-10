@@ -182,13 +182,17 @@ export default function CategoryManagement() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold">Category Management</h2>
-        <Button onClick={() => {
-          resetForm();
-          setIsOpen(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" /> Add Category
+        <Button 
+          onClick={() => {
+            resetForm();
+            setIsOpen(true);
+          }}
+          className="py-2 px-4 h-auto"
+          size="default"
+        >
+          <Plus className="mr-2 h-5 w-5" /> Add Category
         </Button>
       </div>
 
@@ -220,21 +224,27 @@ export default function CategoryManagement() {
                     </TableCell>
                     <TableCell className="font-medium">{category.name}</TableCell>
                     <TableCell>{category.slug}</TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        onClick={() => handleEdit(category)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="destructive" 
-                        size="icon"
-                        onClick={() => handleDelete(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="h-9 w-9 p-0 md:h-8 md:w-8" 
+                          onClick={() => handleEdit(category)}
+                          aria-label={`Edit ${category.name}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          size="sm"
+                          className="h-9 w-9 p-0 md:h-8 md:w-8"
+                          onClick={() => handleDelete(category.id)}
+                          aria-label={`Delete ${category.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

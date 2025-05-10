@@ -59,7 +59,8 @@ export function Header() {
             {/* Search Toggle */}
             <button 
               onClick={() => setIsSearchOpen(!isSearchOpen)} 
-              className="text-gray-600 hover:text-primary transition"
+              className="text-gray-600 hover:text-primary transition p-2"
+              aria-label="Search"
             >
               <Search size={20} />
             </button>
@@ -67,7 +68,7 @@ export function Header() {
             {/* User Account */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="text-gray-600 hover:text-primary transition">
+                <button className="text-gray-600 hover:text-primary transition p-2" aria-label="User account">
                   {currentUser ? (
                     <div className="relative">
                       <User size={20} />
@@ -127,11 +128,12 @@ export function Header() {
             {/* Shopping Cart */}
             <button 
               onClick={() => setIsCartOpen(true)} 
-              className="relative text-gray-600 hover:text-primary transition"
+              className="relative text-gray-600 hover:text-primary transition p-2"
+              aria-label="Shopping cart"
             >
               <ShoppingBag size={20} />
               {cart.count > 0 && (
-                <span className="absolute -top-2 -right-2 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {cart.count}
                 </span>
               )}
@@ -140,7 +142,7 @@ export function Header() {
             {/* Mobile Menu Toggle */}
             <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
               <SheetTrigger asChild>
-                <button className="text-gray-600 md:hidden">
+                <button className="text-gray-600 md:hidden p-2" aria-label="Menu">
                   <Menu size={24} />
                 </button>
               </SheetTrigger>

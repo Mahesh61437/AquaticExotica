@@ -246,13 +246,17 @@ export default function ProductManagement() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold">Product Management</h2>
-        <Button onClick={() => {
-          resetForm();
-          setIsOpen(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" /> Add Product
+        <Button 
+          onClick={() => {
+            resetForm();
+            setIsOpen(true);
+          }}
+          className="py-2 px-4 h-auto"
+          size="default"
+        >
+          <Plus className="mr-2 h-5 w-5" /> Add Product
         </Button>
       </div>
 
