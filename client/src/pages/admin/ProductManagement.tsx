@@ -256,14 +256,19 @@ export default function ProductManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data
-    if (!formData.name || !formData.description || !formData.price || !formData.imageUrl || !formData.category) {
+    // Validate form data - image is now optional
+    if (!formData.name || !formData.description || !formData.price || !formData.category) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
+    }
+    
+    // Set default placeholder image if no image was uploaded
+    if (!formData.imageUrl) {
+      formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
     }
 
     if (editingProduct) {

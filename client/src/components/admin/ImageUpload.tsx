@@ -1,4 +1,4 @@
-import { useState, useRef, ChangeEvent } from "react";
+import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -66,9 +66,16 @@ export function ImageUpload({
 
     const onError: UploadErrorCallback = (error) => {
       setUploading(false);
+      console.error("Upload error:", error);
+      
+      // Set a placeholder image and continue with the form
+      const placeholderUrl = `https://placehold.co/600x800/e6e6e6/999999?text=No+Image`;
+      setImageUrl(placeholderUrl);
+      onImageUploaded(placeholderUrl);
+      
       toast({
-        title: "Upload failed",
-        description: error.message,
+        title: "Upload failed - Using placeholder",
+        description: "We'll use a placeholder image instead. You can try again or continue with the form.",
         variant: "destructive",
       });
     };
@@ -83,7 +90,24 @@ export function ImageUpload({
       });
     };
 
-    uploadImage(file, folder, onProgress, onError, onSuccess);
+    try {
+      uploadImage(file, folder, onProgress, onError, onSuccess);
+    } catch (error) {
+      // Fallback to placeholder if upload fails completely
+      console.error("Upload exception:", error);
+      setUploading(false);
+      
+      // Set a placeholder image and continue with the form
+      const placeholderUrl = `https://placehold.co/600x800/e6e6e6/999999?text=No+Image`;
+      setImageUrl(placeholderUrl);
+      onImageUploaded(placeholderUrl);
+      
+      toast({
+        title: "Upload failed - Using placeholder",
+        description: "We'll use a placeholder image instead. You can continue with the form.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleRemoveImage = () => {

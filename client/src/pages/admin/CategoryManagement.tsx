@@ -191,7 +191,7 @@ export default function CategoryManagement() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate form data
+    // Validate form data - image is now optional
     if (!formData.name || !formData.slug) {
       toast({
         title: "Error",
@@ -199,6 +199,11 @@ export default function CategoryManagement() {
         variant: "destructive",
       });
       return;
+    }
+    
+    // Set default placeholder image if no image was uploaded
+    if (!formData.imageUrl) {
+      formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=Category";
     }
 
     if (editingCategory) {
