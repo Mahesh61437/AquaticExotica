@@ -3,12 +3,21 @@ import {
   ref, 
   uploadBytesResumable, 
   getDownloadURL,
-  deleteObject
+  deleteObject,
+  FirebaseStorage
 } from "firebase/storage";
 import app from "@/lib/firebase";
+import { FirebaseApp } from "firebase/app";
 
 // Initialize Firebase Storage
-const storage = getStorage(app);
+const firebase = app as FirebaseApp;
+let storage: FirebaseStorage;
+try {
+  storage = getStorage(firebase);
+} catch (error) {
+  console.error("Error initializing Firebase Storage:", error);
+  throw new Error("Failed to initialize Firebase Storage");
+}
 
 /**
  * Type definitions for image upload
