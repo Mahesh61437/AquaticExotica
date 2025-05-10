@@ -4,12 +4,30 @@ import { User } from '@shared/schema';
 // Utility function to get a user by their ID
 export async function getUserByIdViaSQL(id: number): Promise<User | null> {
   try {
-    // Use direct string-based query without parameter placeholders
-    const query = `
-      SELECT id, username, email, password, full_name, created_at
-      FROM users 
-      WHERE id = ${id}
-    `;
+    // First check if the is_admin column exists
+    const columnsResult = await db.execute(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'is_admin'
+    `);
+    
+    const hasIsAdminColumn = columnsResult.rows && columnsResult.rows.length > 0;
+    
+    // Build the query based on whether is_admin column exists
+    let query;
+    if (hasIsAdminColumn) {
+      query = `
+        SELECT id, username, email, password, full_name, is_admin, created_at
+        FROM users 
+        WHERE id = ${id}
+      `;
+    } else {
+      query = `
+        SELECT id, username, email, password, full_name, created_at
+        FROM users 
+        WHERE id = ${id}
+      `;
+    }
     
     const result = await db.execute(query);
     
@@ -18,38 +36,17 @@ export async function getUserByIdViaSQL(id: number): Promise<User | null> {
     }
     
     // Type casting the database result
-    const user: {
-      id: number;
-      username: string;
-      email: string;
-      password: string;
-      full_name: string;
-      created_at: Date;
-    } = result.rows[0] as any;
-    
-    // Try to get is_admin separately
-    let isAdmin = false;
-    try {
-      const adminQuery = `SELECT is_admin FROM users WHERE id = ${user.id}`;
-      const adminResult = await db.execute(adminQuery);
-      
-      if (adminResult.rows && adminResult.rows.length > 0) {
-        isAdmin = (adminResult.rows[0] as any).is_admin === true;
-      }
-    } catch (e) {
-      console.log('Could not retrieve is_admin field, defaulting to false');
-      // Continue even if this fails - we can default isAdmin to false
-    }
+    const dbUser = result.rows[0] as any;
     
     // Transform the database fields to the application format
     return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      password: user.password,
-      fullName: user.full_name,
-      createdAt: user.created_at,
-      isAdmin: isAdmin
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name,
+      createdAt: dbUser.created_at,
+      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
     };
   } catch (error) {
     console.error('Error getting user by ID via SQL:', error);
@@ -66,12 +63,30 @@ export async function createUserViaSQL(
   isAdmin: boolean = false
 ): Promise<User | null> {
   try {
-    // Use a simpler approach with a direct string-based query without parameter placeholders
-    const insertQuery = `
-      INSERT INTO users (username, email, password, full_name)
-      VALUES ('${username}', '${email}', '${password}', '${fullName}')
-      RETURNING id, username, email, password, full_name, created_at
-    `;
+    // First check if the is_admin column exists
+    const columnsResult = await db.execute(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'is_admin'
+    `);
+    
+    const hasIsAdminColumn = columnsResult.rows && columnsResult.rows.length > 0;
+    
+    // Prepare the insert query based on whether is_admin column exists
+    let insertQuery;
+    if (hasIsAdminColumn) {
+      insertQuery = `
+        INSERT INTO users (username, email, password, full_name, is_admin)
+        VALUES ('${username}', '${email}', '${password}', '${fullName}', ${isAdmin ? 'TRUE' : 'FALSE'})
+        RETURNING id, username, email, password, full_name, is_admin, created_at
+      `;
+    } else {
+      insertQuery = `
+        INSERT INTO users (username, email, password, full_name)
+        VALUES ('${username}', '${email}', '${password}', '${fullName}')
+        RETURNING id, username, email, password, full_name, created_at
+      `;
+    }
     
     const insertResult = await db.execute(insertQuery);
     
@@ -80,29 +95,7 @@ export async function createUserViaSQL(
     }
     
     // Type casting the database result
-    const dbUser: {
-      id: number;
-      username: string;
-      email: string;
-      password: string;
-      full_name: string;
-      created_at: Date;
-    } = insertResult.rows[0] as any;
-    
-    // If creation succeeded, try to update is_admin separately with a direct query
-    try {
-      const isAdminValue = isAdmin ? 'TRUE' : 'FALSE';
-      const updateQuery = `
-        UPDATE users 
-        SET is_admin = ${isAdminValue}
-        WHERE id = ${dbUser.id}
-      `;
-      
-      await db.execute(updateQuery);
-    } catch (updateError) {
-      console.log('Note: Could not set is_admin field, but user was created successfully.', updateError);
-      // Continue even if this fails - we created the user successfully
-    }
+    const dbUser = insertResult.rows[0] as any;
     
     // Transform the database fields to the application format
     return {
@@ -112,7 +105,7 @@ export async function createUserViaSQL(
       password: dbUser.password,
       fullName: dbUser.full_name,
       createdAt: dbUser.created_at,
-      isAdmin: isAdmin // Use the passed in value since we may not be able to read it from DB
+      isAdmin: hasIsAdminColumn ? dbUser.is_admin : isAdmin // Use DB value if column exists, otherwise use passed value
     };
   } catch (error) {
     console.error('Error creating user via SQL:', error);
@@ -123,12 +116,30 @@ export async function createUserViaSQL(
 // Utility function to get a user by their username
 export async function getUserByUsernameViaSQL(username: string): Promise<User | null> {
   try {
-    // Use direct string-based query without parameter placeholders
-    const query = `
-      SELECT id, username, email, password, full_name, created_at
-      FROM users 
-      WHERE username = '${username}'
-    `;
+    // First check if the is_admin column exists
+    const columnsResult = await db.execute(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'is_admin'
+    `);
+    
+    const hasIsAdminColumn = columnsResult.rows && columnsResult.rows.length > 0;
+    
+    // Build the query based on whether is_admin column exists
+    let query;
+    if (hasIsAdminColumn) {
+      query = `
+        SELECT id, username, email, password, full_name, is_admin, created_at
+        FROM users 
+        WHERE username = '${username}'
+      `;
+    } else {
+      query = `
+        SELECT id, username, email, password, full_name, created_at
+        FROM users 
+        WHERE username = '${username}'
+      `;
+    }
     
     const result = await db.execute(query);
     
@@ -137,38 +148,17 @@ export async function getUserByUsernameViaSQL(username: string): Promise<User | 
     }
     
     // Type casting the database result
-    const user: {
-      id: number;
-      username: string;
-      email: string;
-      password: string;
-      full_name: string;
-      created_at: Date;
-    } = result.rows[0] as any;
-    
-    // Try to get is_admin separately
-    let isAdmin = false;
-    try {
-      const adminQuery = `SELECT is_admin FROM users WHERE id = ${user.id}`;
-      const adminResult = await db.execute(adminQuery);
-      
-      if (adminResult.rows && adminResult.rows.length > 0) {
-        isAdmin = (adminResult.rows[0] as any).is_admin === true;
-      }
-    } catch (e) {
-      console.log('Could not retrieve is_admin field, defaulting to false');
-      // Continue even if this fails - we can default isAdmin to false
-    }
+    const dbUser = result.rows[0] as any;
     
     // Transform the database fields to the application format
     return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      password: user.password,
-      fullName: user.full_name,
-      createdAt: user.created_at,
-      isAdmin: isAdmin
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name,
+      createdAt: dbUser.created_at,
+      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
     };
   } catch (error) {
     console.error('Error getting user by username via SQL:', error);
@@ -179,12 +169,30 @@ export async function getUserByUsernameViaSQL(username: string): Promise<User | 
 // Utility function to get a user by their email
 export async function getUserByEmailViaSQL(email: string): Promise<User | null> {
   try {
-    // Use direct string-based query without parameter placeholders
-    const query = `
-      SELECT id, username, email, password, full_name, created_at
-      FROM users 
-      WHERE email = '${email}'
-    `;
+    // First check if the is_admin column exists
+    const columnsResult = await db.execute(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'is_admin'
+    `);
+    
+    const hasIsAdminColumn = columnsResult.rows && columnsResult.rows.length > 0;
+    
+    // Build the query based on whether is_admin column exists
+    let query;
+    if (hasIsAdminColumn) {
+      query = `
+        SELECT id, username, email, password, full_name, is_admin, created_at
+        FROM users 
+        WHERE email = '${email}'
+      `;
+    } else {
+      query = `
+        SELECT id, username, email, password, full_name, created_at
+        FROM users 
+        WHERE email = '${email}'
+      `;
+    }
     
     const result = await db.execute(query);
     
@@ -193,38 +201,17 @@ export async function getUserByEmailViaSQL(email: string): Promise<User | null> 
     }
     
     // Type casting the database result
-    const user: {
-      id: number;
-      username: string;
-      email: string;
-      password: string;
-      full_name: string;
-      created_at: Date;
-    } = result.rows[0] as any;
-    
-    // Try to get is_admin separately
-    let isAdmin = false;
-    try {
-      const adminQuery = `SELECT is_admin FROM users WHERE id = ${user.id}`;
-      const adminResult = await db.execute(adminQuery);
-      
-      if (adminResult.rows && adminResult.rows.length > 0) {
-        isAdmin = (adminResult.rows[0] as any).is_admin === true;
-      }
-    } catch (e) {
-      console.log('Could not retrieve is_admin field, defaulting to false');
-      // Continue even if this fails - we can default isAdmin to false
-    }
+    const dbUser = result.rows[0] as any;
     
     // Transform the database fields to the application format
     return {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      password: user.password,
-      fullName: user.full_name,
-      createdAt: user.created_at,
-      isAdmin: isAdmin
+      id: dbUser.id,
+      username: dbUser.username,
+      email: dbUser.email,
+      password: dbUser.password,
+      fullName: dbUser.full_name,
+      createdAt: dbUser.created_at,
+      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
     };
   } catch (error) {
     console.error('Error getting user by email via SQL:', error);

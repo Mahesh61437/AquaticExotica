@@ -74,9 +74,15 @@ app.use((req, res, next) => {
     console.log("Database schema migration completed successfully");
     
     // Then run the standard database migration
+    console.log("Running database schema migration...");
     const { runMigration } = await import("./db-migrate");
     await runMigration();
     console.log("Database migration completed");
+    
+    // Run schema fix again to ensure is_admin column is created
+    // This is because runMigration may reset the schema based on the models
+    await fixSchema();
+    console.log("Schema verification completed");
     
     // Finally initialize with demo data
     console.log("Initializing database with demo data...");
