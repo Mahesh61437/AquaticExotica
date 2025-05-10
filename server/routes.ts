@@ -621,11 +621,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ADMIN ROUTES
   // These routes are protected by the isAdmin middleware
   
-  // Admin: Get all products (with optional filters)
+  // Admin: Get all products with pagination
   app.get("/api/admin/products", isAdmin, async (req, res) => {
     try {
+      const page = parseInt(req.query.page as string) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const offset = (page - 1) * limit;
+      
+      // Get total count and paginated products
       const products = await storage.getAllProducts();
-      res.json(products);
+      const totalCount = products.length;
+      const paginatedProducts = products.slice(offset, offset + limit);
+      
+      res.json({
+        data: paginatedProducts,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      });
     } catch (error) {
       console.error("Admin fetch products error:", error);
       res.status(500).json({ message: "Failed to fetch products" });
@@ -763,12 +779,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all orders
+  // Admin: Get all orders with pagination
   app.get("/api/admin/orders", isAdmin, async (req, res) => {
     try {
-      // Add getAllOrders method to storage interface
+      const page = parseInt(req.query.page as string) || 1; // Default to page 1
+      const limit = parseInt(req.query.limit as string) || 10; // Default to 10 items per page
+      const offset = (page - 1) * limit;
+      
+      // Get total count and paginated orders
       const orders = await storage.getAllOrders();
-      res.json(orders);
+      const totalCount = orders.length;
+      const paginatedOrders = orders.slice(offset, offset + limit);
+      
+      res.json({
+        data: paginatedOrders,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit)
+        }
+      });
     } catch (error) {
       console.error("Admin fetch orders error:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
