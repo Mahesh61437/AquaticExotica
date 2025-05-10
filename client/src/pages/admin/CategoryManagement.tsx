@@ -375,12 +375,12 @@ export default function CategoryManagement() {
 
             
             <div className="space-y-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                value={formData.imageUrl || ""}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+              <Label>Category Image</Label>
+              <ImageUpload 
+                initialImage={formData.imageUrl}
+                onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
+                onImageRemoved={() => setFormData({ ...formData, imageUrl: "" })}
+                folder="categories"
               />
             </div>
             

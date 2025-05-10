@@ -91,7 +91,8 @@ export async function deleteImage(url: string | undefined): Promise<void> {
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
     const projectId = app.options.projectId;
     
-    if (!url.includes(baseUrl) || !url.includes(projectId)) {
+    // We've already checked url is not undefined above, but TypeScript needs reassurance
+    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(projectId)) {
       throw new Error('Invalid Firebase Storage URL');
     }
     
@@ -129,7 +130,8 @@ export function getStorageRefFromUrl(url: string | undefined): ReturnType<typeof
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
     const projectId = app.options.projectId;
     
-    if (!url.includes(baseUrl) || !url.includes(projectId)) {
+    // We've already checked url is not undefined above, but TypeScript needs reassurance
+    if (typeof url !== 'string' || !url.includes(baseUrl) || !url.includes(projectId)) {
       return null;
     }
     
