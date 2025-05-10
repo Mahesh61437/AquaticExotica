@@ -28,6 +28,7 @@ import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
+import { StockNotifier } from "@/components/admin/StockNotifier";
 
 export default function ProductManagement() {
   const { toast } = useToast();
@@ -54,22 +55,18 @@ export default function ProductManagement() {
   const { data: products, isLoading } = useQuery({
     queryKey: ["/api/admin/products"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/products", {
-        method: "GET"
-      });
-      return await res.json() as Product[];
+      return await apiRequest<Product[]>("/api/admin/products");
     },
   });
 
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertProduct) => {
-      const res = await apiRequest("POST", "/api/admin/products", {
+      return await apiRequest("/api/admin/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
-      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
@@ -531,6 +528,19 @@ export default function ProductManagement() {
               </Button>
             </DialogFooter>
           </form>
+          
+          {/* Add stock notifier component when editing a product */}
+          {editingProduct && editingProduct.stock > 0 && (
+            <div className="mt-6 border-t pt-6">
+              <StockNotifier 
+                product={editingProduct}
+                onSuccess={() => {
+                  queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                }}
+              />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
