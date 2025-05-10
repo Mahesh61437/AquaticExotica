@@ -180,6 +180,14 @@ export default function CategoryManagement() {
       slug: category.slug,
       imageUrl: category.imageUrl,
     });
+    
+    // Set the image source type based on the URL
+    if (category.imageUrl?.startsWith('http') && !category.imageUrl?.includes('firebasestorage')) {
+      setImageSourceType('url');
+    } else {
+      setImageSourceType('upload');
+    }
+    
     setIsOpen(true);
   };
 
@@ -221,6 +229,7 @@ export default function CategoryManagement() {
       imageUrl: "",
     });
     setEditingCategory(null);
+    setImageSourceType('upload');
   };
 
   const handleGenerateSlug = () => {
@@ -388,8 +397,11 @@ export default function CategoryManagement() {
                   <select 
                     id="categoryImageType"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? 'url' : 'upload'}
+                    value={imageSourceType}
                     onChange={(e) => {
+                      // Set the image source type
+                      setImageSourceType(e.target.value as 'upload' | 'url');
+                      
                       // Create a default empty URL if switching to URL mode
                       if (e.target.value === 'url') {
                         setFormData({ ...formData, imageUrl: "" });
@@ -401,7 +413,7 @@ export default function CategoryManagement() {
                   </select>
                 </div>
                 
-                {document.getElementById('categoryImageType')?.value === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) ? (
+                {(imageSourceType === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage'))) ? (
                   <div className="space-y-2">
                     <Label htmlFor="imageUrl">Image URL</Label>
                     <Input

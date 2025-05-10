@@ -245,6 +245,14 @@ export default function ProductManagement() {
       isFeatured: product.isFeatured,
       isTrending: product.isTrending,
     });
+    
+    // Set the image source type based on the URL
+    if (product.imageUrl?.startsWith('http') && !product.imageUrl?.includes('firebasestorage')) {
+      setImageSourceType('url');
+    } else {
+      setImageSourceType('upload');
+    }
+    
     setIsOpen(true);
   };
 
