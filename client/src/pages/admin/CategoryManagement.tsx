@@ -18,12 +18,13 @@ import { Loader2, Plus, Edit, Trash2, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
 
 export default function CategoryManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url'>('upload');
+  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url' | 'firebase'>('upload');
   const [formData, setFormData] = useState<Partial<InsertCategory>>({
     name: "",
     slug: "",

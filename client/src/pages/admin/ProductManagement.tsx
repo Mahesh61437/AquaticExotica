@@ -561,20 +561,27 @@ export default function ProductManagement() {
                       value={imageSourceType}
                       onChange={(e) => {
                         // Set the image source type
-                        setImageSourceType(e.target.value as 'upload' | 'url');
+                        setImageSourceType(e.target.value as 'upload' | 'url' | 'firebase');
                         
                         // Create a default empty URL if switching to URL mode
-                        if (e.target.value === 'url') {
+                        if (e.target.value === 'url' || e.target.value === 'firebase') {
                           setFormData({ ...formData, imageUrl: "" });
                         }
                       }}
                     >
                       <option value="upload">Upload Image</option>
                       <option value="url">External URL</option>
+                      <option value="firebase">Firebase Storage</option>
                     </select>
                   </div>
                   
-                  {(imageSourceType === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage'))) ? (
+                  {imageSourceType === 'firebase' ? (
+                    <FirebaseImageSelector
+                      initialImage={formData.imageUrl}
+                      onImageSelected={(url) => setFormData({ ...formData, imageUrl: url })}
+                      className="w-full"
+                    />
+                  ) : imageSourceType === 'url' || (formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage')) ? (
                     <div className="space-y-2">
                       <Label htmlFor="imageUrl">Image URL</Label>
                       <Input
