@@ -426,7 +426,7 @@ export default function ProductManagement() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                       </div>
                     ) : categories && categories.length > 0 ? (
-                      categories.map((category) => (
+                      categories.map((category: { id: number; name: string }) => (
                         <SelectItem key={category.id} value={category.name}>
                           {category.name}
                         </SelectItem>
@@ -526,8 +526,36 @@ export default function ProductManagement() {
                       }
                     }}
                   />
-                  <Button type="button" onClick={handleAddTag}>Add</Button>
+                  <Button type="button" onClick={handleAddTag} className="whitespace-nowrap">
+                    <Tag className="h-4 w-4 mr-1" /> Add Tag
+                  </Button>
                 </div>
+                
+                {uniqueTags.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Suggested tags (click to add):</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {uniqueTags.map((tag) => (
+                        <Badge 
+                          key={tag} 
+                          variant="outline" 
+                          className="cursor-pointer hover:bg-secondary"
+                          onClick={() => {
+                            if (!formData.tags?.includes(tag)) {
+                              setFormData({
+                                ...formData,
+                                tags: [...(formData.tags || []), tag]
+                              });
+                            }
+                          }}
+                        >
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex flex-wrap gap-1 mt-2">
                   {formData.tags?.map((tag) => (
                     <Badge key={tag} variant="secondary" className="gap-1">
