@@ -195,6 +195,7 @@ export function CheckoutForm() {
       const orderData = {
         status: "pending",
         total: totalWithShipping.toFixed(2), // Format as string with 2 decimal places
+        totalAmount: totalWithShipping.toFixed(2), // Add totalAmount field to match schema
         items: JSON.stringify(cart.items),
         shippingAddress: JSON.stringify({
           firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
@@ -222,7 +223,7 @@ export function CheckoutForm() {
         createdAt: new Date().toISOString(),
         userId: currentUser?.id || null, // Link order to user if authenticated
         
-        // Add customer information for email notifications as required by our schema
+        // Add customer information for email notifications - these fields are now in the database schema
         customerName: `${data.firstName} ${data.lastName}`,
         customerEmail: data.email,
         customerPhone: data.phone,
