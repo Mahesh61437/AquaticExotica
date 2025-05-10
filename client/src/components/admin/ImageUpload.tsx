@@ -29,11 +29,26 @@ export function ImageUpload({
   const [imageUrl, setImageUrl] = useState<string | undefined>(initialImage);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Add a skip upload button that directly sets a placeholder
+  const handleSkipUpload = () => {
+    const placeholderUrl = `https://placehold.co/600x800/e6e6e6/999999?text=${folder.charAt(0).toUpperCase() + folder.slice(1, -1)}`;
+    setImageUrl(placeholderUrl);
+    onImageUploaded(placeholderUrl);
+    toast({
+      title: "Using placeholder image",
+      description: "You can continue with the form."
+    });
+  };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    
+    // Clear any previous errors
+    setUploadError(null);
 
     // Check if file is an image
     if (!file.type.startsWith("image/")) {
@@ -68,14 +83,12 @@ export function ImageUpload({
       setUploading(false);
       console.error("Upload error:", error);
       
-      // Set a placeholder image and continue with the form
-      const placeholderUrl = `https://placehold.co/600x800/e6e6e6/999999?text=No+Image`;
-      setImageUrl(placeholderUrl);
-      onImageUploaded(placeholderUrl);
+      // Set error message for display
+      setUploadError(error.message || "Unknown error");
       
       toast({
-        title: "Upload failed - Using placeholder",
-        description: "We'll use a placeholder image instead. You can try again or continue with the form.",
+        title: "Upload failed",
+        description: "Please try again or use a placeholder image instead.",
         variant: "destructive",
       });
     };
@@ -93,18 +106,16 @@ export function ImageUpload({
     try {
       uploadImage(file, folder, onProgress, onError, onSuccess);
     } catch (error) {
-      // Fallback to placeholder if upload fails completely
+      // Fallback if upload fails completely
       console.error("Upload exception:", error);
       setUploading(false);
       
-      // Set a placeholder image and continue with the form
-      const placeholderUrl = `https://placehold.co/600x800/e6e6e6/999999?text=No+Image`;
-      setImageUrl(placeholderUrl);
-      onImageUploaded(placeholderUrl);
+      // Set error message for display
+      setUploadError(error instanceof Error ? error.message : "Unknown error");
       
       toast({
-        title: "Upload failed - Using placeholder",
-        description: "We'll use a placeholder image instead. You can continue with the form.",
+        title: "Upload failed",
+        description: "Please try again or use a placeholder image instead.",
         variant: "destructive",
       });
     }
@@ -141,11 +152,7 @@ export function ImageUpload({
           </Button>
         </div>
       ) : (
-        <div 
-          className="bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center h-64 p-4"
-          onClick={() => fileInputRef.current?.click()}
-          style={{ cursor: "pointer" }}
-        >
+        <div className="bg-gray-100 dark:bg-gray-800 flex flex-col items-center justify-center h-64 p-4">
           {uploading ? (
             <div className="w-full space-y-4">
               <div className="flex flex-col items-center">
@@ -159,10 +166,33 @@ export function ImageUpload({
           ) : (
             <>
               <ImageIcon className="h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-sm text-muted-foreground text-center mb-2">
-                Click to upload an image or drag and drop
-              </p>
-              <p className="text-xs text-muted-foreground text-center">
+              
+              {uploadError ? (
+                <div className="text-red-500 text-sm mb-4 text-center">
+                  <p>Upload failed: {uploadError}</p>
+                </div>
+              ) : null}
+              
+              <div className="flex flex-col space-y-3">
+                <Button 
+                  variant="secondary" 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  Select image
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={handleSkipUpload}
+                  className="w-full"
+                >
+                  Use placeholder
+                </Button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground text-center mt-3">
                 PNG, JPG, GIF up to 5MB
               </p>
             </>
