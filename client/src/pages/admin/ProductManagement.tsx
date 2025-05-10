@@ -17,7 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Product, InsertProduct } from "@shared/schema";
-import { Loader2, Plus, Edit, Trash2, Tag, ImageIcon } from "lucide-react";
+import { Loader2, Plus, Edit, Trash2, Tag, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
@@ -540,19 +540,66 @@ export default function ProductManagement() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="imageUpload">Product Image *</Label>
-                <ImageUpload
-                  initialImage={formData.imageUrl || ""}
-                  onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
-                  onImageRemoved={() => setFormData({ ...formData, imageUrl: "" })}
-                  folder="products"
-                  className="w-full"
-                />
-                {!formData.imageUrl && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Upload a product image (required)
-                  </p>
-                )}
+                <Label htmlFor="imageOptions">Product Image</Label>
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-2">
+                    <Label htmlFor="imageType">Image Source</Label>
+                    <select 
+                      id="imageType"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? 'url' : 'upload'}
+                      onChange={(e) => {
+                        if (e.target.value === 'url' && !formData.imageUrl?.startsWith('http')) {
+                          setFormData({ ...formData, imageUrl: "" });
+                        }
+                      }}
+                    >
+                      <option value="upload">Upload Image</option>
+                      <option value="url">External URL</option>
+                    </select>
+                  </div>
+                  
+                  {formData.imageUrl?.startsWith('http') && !formData.imageUrl?.includes('firebasestorage') ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="imageUrl">Image URL</Label>
+                      <Input
+                        id="imageUrl"
+                        value={formData.imageUrl || ""}
+                        onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                        placeholder="https://example.com/image.jpg"
+                      />
+                      {formData.imageUrl && (
+                        <div className="mt-2 relative w-full h-48 border rounded-md overflow-hidden">
+                          <img 
+                            src={formData.imageUrl} 
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
+                            }}
+                          />
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2"
+                            onClick={() => setFormData({ ...formData, imageUrl: "" })}
+                            type="button"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <ImageUpload
+                      initialImage={formData.imageUrl || ""}
+                      onImageUploaded={(url) => setFormData({ ...formData, imageUrl: url })}
+                      onImageRemoved={() => setFormData({ ...formData, imageUrl: "" })}
+                      folder="products"
+                      className="w-full"
+                    />
+                  )}
+                </div>
               </div>
               
               <div className="space-y-2">
