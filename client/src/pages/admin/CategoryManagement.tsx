@@ -24,7 +24,6 @@ export default function CategoryManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url' | 'firebase'>('upload');
   const [formData, setFormData] = useState<Partial<InsertCategory>>({
     name: "",
     slug: "",
@@ -182,12 +181,7 @@ export default function CategoryManagement() {
       imageUrl: category.imageUrl,
     });
     
-    // Set the image source type based on the URL
-    if (category.imageUrl?.startsWith('http') && !category.imageUrl?.includes('firebasestorage')) {
-      setImageSourceType('url');
-    } else {
-      setImageSourceType('upload');
-    }
+    // Category image will only be from Firebase Storage
     
     setIsOpen(true);
   };
@@ -230,7 +224,6 @@ export default function CategoryManagement() {
       imageUrl: "",
     });
     setEditingCategory(null);
-    setImageSourceType('upload');
   };
 
   const handleGenerateSlug = () => {
