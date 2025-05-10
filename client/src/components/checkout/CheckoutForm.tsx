@@ -190,8 +190,8 @@ export function CheckoutForm() {
       const orderData = {
         status: "pending",
         total: (cart.total + 150).toString(), // Add shipping cost to the total
-        items: cart.items,
-        shippingAddress: {
+        items: JSON.stringify(cart.items),
+        shippingAddress: JSON.stringify({
           firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
           lastName: data.sameAsBilling ? data.lastName : (data.shippingLastName || data.lastName),
           email: data.email,
@@ -201,8 +201,8 @@ export function CheckoutForm() {
           state: data.sameAsBilling ? data.state : (data.shippingState || ""),
           zipCode: data.sameAsBilling ? data.zipCode : (data.shippingZipCode || ""),
           country: data.sameAsBilling ? data.country : (data.shippingCountry || "IN"),
-        },
-        billingAddress: {
+        }),
+        billingAddress: JSON.stringify({
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
@@ -212,7 +212,7 @@ export function CheckoutForm() {
           state: data.state,
           zipCode: data.zipCode,
           country: data.country,
-        },
+        }),
         paymentMethod: "pending", // Set default payment status
         createdAt: new Date().toISOString(),
         userId: currentUser?.id || null, // Link order to user if authenticated
