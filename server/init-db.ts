@@ -24,13 +24,13 @@ export async function initializeDatabase() {
     
     console.log("Creating initial admin user...");
     
-    // Create admin user
-    const hashedPassword = await hashPassword("admin123");
+    // Create admin user with the specified credentials
+    const hashedPassword = await hashPassword("Mahesh61437");
     const adminUser = await createUserViaSQL(
-      "admin",
-      "admin@example.com",
+      "mahesh",
+      "mahesh@aquaticexoctica.com",
       hashedPassword,
-      "Admin User",
+      "mahesh",
       true
     );
     
