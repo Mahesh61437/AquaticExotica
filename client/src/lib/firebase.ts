@@ -18,8 +18,9 @@ if (missingVars.length > 0) {
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string;
 const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string || 
                    (projectId ? `${projectId}.firebaseapp.com` : '');
-// Use the specific storage bucket provided
-const storageBucket = "aqua-india-61437.firebasestorage.app";
+// Use the storage bucket from environment variables or create a default one
+const storageBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string || 
+                     (projectId ? `${projectId}.appspot.com` : '');
 
 const firebaseConfig: FirebaseOptions = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,

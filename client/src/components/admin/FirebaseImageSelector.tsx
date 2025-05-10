@@ -50,6 +50,7 @@ export function FirebaseImageSelector({
     try {
       // Create the Firebase Storage URL
       const url = createFirebaseStorageUrl(imagePath, accessToken);
+      console.log("Trying to load Firebase image from URL:", url);
       
       // Test the image URL by creating an Image object
       const img = new Image();
@@ -64,12 +65,13 @@ export function FirebaseImageSelector({
         });
       };
       
-      img.onerror = () => {
+      img.onerror = (e) => {
+        console.error("Failed to load image:", e);
         setLoading(false);
         setErrorLoading(true);
         toast({
           title: "Error",
-          description: "Failed to load image. Check the path and access token",
+          description: `Failed to load image. Please check if the image exists at path: ${imagePath}`,
           variant: "destructive",
         });
       };
@@ -77,11 +79,12 @@ export function FirebaseImageSelector({
       // Set the source to trigger loading
       img.src = url;
     } catch (error) {
+      console.error("Error loading Firebase image:", error);
       setLoading(false);
       setErrorLoading(true);
       toast({
         title: "Error",
-        description: "Invalid Firebase Storage path",
+        description: "Invalid Firebase Storage path or configuration",
         variant: "destructive",
       });
     }
@@ -101,8 +104,17 @@ export function FirebaseImageSelector({
           />
         </div>
         <p className="text-xs text-muted-foreground">
-          Enter the path to your image in Firebase Storage (e.g., products/image.jpg)
+          Enter the path to your image in Firebase Storage, for example:
+          <br />
+          • <code className="bg-gray-100 px-1 py-0.5 rounded">products/my-image.jpg</code>
+          <br />
+          • <code className="bg-gray-100 px-1 py-0.5 rounded">categories/women.jpg</code>
         </p>
+        {errorLoading && (
+          <p className="text-xs text-red-500 mt-1">
+            Make sure your image exists in Firebase Storage and is publicly accessible or provided with a valid access token.
+          </p>
+        )}
       </div>
       
       <div className="space-y-2">
@@ -115,7 +127,7 @@ export function FirebaseImageSelector({
           className={errorLoading ? "border-red-500" : ""}
         />
         <p className="text-xs text-muted-foreground">
-          If your storage requires authentication, enter the access token
+          Leave this empty if your Firebase Storage has public read access
         </p>
       </div>
       
