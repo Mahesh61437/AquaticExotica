@@ -38,8 +38,9 @@ export default function CategoryManagement() {
   const { data: categories, isLoading } = useQuery({
     queryKey: ["/api/admin/categories"],
     queryFn: async () => {
-      const res = await apiRequest("GET", "/api/admin/categories", {
-        method: "GET"
+      const res = await fetch("/api/admin/categories", {
+        method: "GET",
+        credentials: "include"
       });
       return await res.json() as Category[];
     },
@@ -48,12 +49,11 @@ export default function CategoryManagement() {
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const res = await apiRequest("POST", "/api/admin/categories", {
+      return await apiRequest("/api/admin/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
-      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -77,12 +77,11 @@ export default function CategoryManagement() {
   // Update category mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<Category> }) => {
-      const res = await apiRequest("PUT", `/api/admin/categories/${id}`, {
+      return await apiRequest(`/api/admin/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
-      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -106,7 +105,7 @@ export default function CategoryManagement() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await apiRequest("DELETE", `/api/admin/categories/${id}`, {
+      await apiRequest(`/api/admin/categories/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" }
       });
