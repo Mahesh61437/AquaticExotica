@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
 import { StockNotifier } from "@/components/admin/StockNotifier";
 import { ImageUpload } from "@/components/admin/ImageUpload";
+import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
 import {
   Select,
   SelectContent,
@@ -40,7 +41,7 @@ export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url'>('upload');
+  const [imageSourceType, setImageSourceType] = useState<'upload' | 'url' | 'firebase'>('upload');
   const [formData, setFormData] = useState<Partial<InsertProduct>>({
     name: "",
     description: "",
