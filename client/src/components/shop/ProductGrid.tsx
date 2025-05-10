@@ -7,9 +7,10 @@ interface ProductGridProps {
   category?: string;
   filter?: string;
   searchQuery?: string;
+  activeCategories?: string[];
 }
 
-export function ProductGrid({ category, filter, searchQuery }: ProductGridProps) {
+export function ProductGrid({ category, filter, searchQuery, activeCategories = [] }: ProductGridProps) {
   // Determine the correct endpoint based on props
   let endpoint = "/api/products";
   if (category) {
@@ -55,9 +56,25 @@ export function ProductGrid({ category, filter, searchQuery }: ProductGridProps)
     );
   }
 
+  // Filter products by selected categories if any are active
+  const displayProducts = activeCategories.length > 0
+    ? products.filter(product => activeCategories.includes(product.category))
+    : products;
+
+  if (displayProducts.length === 0 && activeCategories.length > 0) {
+    return (
+      <div className="text-center py-10">
+        <h3 className="text-xl font-medium mb-2">No products found</h3>
+        <p className="text-gray-500">
+          No products match the selected categories. Try different filters.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {products.map((product) => (
+      {displayProducts.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
     </div>

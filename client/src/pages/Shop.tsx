@@ -101,6 +101,7 @@ export default function Shop() {
               category={params?.category} 
               filter={filterParam} 
               searchQuery={searchQuery}
+              activeCategories={activeCategories}
             />
           </div>
         </div>
