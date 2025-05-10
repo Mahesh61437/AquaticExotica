@@ -9,21 +9,30 @@ import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-
 
 // Admin middleware
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  if (!req.session || !req.session.userId) {
-    return res.status(401).json({ message: "Unauthorized" });
-  }
-
   try {
+    if (!req.session || !req.session.userId) {
+      console.log("Admin access denied: No user session found");
+      return res.status(401).json({ message: "Unauthorized: Please log in first" });
+    }
+
+    console.log(`Checking admin status for user ID: ${req.session.userId}`);
     const user = await storage.getUser(req.session.userId);
     
-    if (!user || !user.isAdmin) {
+    if (!user) {
+      console.log(`Admin access denied: User with ID ${req.session.userId} not found`);
+      return res.status(401).json({ message: "Unauthorized: User not found" });
+    }
+    
+    if (!user.isAdmin) {
+      console.log(`Admin access denied: User ${user.username} (${user.email}) is not an admin`);
       return res.status(403).json({ message: "Forbidden: Admin access required" });
     }
     
+    console.log(`Admin access granted for user: ${user.username} (${user.email})`);
     next();
   } catch (error) {
     console.error("Error in admin middleware:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(500).json({ message: "Internal server error checking admin status" });
   }
 };
 
@@ -428,10 +437,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders
   app.post("/api/orders", async (req, res) => {
     try {
+      console.log("Order creation request body:", JSON.stringify(req.body, null, 2));
+      
       // Use safeParse to handle validation errors gracefully
       const validationResult = insertOrderSchema.safeParse(req.body);
       
       if (!validationResult.success) {
+        console.error("Order validation failed:", JSON.stringify(validationResult.error.format(), null, 2));
         return res.status(400).json({ 
           message: "Invalid order data", 
           errors: validationResult.error.format() 
@@ -440,6 +452,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get the validated order data
       const orderData = validationResult.data;
+      console.log("Validated order data:", JSON.stringify(orderData, null, 2));
       
       // If user is authenticated, ensure the userId is correctly set
       if (req.session.userId) {
@@ -468,7 +481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(order);
     } catch (error) {
       console.error("Order creation error:", error);
-      res.status(500).json({ message: "Failed to create order" });
+      res.status(500).json({ message: "Failed to create order", error: String(error) });
     }
   });
 
