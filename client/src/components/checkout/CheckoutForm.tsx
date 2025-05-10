@@ -218,12 +218,16 @@ export function CheckoutForm() {
         userId: currentUser?.id || null, // Link order to user if authenticated
       };
 
+      // Log the order data before submitting (for debugging)
+      console.log("Submitting order data:", orderData);
+      
       // Submit order to API
       const response = await apiRequest("/api/orders", {
         method: "POST",
         body: JSON.stringify(orderData),
       });
       const order = await response.json();
+      console.log("Order creation response:", order);
 
       // Clear cart and show success with message about stock check
       clearCart();
