@@ -186,10 +186,15 @@ export function CheckoutForm() {
             country: data.shippingCountry || "",
           };
 
+      // Parse cart.total to ensure it's a number before adding shipping
+      const cartTotal = parseFloat(typeof cart.total === 'string' ? cart.total : cart.total.toString());
+      const shippingCost = 150; // Shipping cost
+      const totalWithShipping = cartTotal + shippingCost;
+
       // Create order data formatted according to schema requirements
       const orderData = {
         status: "pending",
-        total: (cart.total + 150).toString(), // Add shipping cost to the total
+        total: totalWithShipping.toFixed(2), // Format as string with 2 decimal places
         items: JSON.stringify(cart.items),
         shippingAddress: JSON.stringify({
           firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
@@ -217,11 +222,10 @@ export function CheckoutForm() {
         createdAt: new Date().toISOString(),
         userId: currentUser?.id || null, // Link order to user if authenticated
         
-        // Add customer information for email notifications
+        // Add customer information for email notifications as required by our schema
         customerName: `${data.firstName} ${data.lastName}`,
         customerEmail: data.email,
         customerPhone: data.phone,
-        totalAmount: cart.total + 150, // Add shipping cost to the total
       };
 
       // Log the order data before submitting (for debugging)
