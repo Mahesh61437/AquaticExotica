@@ -18,11 +18,41 @@ export async function initializeDatabase() {
     const count = parseInt(countResult.rows[0].count.toString(), 10);
     
     if (count > 0) {
-      console.log("Database already contains data, skipping initialization.");
+      console.log("Database already contains users, checking for admin user...");
+      
+      // Check if there's at least one admin user
+      const adminCheckResult = await db.execute(`
+        SELECT COUNT(*) as count FROM users WHERE is_admin = TRUE
+      `).catch(err => {
+        console.log("Could not check for admin users, assuming none exist:", err.message);
+        return { rows: [{ count: "0" }] };
+      });
+      
+      const adminCount = parseInt(adminCheckResult.rows[0].count.toString(), 10);
+      
+      if (adminCount === 0) {
+        console.log("No admin users found, creating default admin...");
+        // Create admin user with the specified credentials
+        const hashedPassword = await hashPassword("Mahesh61437");
+        const adminUser = await createUserViaSQL(
+          "mahesh",
+          "mahesh@aquaticexoctica.com",
+          hashedPassword,
+          "mahesh",
+          true
+        );
+        
+        if (adminUser) {
+          console.log("Created admin user:", adminUser.email);
+        }
+      } else {
+        console.log(`Found ${adminCount} admin users, skipping admin creation.`);
+      }
+      
       return;
     }
     
-    console.log("Creating initial admin user...");
+    console.log("Database has no users, creating initial admin user...");
     
     // Create admin user with the specified credentials
     const hashedPassword = await hashPassword("Mahesh61437");
