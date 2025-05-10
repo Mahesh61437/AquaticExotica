@@ -66,7 +66,7 @@ const formSchema = z.object({
     }
   ),
   shippingCountry: z.string().optional(),
-  paymentMethod: z.enum(["credit-card", "upi", "net-banking", "cod"]),
+  // Removed payment method as requested
   saveInfo: z.boolean().default(false),
   notes: z.string().optional(),
 });
@@ -108,7 +108,7 @@ export function CheckoutForm() {
       shippingState: "",
       shippingZipCode: "",
       shippingCountry: "IN",
-      paymentMethod: "credit-card",
+      // Payment method removed
       saveInfo: false,
       notes: "",
     },
@@ -150,7 +150,6 @@ export function CheckoutForm() {
           form.setValue('phone', defaultAddress.phone);
           
           // Set selected state to update city dropdown
-          setSelectedState(defaultAddress.state);
           setSelectedState(defaultAddress.state);
         }
       }
@@ -214,7 +213,7 @@ export function CheckoutForm() {
           zipCode: data.zipCode,
           country: data.country,
         },
-        paymentMethod: data.paymentMethod,
+        paymentMethod: "pending", // Set default payment status
         createdAt: new Date().toISOString(),
         userId: currentUser?.id || null, // Link order to user if authenticated
       };
