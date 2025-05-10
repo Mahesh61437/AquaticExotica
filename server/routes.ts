@@ -740,8 +740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filteredCategories = query 
         ? allCategories.filter(category => 
             category.name.toLowerCase().includes(query.toLowerCase()) || 
-            category.slug.toLowerCase().includes(query.toLowerCase()) ||
-            (category.description && category.description.toLowerCase().includes(query.toLowerCase()))
+            category.slug.toLowerCase().includes(query.toLowerCase())
           )
         : allCategories;
       
