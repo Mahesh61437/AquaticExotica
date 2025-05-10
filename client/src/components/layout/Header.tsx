@@ -41,7 +41,7 @@ export function Header() {
         <div className="py-4 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-2xl font-heading font-bold text-primary">
-            ModernShop
+            AquaticExotica
           </Link>
           
           {/* Desktop Navigation */}

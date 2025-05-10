@@ -10,7 +10,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Company Info */}
           <div>
-            <h3 className="text-xl font-heading font-bold mb-4">ModernShop</h3>
+            <h3 className="text-xl font-heading font-bold mb-4">AquaticExotica</h3>
             <p className="text-gray-400 mb-4">
               Your destination for modern fashion and accessories with an emphasis on quality and style.
             </p>
@@ -115,7 +115,7 @@ export function Footer() {
         
         <div className="mt-10 pt-6 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center">
           <p className="text-gray-500 text-sm mb-4 md:mb-0">
-            &copy; {new Date().getFullYear()} ModernShop. All rights reserved.
+            &copy; {new Date().getFullYear()} AquaticExotica. All rights reserved.
           </p>
           
           <div className="flex items-center space-x-4">
