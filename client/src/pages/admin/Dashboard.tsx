@@ -19,6 +19,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export default function AdminDashboard() {
   const { currentUser, loading } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
+  const [stats, setStats] = useState({
+    products: 0,
+    categories: 0,
+    orders: 0,
+    users: 0
+  });
+
+  // Fetch stats for the overview page
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Get counts for all entities
+        const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.all([
+          fetch('/api/admin/products'),
+          fetch('/api/admin/categories'),
+          fetch('/api/admin/orders'),
+          fetch('/api/admin/users')
+        ]);
+        
+        const products = await productsRes.json();
+        const categories = await categoriesRes.json();
+        const orders = await ordersRes.json();
+        const users = await usersRes.json();
+        
+        setStats({
+          products: Array.isArray(products) ? products.length : 0,
+          categories: Array.isArray(categories) ? categories.length : 0,
+          orders: Array.isArray(orders) ? orders.length : 0,
+          users: Array.isArray(users) ? users.length : 0
+        });
+      } catch (error) {
+        console.error("Error fetching admin stats:", error);
+      }
+    };
+    
+    if (currentUser?.isAdmin) {
+      fetchStats();
+    }
+  }, [currentUser]);
 
   // Redirect non-admin users
   if (loading) {
@@ -75,7 +114,7 @@ export default function AdminDashboard() {
                   <ShoppingBag className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+24</div>
+                  <div className="text-2xl font-bold">{stats.products}</div>
                   <p className="text-xs text-muted-foreground">
                     Manage your product inventory
                   </p>
@@ -88,7 +127,7 @@ export default function AdminDashboard() {
                   <Tags className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+5</div>
+                  <div className="text-2xl font-bold">{stats.categories}</div>
                   <p className="text-xs text-muted-foreground">
                     Organize your products
                   </p>
@@ -101,7 +140,7 @@ export default function AdminDashboard() {
                   <ListOrdered className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+12</div>
+                  <div className="text-2xl font-bold">{stats.orders}</div>
                   <p className="text-xs text-muted-foreground">
                     Process customer orders
                   </p>
@@ -114,7 +153,7 @@ export default function AdminDashboard() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+43</div>
+                  <div className="text-2xl font-bold">{stats.users}</div>
                   <p className="text-xs text-muted-foreground">
                     Manage user accounts
                   </p>
