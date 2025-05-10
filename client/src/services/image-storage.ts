@@ -80,6 +80,11 @@ export function uploadImage(
  */
 export async function deleteImage(url: string | undefined): Promise<void> {
   try {
+    // If no URL provided, just return
+    if (!url) {
+      return;
+    }
+    
     // Extract the path from the URL
     // Firebase Storage URLs follow this pattern:
     // https://firebasestorage.googleapis.com/v0/b/[PROJECT_ID].appspot.com/o/[PATH]?alt=media&token=[TOKEN]
@@ -113,8 +118,13 @@ export async function deleteImage(url: string | undefined): Promise<void> {
  * @param url The download URL of the file
  * @returns A Firebase Storage reference or null if URL is invalid
  */
-export function getStorageRefFromUrl(url: string): ReturnType<typeof ref> | null {
+export function getStorageRefFromUrl(url: string | undefined): ReturnType<typeof ref> | null {
   try {
+    // If no URL provided, return null
+    if (!url) {
+      return null;
+    }
+    
     // Extract the path from the URL
     const baseUrl = "https://firebasestorage.googleapis.com/v0/b/";
     const projectId = app.options.projectId;
@@ -143,7 +153,12 @@ export function getStorageRefFromUrl(url: string): ReturnType<typeof ref> | null
  * @param pathOrUrl Storage path or URL
  * @returns Promise that resolves to a download URL
  */
-export async function getImageUrl(pathOrUrl: string): Promise<string> {
+export async function getImageUrl(pathOrUrl: string | undefined): Promise<string> {
+  // If no path or URL provided, return empty string
+  if (!pathOrUrl) {
+    return '';
+  }
+  
   // If it's already a URL (starts with http/https), return it
   if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
     return pathOrUrl;

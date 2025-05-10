@@ -17,6 +17,7 @@ import { Category, InsertCategory } from "@shared/schema";
 import { Loader2, Plus, Edit, Trash2, ImageIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 
 export default function CategoryManagement() {
   const { toast } = useToast();
