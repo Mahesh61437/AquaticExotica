@@ -103,7 +103,7 @@ export default function ProductManagement() {
   });
   
   // Fetch categories for dropdown
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
+  const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/admin/categories"],
     queryFn: async () => {
       const res = await fetch("/api/admin/categories", {
@@ -113,6 +113,9 @@ export default function ProductManagement() {
       return await res.json();
     },
   });
+  
+  // Extract categories array from response
+  const categories = categoriesResponse?.data || [];
   
   // Get unique tags from existing products for tag suggestions
   const uniqueTags = productsResponse?.data?.reduce((acc: string[], product: Product) => {
