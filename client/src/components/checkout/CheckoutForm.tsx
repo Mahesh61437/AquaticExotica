@@ -651,59 +651,17 @@ export function CheckoutForm() {
               )}
             </div>
 
-            {/* Payment Method */}
+            {/* Payment information removed as requested */}
             <div className="space-y-6">
-              <h2 className="text-2xl font-heading font-bold">Payment Method</h2>
+              <h2 className="text-2xl font-heading font-bold">Order Information</h2>
               
-              <FormField
-                control={form.control}
-                name="paymentMethod"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
-                          <FormControl>
-                            <RadioGroupItem value="credit-card" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Credit/Debit Card
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
-                          <FormControl>
-                            <RadioGroupItem value="upi" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            UPI (Google Pay, PhonePe, Paytm, etc.)
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
-                          <FormControl>
-                            <RadioGroupItem value="net-banking" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Net Banking
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0 border rounded-md p-3">
-                          <FormControl>
-                            <RadioGroupItem value="cod" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            Cash on Delivery
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="p-4 bg-blue-50 rounded-md text-blue-700">
+                <p className="text-sm font-medium mb-2">Order & Payment Process</p>
+                <p className="text-xs">
+                  After submitting your order, we will check stock availability and contact you 
+                  via WhatsApp with payment options and delivery details.
+                </p>
+              </div>
             </div>
 
             {/* Additional Information */}
