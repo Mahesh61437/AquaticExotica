@@ -7,31 +7,46 @@ import { hash, compare } from "bcrypt";
 import { sendOrderNotification } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
 
-// Admin middleware
+// Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.session || !req.session.userId) {
-      console.log("Admin access denied: No user session found");
+    if (!req.session) {
+      console.error("Admin middleware: No session object available");
+      return res.status(500).json({ message: "Server error: Session unavailable" });
+    }
+    
+    if (!req.session.userId) {
+      console.log("Admin access denied: No user ID in session");
       return res.status(401).json({ message: "Unauthorized: Please log in first" });
     }
 
-    console.log(`Checking admin status for user ID: ${req.session.userId}`);
-    const user = await storage.getUser(req.session.userId);
+    console.log(`Admin middleware: Checking admin status for user ID: ${req.session.userId}`);
     
-    if (!user) {
-      console.log(`Admin access denied: User with ID ${req.session.userId} not found`);
-      return res.status(401).json({ message: "Unauthorized: User not found" });
+    // Get user directly from database to ensure latest data
+    try {
+      const user = await storage.getUser(req.session.userId);
+      
+      if (!user) {
+        console.log(`Admin access denied: User with ID ${req.session.userId} not found in database`);
+        // Clear invalid session
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "Unauthorized: User not found" });
+      }
+      
+      if (!user.isAdmin) {
+        console.log(`Admin access denied: User ${user.username} (${user.email}) is not an admin`);
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
+      }
+      
+      console.log(`Admin access granted for user: ${user.username} (${user.email})`);
+      // Everything is good, proceed
+      next();
+    } catch (dbError) {
+      console.error("Admin middleware: Database error when retrieving user:", dbError);
+      return res.status(500).json({ message: "Server error: Could not verify admin status" });
     }
-    
-    if (!user.isAdmin) {
-      console.log(`Admin access denied: User ${user.username} (${user.email}) is not an admin`);
-      return res.status(403).json({ message: "Forbidden: Admin access required" });
-    }
-    
-    console.log(`Admin access granted for user: ${user.username} (${user.email})`);
-    next();
   } catch (error) {
-    console.error("Error in admin middleware:", error);
+    console.error("Critical error in admin middleware:", error);
     return res.status(500).json({ message: "Internal server error checking admin status" });
   }
 };
@@ -259,11 +274,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.session.userId;
       if (!userId) {
+        console.log("GET /api/auth/me - Not authenticated (no userId in session)");
         return res.status(401).json({ message: "Not authenticated" });
       }
       
+      console.log(`GET /api/auth/me - Retrieving user with ID: ${userId}`);
       const user = await storage.getUser(userId);
       if (!user) {
+        console.log(`GET /api/auth/me - User with ID ${userId} not found`);
         // Clear invalid session
         req.session.destroy(() => {});
         return res.status(401).json({ message: "User not found" });
@@ -272,10 +290,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Remove password from response
       const { password, ...userWithoutPassword } = user;
       
+      console.log(`GET /api/auth/me - Responding with user: ${user.username}, admin: ${user.isAdmin}`);
       res.json(userWithoutPassword);
     } catch (error) {
       console.error("Get current user error:", error);
       res.status(500).json({ message: "Failed to get user data" });
+    }
+  });
+  
+  // New admin-status check endpoint
+  app.get("/api/auth/admin-status", async (req: Request, res: Response) => {
+    try {
+      const userId = req.session.userId;
+      
+      if (!userId) {
+        console.log("GET /api/auth/admin-status - Not authenticated");
+        return res.status(401).json({ isAdmin: false, message: "Not authenticated" });
+      }
+      
+      console.log(`GET /api/auth/admin-status - Checking admin status for user ID: ${userId}`);
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        console.log(`GET /api/auth/admin-status - User with ID ${userId} not found`);
+        return res.status(401).json({ isAdmin: false, message: "User not found" });
+      }
+      
+      console.log(`GET /api/auth/admin-status - User ${user.username} has admin status: ${user.isAdmin}`);
+      res.json({ 
+        isAdmin: user.isAdmin, 
+        message: user.isAdmin ? "Admin access granted" : "Not an admin user" 
+      });
+    } catch (error) {
+      console.error("Error checking admin status:", error);
+      res.status(500).json({ isAdmin: false, message: "Error checking admin status" });
     }
   });
   
