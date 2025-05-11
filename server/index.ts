@@ -102,7 +102,59 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // Pass the existing server instance to registerRoutes
+  // First register the health check route
+  app.get("/", async (_req, res) => {
+    console.log("Health check request received at root endpoint");
+    try {
+      // Actually check the database connection
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT NOW()');
+        // For root endpoint, respond with text/html for better health check compatibility
+        res.status(200).send('<html><body><h1>Service is running</h1></body></html>');
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(500).send('Service unavailable');
+    }
+  });
+
+  // Also add a JSON health check endpoint
+  app.get("/health", async (_req, res) => {
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT NOW()');
+        res.status(200).json({
+          status: "healthy",
+          timestamp: new Date().toISOString(),
+          message: "OK",
+          database: "connected"
+        });
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(500).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        message: error instanceof Error ? error.message : String(error),
+        database: "disconnected"
+      });
+    }
+  });
+
+  // Then register Vite middleware in development
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
+  // Then register all other routes
   await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -112,15 +164,6 @@ app.use((req, res, next) => {
     res.status(status).json({ message });
     throw err;
   });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
 
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
