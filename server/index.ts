@@ -134,4 +134,21 @@ app.use((req, res, next) => {
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   });
+  
+  // Keep the server running indefinitely
+  setInterval(() => {}, 1000);
+
+  // Handle termination signals properly
+  process.on('SIGTERM', () => {
+    log('Received SIGTERM signal, keeping application alive');
+  });
+
+  process.on('SIGINT', () => {
+    log('Received SIGINT signal, keeping application alive');
+  });
+
+  // Prevent unhandled promise rejections from crashing the app
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
 })();
