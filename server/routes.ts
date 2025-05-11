@@ -73,27 +73,12 @@ const firstAdminSchema = z.object({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
-  app.get("/", async (_req, res) => {
-    try {
-      // Check database connection
-      await pool.query('SELECT 1');
-      
-      res.status(200).json({
-        status: "healthy",
-        timestamp: new Date().toISOString(),
-        services: {
-          database: "connected",
-          email: process.env.SENDGRID_API_KEY?.startsWith('SG.') ? "configured" : "not_configured"
-        }
-      });
-    } catch (error) {
-      console.error("Health check failed:", error);
-      res.status(500).json({
-        status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        error: "Service checks failed"
-      });
-    }
+  app.get("/", (_req, res) => {
+    res.status(200).json({
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      message: "OK"
+    });
   });
 
   // prefix all routes with /api
