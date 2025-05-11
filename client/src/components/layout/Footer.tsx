@@ -12,7 +12,7 @@ export function Footer() {
           <div>
             <h3 className="text-xl font-heading font-bold mb-4">AquaticExotica</h3>
             <p className="text-gray-400 mb-4">
-              Your destination for modern fashion and accessories with an emphasis on quality and style.
+              Your destination for premium aquatic plants, exotic fish species, and professional aquarium equipment.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-400 hover:text-white transition">
@@ -45,13 +45,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/shop/women" className="text-gray-400 hover:text-white transition">
-                  Women's Collection
+                <Link href="/shop?category=plants" className="text-gray-400 hover:text-white transition">
+                  Aquatic Plants
                 </Link>
               </li>
               <li>
-                <Link href="/shop/men" className="text-gray-400 hover:text-white transition">
-                  Men's Collection
+                <Link href="/shop?category=equipment" className="text-gray-400 hover:text-white transition">
+                  Aquarium Equipment
                 </Link>
               </li>
               <li>
