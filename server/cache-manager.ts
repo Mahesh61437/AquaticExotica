@@ -1,9 +1,9 @@
 /**
- * Server-side caching with Replit Database
+ * Server-side caching with Redis (Upstash)
  * Provides persistent cache for server-side API calls with TTL support
  */
 
-import Client from '@replit/database';
+import { Redis } from "@upstash/redis";
 
 interface CacheEntry {
   data: any;
@@ -12,44 +12,64 @@ interface CacheEntry {
 }
 
 class ServerCache {
-  private db: Client;
+  private redis: Redis;
   private cache: Map<string, CacheEntry> = new Map();
   private isReady: boolean = false;
   private readyPromise: Promise<void>;
   private defaultTTL: number = 10 * 60 * 1000; // 10 minutes TTL
-
+  private keyPrefix: string = 'aquatic:cache:';
+  
   constructor() {
-    this.db = new Client();
+    // Configure Redis using environment variables if available
+    const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.REDIS_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+    
+    if (redisUrl && redisToken) {
+      this.redis = new Redis({
+        url: redisUrl,
+        token: redisToken,
+      });
+      console.log("[server-cache] Redis initialized with environment variables");
+    } else {
+      console.warn("[server-cache] Redis credentials not found, using in-memory cache only");
+      // Create dummy Redis implementation that just uses memory
+      this.redis = {
+        get: async () => null,
+        set: async () => "OK",
+        del: async () => 0,
+        keys: async () => [],
+        expire: async () => 0,
+      } as any;
+    }
+    
     this.readyPromise = this.initialize();
     
     // Set up periodic cleanup
     setInterval(() => {
       this.cleanupExpiredEntries().catch(err => {
-        console.error('Failed to clean up expired cache entries:', err);
+        console.error('[server-cache] Failed to clean up expired cache entries:', err);
       });
     }, 5 * 60 * 1000); // Run every 5 minutes
   }
-
+  
   private async initialize(): Promise<void> {
     try {
-      // Load existing cache
-      await this.loadFromDatabase();
+      await this.loadFromRedis();
       this.isReady = true;
     } catch (error) {
-      console.error('Failed to initialize server cache:', error);
+      console.error('[server-cache] Failed to initialize server cache:', error);
       this.isReady = true; // Mark as ready even on failure to not block
     }
   }
-
-  private async loadFromDatabase(): Promise<void> {
+  
+  private async loadFromRedis(): Promise<void> {
     try {
       // Get all cache keys
+      const pattern = `${this.keyPrefix}*`;
       let keys: string[] = [];
+      
       try {
-        const keysResult = await this.db.list('srv_cache:');
-        if (Array.isArray(keysResult)) {
-          keys = keysResult;
-        }
+        keys = await this.redis.keys(pattern);
       } catch (err) {
         console.warn('[server-cache] Error listing cache keys:', err);
         return;
@@ -58,103 +78,90 @@ class ServerCache {
       const now = Date.now();
       let loadedCount = 0;
       
-      for (const dbKey of keys) {
-        // Check if this entry is expired
-        let expiryStr: unknown;
+      for (const redisKey of keys) {
         try {
-          expiryStr = await this.db.get(`srv_expire:${dbKey}`);
-        } catch (err) {
-          continue; // Skip if can't get expiry
-        }
-        
-        const expiry = typeof expiryStr === 'string' ? parseInt(expiryStr, 10) : 0;
-        
-        if (expiry && now > expiry) {
-          // Expired, delete it
-          try {
-            await this.db.delete(dbKey);
-            await this.db.delete(`srv_expire:${dbKey}`);
-          } catch (err) {
-            // Ignore deletion errors
-          }
-          continue;
-        }
-        
-        // Not expired, load it
-        let entryStr: unknown;
-        try {
-          entryStr = await this.db.get(dbKey);
-        } catch (err) {
-          continue; // Skip if can't get entry
-        }
-        
-        if (typeof entryStr === 'string') {
-          try {
-            const entry = JSON.parse(entryStr) as CacheEntry;
-            const key = dbKey.replace('srv_cache:', '');
-            
-            // Double-check expiry based on the entry's timestamp + expiry
-            if (now - entry.timestamp < entry.expiry) {
-              this.cache.set(key, entry);
-              loadedCount++;
-            } else {
-              // Expired, delete it
-              try {
-                await this.db.delete(dbKey);
-                await this.db.delete(`srv_expire:${dbKey}`);
-              } catch (err) {
-                // Ignore deletion errors
+          const entryStr = await this.redis.get(redisKey);
+          
+          if (typeof entryStr === 'string') {
+            try {
+              const entry = JSON.parse(entryStr) as CacheEntry;
+              const key = redisKey.replace(this.keyPrefix, '');
+              
+              // Check if expired
+              if (now - entry.timestamp < entry.expiry) {
+                this.cache.set(key, entry);
+                loadedCount++;
+              } else {
+                // Expired, delete it
+                try {
+                  await this.redis.del(redisKey);
+                } catch (err) {
+                  // Ignore deletion errors
+                }
               }
+            } catch (err) {
+              // Skip invalid JSON
+              console.warn(`[server-cache] Invalid cache entry for ${redisKey}:`, err);
             }
-          } catch (err) {
-            // Skip invalid JSON
-            console.warn(`[server-cache] Invalid cache entry for ${dbKey}:`, err);
           }
+        } catch (err) {
+          // Skip errors
+          console.warn(`[server-cache] Error retrieving key ${redisKey}:`, err);
         }
       }
       
-      console.log(`[server-cache] Loaded ${loadedCount} cached responses from Replit Database`);
+      console.log(`[server-cache] Loaded ${loadedCount} cached responses from Redis`);
     } catch (error) {
-      console.warn('[server-cache] Failed to load cache from database:', error);
+      console.warn('[server-cache] Failed to load cache from Redis:', error);
     }
   }
-
+  
   private async cleanupExpiredEntries(): Promise<void> {
     try {
-      const now = Date.now();
-      let expireKeys: string[] = [];
+      // Get all cache keys
+      const pattern = `${this.keyPrefix}*`;
+      let keys: string[] = [];
+      
       try {
-        const keysResult = await this.db.list('srv_expire:');
-        if (Array.isArray(keysResult)) {
-          expireKeys = keysResult;
-        }
+        keys = await this.redis.keys(pattern);
       } catch (err) {
-        console.warn('[server-cache] Error listing expire keys:', err);
+        console.warn('[server-cache] Error listing cache keys:', err);
         return;
       }
       
+      const now = Date.now();
       let deletedCount = 0;
       
-      for (const expireKey of expireKeys) {
-        let expiryStr: unknown;
+      for (const redisKey of keys) {
         try {
-          expiryStr = await this.db.get(expireKey);
-        } catch (err) {
-          continue; // Skip if can't get expiry
-        }
-        
-        const expiry = typeof expiryStr === 'string' ? parseInt(expiryStr, 10) : 0;
-        
-        if (now > expiry) {
-          // Expired, delete it and its associated cache entry
-          const cacheKey = expireKey.replace('srv_expire:', 'srv_cache:');
-          try {
-            await this.db.delete(cacheKey);
-            await this.db.delete(expireKey);
-            deletedCount++;
-          } catch (err) {
-            // Ignore deletion errors
+          const entryStr = await this.redis.get(redisKey);
+          
+          if (typeof entryStr === 'string') {
+            try {
+              const entry = JSON.parse(entryStr) as CacheEntry;
+              
+              // Check if expired
+              if (now - entry.timestamp >= entry.expiry) {
+                // Expired, delete it
+                try {
+                  await this.redis.del(redisKey);
+                  deletedCount++;
+                } catch (err) {
+                  // Ignore deletion errors
+                }
+              }
+            } catch (err) {
+              // Invalid JSON, delete it
+              try {
+                await this.redis.del(redisKey);
+                deletedCount++;
+              } catch (delErr) {
+                // Ignore deletion errors
+              }
+            }
           }
+        } catch (err) {
+          // Skip errors
         }
       }
       
@@ -180,16 +187,17 @@ class ServerCache {
       // Update in-memory cache
       this.cache.set(key, entry);
       
-      // Save to database
-      const dbKey = `srv_cache:${key}`;
+      // Save to Redis
+      const redisKey = `${this.keyPrefix}${key}`;
       try {
-        await this.db.set(dbKey, JSON.stringify(entry));
+        // Save entry with JSON
+        await this.redis.set(redisKey, JSON.stringify(entry));
         
-        // Set expiration
-        const expiresAt = entry.timestamp + entry.expiry;
-        await this.db.set(`srv_expire:${dbKey}`, expiresAt.toString());
+        // Set expiration in Redis
+        const expirySeconds = Math.ceil(ttl / 1000);
+        await this.redis.expire(redisKey, expirySeconds);
       } catch (err) {
-        console.warn(`[server-cache] Failed to save cache entry to DB:`, err);
+        console.warn(`[server-cache] Failed to save cache entry to Redis:`, err);
       }
     } catch (error) {
       console.warn(`[server-cache] Failed to cache '${key}':`, error);
@@ -206,15 +214,10 @@ class ServerCache {
       return entry.data as T;
     }
     
-    // If not in memory, check database
+    // If not in memory, check Redis
     try {
-      const dbKey = `srv_cache:${key}`;
-      let entryStr: unknown;
-      try {
-        entryStr = await this.db.get(dbKey);
-      } catch (err) {
-        return null; // Can't get entry
-      }
+      const redisKey = `${this.keyPrefix}${key}`;
+      const entryStr = await this.redis.get(redisKey);
       
       if (typeof entryStr === 'string') {
         try {
@@ -226,10 +229,9 @@ class ServerCache {
             this.cache.set(key, entry);
             return entry.data as T;
           } else {
-            // Expired, delete from database
+            // Expired, delete from Redis
             try {
-              await this.db.delete(dbKey);
-              await this.db.delete(`srv_expire:${dbKey}`);
+              await this.redis.del(redisKey);
             } catch (err) {
               // Ignore deletion errors
             }
@@ -240,7 +242,7 @@ class ServerCache {
         }
       }
     } catch (error) {
-      console.warn(`[server-cache] Failed to get '${key}' from database:`, error);
+      console.warn(`[server-cache] Failed to get '${key}' from Redis:`, error);
     }
     
     return null;
@@ -253,17 +255,12 @@ class ServerCache {
     // Remove from in-memory cache
     this.cache.delete(key);
     
-    // Remove from database
+    // Remove from Redis
     try {
-      const dbKey = `srv_cache:${key}`;
-      try {
-        await this.db.delete(dbKey);
-        await this.db.delete(`srv_expire:${dbKey}`);
-      } catch (err) {
-        console.warn(`[server-cache] Failed to delete cache entry from DB:`, err);
-      }
+      const redisKey = `${this.keyPrefix}${key}`;
+      await this.redis.del(redisKey);
     } catch (error) {
-      console.warn(`[server-cache] Failed to delete '${key}' from database:`, error);
+      console.warn(`[server-cache] Failed to delete '${key}' from Redis:`, error);
     }
   }
   
@@ -274,29 +271,20 @@ class ServerCache {
     // Clear in-memory cache
     this.cache.clear();
     
-    // Clear all from database
+    // Clear all from Redis
     try {
-      let cacheKeys: string[] = [];
-      try {
-        const keysResult = await this.db.list('srv_cache:');
-        if (Array.isArray(keysResult)) {
-          cacheKeys = keysResult;
-        }
-      } catch (err) {
-        console.warn('[server-cache] Error listing cache keys:', err);
-        return;
-      }
+      const pattern = `${this.keyPrefix}*`;
+      const keys = await this.redis.keys(pattern);
       
-      for (const key of cacheKeys) {
+      for (const redisKey of keys) {
         try {
-          await this.db.delete(key);
-          await this.db.delete(`srv_expire:${key}`);
+          await this.redis.del(redisKey);
         } catch (err) {
           // Ignore deletion errors
         }
       }
     } catch (error) {
-      console.warn('[server-cache] Failed to clear cache from database:', error);
+      console.warn('[server-cache] Failed to clear cache from Redis:', error);
     }
   }
   
@@ -315,6 +303,7 @@ class ServerCache {
     }
     
     // Not in cache, fetch fresh data
+    console.log(`[cache-miss] Fetching fresh ${key} data`);
     const data = await fetchFn();
     
     // Cache for next time
