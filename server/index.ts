@@ -103,8 +103,8 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // Register pure root health check first - no database dependency
-  app.get("/", (_req, res) => {
+  // Move health check to a dedicated endpoint instead of root path
+  app.get("/health", (_req, res) => {
     // Respond immediately with a lightweight 'OK' response for deployment health checks
     // Don't do any logging or database operations here to ensure fastest possible response
     res.set('Connection', 'close').status(200).send('OK');
