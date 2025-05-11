@@ -6,9 +6,10 @@ import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { createServer } from "http";
 
-// Add declaration for global keepAliveInterval
+// Add declaration for global references to prevent garbage collection
 declare global {
   var keepAliveInterval: NodeJS.Timeout;
+  var keepAlivePromise: Promise<any>;
 }
 
 // Create PostgreSQL session store
@@ -105,8 +106,8 @@ app.use((req, res, next) => {
   // Register pure root health check first - no database dependency
   app.get("/", (_req, res) => {
     // Respond immediately with a lightweight 'OK' response for deployment health checks
-    // Don't log to avoid slowing down health checks
-    res.status(200).send('OK');
+    // Don't do any logging or database operations here to ensure fastest possible response
+    res.set('Connection', 'close').status(200).send('OK');
   });
 
   // Register other routes before Vite middleware
@@ -157,6 +158,7 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = Number(process.env.PORT || 5000);
+  // Ensure correct interface binding for deployment
   server.listen(port, "0.0.0.0", () => {
     log(`Server running on http://0.0.0.0:${port}`);
     log(`Environment: ${process.env.NODE_ENV}`);
@@ -201,7 +203,14 @@ app.use((req, res, next) => {
   });
   
   // Prevent the main Promise from resolving to keep the process alive
-  return new Promise(() => {
+  // Also add a global reference to ensure the Promise isn't garbage collected
+  const neverEndingPromise = new Promise(() => {
     log('Server started and will remain running');
   });
+  
+  // Store a reference in the global scope to avoid garbage collection
+  // @ts-ignore - Safely storing Promise reference
+  global.keepAlivePromise = neverEndingPromise;
+  
+  return neverEndingPromise;
 })();
