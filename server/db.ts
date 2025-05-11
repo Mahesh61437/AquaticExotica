@@ -23,9 +23,14 @@ neonConfig.webSocketConstructor = ws;
  */
 
 function getConnectionString(): string {
-  // Always use the AP region connection for consistency
-  const apDbUrl = "postgresql://aquaticadmin:npg_qPIdr6Ag7snK@ep-shrill-lake-a1e9dvdn-pooler.ap-southeast-1.aws.neon.tech/aquaticexotica?sslmode=require";
+  // Use the newly created Replit database
+  if (process.env.DATABASE_URL) {
+    console.log("Using Replit-provisioned PostgreSQL database");
+    return process.env.DATABASE_URL;
+  }
   
+  // Fallback to AP region connection
+  const apDbUrl = "postgresql://aquaticadmin:npg_qPIdr6Ag7snK@ep-shrill-lake-a1e9dvdn-pooler.ap-southeast-1.aws.neon.tech/aquaticexotica?sslmode=require";
   console.log("Using Asia Pacific region database connection");
   return apDbUrl;
 }
