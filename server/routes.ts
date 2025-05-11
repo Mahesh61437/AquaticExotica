@@ -459,12 +459,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Categories
+  // Categories with server-side caching
   app.get("/api/categories", async (req, res) => {
     try {
-      const categories = await storage.getAllCategories();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for categories
+      const cacheKey = 'all_categories';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const categories = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh categories data');
+          return storage.getAllCategories();
+        },
+        10 * 60 * 1000 // 10 minute TTL as requested
+      );
+      
       res.json(categories);
     } catch (error) {
+      console.error("Error getting categories:", error);
       res.status(500).json({ message: "Failed to fetch categories" });
     }
   });
