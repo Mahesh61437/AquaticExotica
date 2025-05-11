@@ -5,6 +5,11 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 
+// Add declaration for global keepAliveInterval
+declare global {
+  var keepAliveInterval: NodeJS.Timeout;
+}
+
 // Create PostgreSQL session store
 const PgSession = connectPgSimple(session);
 
@@ -115,7 +120,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = process.env.PORT || 5000;
+  const port = Number(process.env.PORT || 5000);
   server.listen(port, "0.0.0.0", () => {
     log(`Server running on http://0.0.0.0:${port}`);
     log(`Environment: ${process.env.NODE_ENV}`);
@@ -135,8 +140,13 @@ app.use((req, res, next) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
   });
   
-  // Keep the server running indefinitely
-  setInterval(() => {}, 1000);
+  // Keep the server alive indefinitely - critical for deployment
+  const keepAlive = setInterval(() => {
+    log('Server is running...');
+  }, 60000); // Log every minute to show the server is alive
+  
+  // Ensure the interval reference is not lost
+  global.keepAliveInterval = keepAlive;
 
   // Handle termination signals properly
   process.on('SIGTERM', () => {

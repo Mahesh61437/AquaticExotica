@@ -6,6 +6,7 @@ import { z } from "zod";
 import { hash, compare } from "bcrypt";
 import { sendOrderNotification } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
+import { pool } from "./db";
 
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -72,22 +73,58 @@ const firstAdminSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Health check endpoint
-  app.get("/", (_req, res) => {
+  // Health check endpoint - important for deployment
+  app.get("/", async (_req, res) => {
     try {
-      // Basic health check that verifies database connection
-      const timestamp = new Date().toISOString();
-      res.status(200).json({
-        status: "healthy",
-        timestamp,
-        message: "OK",
-        database: "connected"
-      });
+      // Actually check the database connection
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT NOW()');
+        const timestamp = new Date().toISOString();
+        res.status(200).json({
+          status: "healthy",
+          timestamp,
+          message: "OK",
+          database: "connected"
+        });
+      } finally {
+        client.release();
+      }
     } catch (error) {
+      console.error("Health check failed:", error);
       res.status(500).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
-        message: "Service unavailable"
+        message: "Service unavailable",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
+  // Additional health check endpoint at /health
+  app.get("/health", async (_req, res) => {
+    try {
+      // Actually check the database connection
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT NOW()');
+        const timestamp = new Date().toISOString();
+        res.status(200).json({
+          status: "healthy",
+          timestamp,
+          message: "OK",
+          database: "connected"
+        });
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error("Health check failed:", error);
+      res.status(500).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        message: "Service unavailable",
+        error: error instanceof Error ? error.message : String(error)
       });
     }
   });
