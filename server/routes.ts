@@ -75,6 +75,11 @@ const firstAdminSchema = z.object({
 export async function registerRoutes(app: Express, server: Server): Promise<Server> {
   // Health check endpoints have been moved to index.ts to be registered before Vite middleware
 
+  // Add a lightweight home route that redirects to client pages
+  app.get("/__api_home", (_req, res) => {
+    res.status(200).send("API Home - Use client routes for UI");
+  });
+
   // prefix all routes with /api
 
   // Authentication routes

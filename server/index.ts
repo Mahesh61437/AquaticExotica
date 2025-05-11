@@ -5,6 +5,8 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
 import { createServer } from "http";
+import path from "path";
+import fs from "fs";
 
 // Add declaration for global references to prevent garbage collection
 declare global {
@@ -103,17 +105,29 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // Move health check to a dedicated endpoint instead of root path
-  app.get("/health", (_req, res) => {
-    // Respond immediately with a lightweight 'OK' response for deployment health checks
-    // Don't do any logging or database operations here to ensure fastest possible response
+  // Add health check at /api/status endpoint for deployment monitoring
+  app.get("/api/status", (_req, res) => {
+    // Fast, lightweight response with no logging or DB operations
     res.set('Connection', 'close').status(200).send('OK');
   });
+  
+  // Serve a static index.html at the root path for health checks and deployment
+  app.get("/", (_req, res) => {
+    try {
+      const indexPath = path.resolve(process.cwd(), 'static-index.html');
+      const content = fs.readFileSync(indexPath, 'utf8');
+      res.status(200).send(content);
+    } catch (error) {
+      console.error('Error serving static index page:', error);
+      res.status(200).send('OK - AquaticExotica');
+    }
+  });
 
-  // Register other routes before Vite middleware
+  // Register API routes first
   await registerRoutes(app, server);
 
-  // Then register Vite middleware in development (after health check endpoint)
+  // Set up Vite middleware for development or static serving for production
+  // This needs to come AFTER API routes to prevent conflicts
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
