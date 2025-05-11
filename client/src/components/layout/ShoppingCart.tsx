@@ -10,6 +10,7 @@ import {
   SheetTitle,
   SheetClose,
 } from "@/components/ui/sheet";
+import { ImageWithFallback } from "@/components/ui/image";
 
 export function ShoppingCart() {
   const { cart, removeItem, updateQuantity, clearCart, isCartOpen, setIsCartOpen } = useCart();
@@ -48,7 +49,7 @@ export function ShoppingCart() {
               <ul className="divide-y">
                 {cart.items.map((item) => (
                   <li key={item.id} className="py-4 flex items-center">
-                    <img 
+                    <ImageWithFallback 
                       src={item.imageUrl} 
                       alt={item.name} 
                       className="h-20 w-20 object-cover rounded"

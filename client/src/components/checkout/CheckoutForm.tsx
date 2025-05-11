@@ -14,6 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatPrice } from "@/lib/utils";
 import { indianStates, getCitiesByState, validatePinCode, validateIndianPhone } from "@/lib/india-states";
+import { ImageWithFallback } from "@/components/ui/image";
 import {
   Card,
   CardContent,
