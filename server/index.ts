@@ -123,4 +123,18 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+
+  // Handle termination signals properly
+  process.on('SIGTERM', () => {
+    log('Received SIGTERM signal, keeping application alive');
+  });
+
+  process.on('SIGINT', () => {
+    log('Received SIGINT signal, keeping application alive');
+  });
+
+  // Prevent unhandled promise rejections from crashing the app
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
 })();
