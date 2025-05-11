@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
 import { Check, Package, ShoppingCart } from "lucide-react";
@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { Product } from "@shared/schema";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductCardProps {
   product: Product;
@@ -14,6 +15,39 @@ interface ProductCardProps {
 export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const [isAdded, setIsAdded] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const imageRef = useRef<HTMLImageElement>(null);
+  
+  // Use Intersection Observer to load images only when they enter viewport
+  useEffect(() => {
+    if (!imageRef.current) return;
+    
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const img = entry.target as HTMLImageElement;
+          if (img.dataset.src) {
+            img.src = img.dataset.src;
+            // Remove data-src to avoid setting the src again
+            img.removeAttribute('data-src');
+          }
+          // Unobserve after setting src to avoid unnecessary calls
+          observer.unobserve(img);
+        }
+      });
+    }, {
+      rootMargin: '200px 0px', // Load images 200px before they enter viewport
+      threshold: 0.01
+    });
+    
+    observer.observe(imageRef.current);
+    
+    return () => {
+      if (imageRef.current) {
+        observer.unobserve(imageRef.current);
+      }
+    };
+  }, []);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -42,8 +76,20 @@ export function ProductCard({ product }: ProductCardProps) {
       href={`/product/${product.id}`}
       className="product-card group"
     >
-      <div className="product-image">
-        <img src={product.imageUrl} alt={product.name} />
+      <div className="product-image relative overflow-hidden">
+        {/* Show placeholder until image loads */}
+        {!imageLoaded && (
+          <div className="absolute inset-0 bg-gray-200 animate-pulse"></div>
+        )}
+        
+        <img 
+          ref={imageRef}
+          data-src={product.imageUrl} 
+          alt={product.name} 
+          className={`transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+          onLoad={() => setImageLoaded(true)}
+          src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="  // Tiny transparent placeholder
+        />
         
         {/* Sale or New Badge */}
         {product.isSale && (

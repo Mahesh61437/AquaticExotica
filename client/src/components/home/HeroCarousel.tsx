@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import useEmblaCarousel from 'embla-carousel-react';
@@ -23,6 +23,30 @@ export function HeroCarousel({ slides, autoplayDelay = 5000 }: HeroCarouselProps
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true });
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+  const [imagesLoaded, setImagesLoaded] = useState<Record<number, boolean>>({});
+  const imageRefs = useRef<HTMLImageElement[]>([]);
+
+  // Set up image preloading
+  useEffect(() => {
+    // Create an object to track loading status of each slide
+    const loadStatus: Record<number, boolean> = {};
+    slides.forEach(slide => {
+      loadStatus[slide.id] = false;
+      
+      // Preload images
+      const img = new Image();
+      img.onload = () => {
+        setImagesLoaded(prev => ({
+          ...prev,
+          [slide.id]: true
+        }));
+      };
+      img.src = slide.imageUrl;
+    });
+    
+    // Initialize loading status
+    setImagesLoaded(loadStatus);
+  }, [slides]);
 
   // Set up callbacks for the Embla Carousel
   const onSelect = useCallback(() => {
@@ -69,15 +93,33 @@ export function HeroCarousel({ slides, autoplayDelay = 5000 }: HeroCarouselProps
       {/* Main Carousel */}
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex">
-          {slides.map((slide) => (
+          {slides.map((slide, index) => (
             <div key={slide.id} className="relative min-w-full h-[60vh] flex items-center">
+              {/* For progressive loading, we use a background color initially */}
               <div 
-                className="absolute inset-0 bg-cover bg-center" 
+                className="absolute inset-0 bg-gray-300 bg-cover bg-center transition-opacity duration-300"
                 style={{ 
                   backgroundImage: `url(${slide.imageUrl})`,
                   backgroundSize: 'cover',
+                  opacity: imagesLoaded[slide.id] ? 1 : 0.3,
                 }}
               >
+                {/* Hidden image for preloading */}
+                <img 
+                  ref={el => {
+                    if (el) imageRefs.current[index] = el;
+                  }}
+                  src={slide.imageUrl} 
+                  alt=""
+                  className="hidden"
+                  onLoad={() => {
+                    setImagesLoaded(prev => ({
+                      ...prev,
+                      [slide.id]: true
+                    }));
+                  }}
+                />
+                
                 {/* Overlay for better text readability */}
                 <div className="absolute inset-0 bg-black bg-opacity-50"></div>
               </div>
