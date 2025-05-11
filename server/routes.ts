@@ -73,13 +73,8 @@ const firstAdminSchema = z.object({
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Root health check API
-  app.get("/", (req: Request, res: Response) => {
-    res.json({
-      status: "ok",
-      message: "API is running",
-      timestamp: new Date().toISOString(),
-      version: "1.0.0"
-    });
+  app.get("/", (_req: Request, res: Response) => {
+    res.status(200).json({ status: "ok" });
   });
 
   // put application routes here
