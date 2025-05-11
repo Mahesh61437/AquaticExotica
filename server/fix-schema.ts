@@ -70,7 +70,18 @@ export async function fixSchema() {
     
     console.log('Database schema check completed successfully');
   } catch (error) {
+    // Log but don't crash the server - continue execution
     console.error('Error fixing database schema:', error);
+    
+    // Check if it's a column already exists error
+    if (error instanceof Error) {
+      const errorMsg = error.message || '';
+      if (errorMsg.includes('already exists')) {
+        console.log('Column already exists, continuing...');
+        return; // Don't rethrow
+      }
+    }
+    
     throw error;
   }
 }

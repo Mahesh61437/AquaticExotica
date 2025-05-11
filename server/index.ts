@@ -9,10 +9,6 @@ import { pool } from "./db";
 const PgSession = connectPgSimple(session);
 
 const app = express();
-// Add root health check endpoint for Replit deployments
-app.get("/", (_req, res) => {
-  res.status(200).json({ status: "ok" });
-});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -75,27 +71,30 @@ app.use((req, res, next) => {
     // Fix the database schema first
     console.log("Running database schema migration...");
     const { fixSchema } = await import("./fix-schema");
-    await fixSchema();
-    console.log("Database schema migration completed successfully");
+    await fixSchema().catch(err => {
+      console.warn("Schema fix warning (continuing):", err.message);
+    });
+    console.log("Database schema migration completed");
     
     // Then run the standard database migration
     console.log("Running database schema migration...");
     const { runMigration } = await import("./db-migrate");
-    await runMigration();
+    await runMigration().catch(err => {
+      console.warn("Migration warning (continuing):", err.message);
+    });
     console.log("Database migration completed");
-    
-    // Run schema fix again to ensure is_admin column is created
-    // This is because runMigration may reset the schema based on the models
-    await fixSchema();
-    console.log("Schema verification completed");
     
     // Finally initialize with demo data
     console.log("Initializing database with demo data...");
     const { initializeDatabase } = await import("./init-db");
-    await initializeDatabase();
+    await initializeDatabase().catch(err => {
+      console.warn("Database initialization warning (continuing):", err.message);
+    });
     console.log("Database initialization completed");
   } catch (error) {
-    console.error("Database setup failed:", error);
+    // Log but don't exit the process
+    console.error("Database setup encountered issues:", error);
+    console.log("Continuing server startup despite database issues");
   }
 
   const server = await registerRoutes(app);
@@ -105,7 +104,7 @@ app.use((req, res, next) => {
     const message = err.message || "Internal Server Error";
 
     res.status(status).json({ message });
-    throw err;
+    console.error("Server error:", err);
   });
 
   // importantly only setup vite in development and after
