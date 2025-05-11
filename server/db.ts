@@ -23,44 +23,11 @@ neonConfig.webSocketConstructor = ws;
  */
 
 function getConnectionString(): string {
-  // Try to use the custom database URL first (prioritize AP region connection)
-  const customDbUrl = "postgresql://aquaticadmin:npg_qPIdr6Ag7snK@ep-shrill-lake-a1e9dvdn-pooler.ap-southeast-1.aws.neon.tech/aquaticexotica?sslmode=require";
+  // Always use the AP region connection for consistency
+  const apDbUrl = "postgresql://aquaticadmin:npg_qPIdr6Ag7snK@ep-shrill-lake-a1e9dvdn-pooler.ap-southeast-1.aws.neon.tech/aquaticexotica?sslmode=require";
   
-  // If DATABASE_URL is provided, use it as fallback
-  if (process.env.DATABASE_URL) {
-    // Check if it's the AP region connection we want
-    if (process.env.DATABASE_URL === customDbUrl || 
-        process.env.DATABASE_URL.includes("ap-southeast-1")) {
-      return process.env.DATABASE_URL;
-    }
-    
-    // If DATABASE_URL is set but is not the AP region, prefer custom URL
-    if (process.env.USE_PROVIDED_DB === "true") {
-      console.log("Using provided DATABASE_URL environment variable");
-      return process.env.DATABASE_URL;
-    }
-    
-    console.log("Using custom AP region database connection instead of environment DATABASE_URL");
-    return customDbUrl;
-  }
-  
-  // Otherwise, try to construct from individual components
-  const host = process.env.DB_HOST || process.env.PGHOST;
-  const port = process.env.DB_PORT || process.env.PGPORT || '5432';
-  const user = process.env.DB_USER || process.env.PGUSER;
-  const password = process.env.DB_PASSWORD || process.env.PGPASSWORD;
-  const database = process.env.DB_NAME || process.env.PGDATABASE;
-  const ssl = process.env.DB_SSL?.toLowerCase() === 'true' || true; // Default to true
-  
-  // Check if we have enough information to construct a connection string
-  if (host && user && password && database) {
-    const sslParam = ssl ? '?sslmode=require' : '';
-    return `postgres://${user}:${password}@${host}:${port}/${database}${sslParam}`;
-  }
-  
-  // If we get here, use the custom database URL
-  console.log("No valid database connection information found, using custom AP region database");
-  return customDbUrl;
+  console.log("Using Asia Pacific region database connection");
+  return apDbUrl;
 }
 
 // Get connection string and create the pool
