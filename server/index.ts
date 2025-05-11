@@ -104,8 +104,8 @@ app.use((req, res, next) => {
 
   // Register pure root health check first - no database dependency
   app.get("/", (_req, res) => {
-    console.log("Health check request received at root endpoint");
     // Respond immediately with a lightweight 'OK' response for deployment health checks
+    // Don't log to avoid slowing down health checks
     res.status(200).send('OK');
   });
 
@@ -198,5 +198,10 @@ app.use((req, res, next) => {
   // Prevent unhandled promise rejections from crashing the app
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+  
+  // Prevent the main Promise from resolving to keep the process alive
+  return new Promise(() => {
+    log('Server started and will remain running');
   });
 })();
