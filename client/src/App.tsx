@@ -26,6 +26,12 @@ import OrderDetail from "./pages/OrderDetail";
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminSetup from "./pages/AdminSetup";
+// Information pages
+import Contact from "./pages/Contact";
+import Shipping from "./pages/Shipping";
+import FAQ from "./pages/FAQ";
+import Terms from "./pages/Terms";
+import Privacy from "./pages/Privacy";
 // Test pages
 import SignupTest from "./pages/SignupTest";
 
@@ -50,6 +56,11 @@ function Router() {
           <Route path="/orders/:id" component={OrderDetail} />
           <Route path="/admin" component={AdminDashboard} />
           <Route path="/admin-setup" component={AdminSetup} />
+          <Route path="/contact" component={Contact} />
+          <Route path="/shipping" component={Shipping} />
+          <Route path="/faq" component={FAQ} />
+          <Route path="/terms" component={Terms} />
+          <Route path="/privacy" component={Privacy} />
           <Route path="/signup-test" component={SignupTest} />
           <Route component={NotFound} />
         </Switch>
