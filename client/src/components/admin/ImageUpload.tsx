@@ -2,6 +2,7 @@ import { useState, useRef, ChangeEvent, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Upload, X, ImageIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { ImageWithFallback } from "@/components/ui/image";
 import { 
   uploadImage, 
   UploadProgressCallback, 
@@ -136,7 +137,7 @@ export function ImageUpload({
     <div className={`border rounded-md overflow-hidden ${className}`}>
       {imageUrl ? (
         <div className="relative">
-          <img 
+          <ImageWithFallback 
             src={imageUrl} 
             alt="Uploaded image" 
             className="w-full h-64 object-cover"
