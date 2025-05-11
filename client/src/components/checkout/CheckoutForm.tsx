@@ -777,7 +777,7 @@ export function CheckoutForm() {
               <div key={item.id} className="flex justify-between items-center pb-2 border-b">
                 <div className="flex items-center gap-2">
                   <div className="h-12 w-12 bg-gray-100 rounded overflow-hidden">
-                    <img
+                    <ImageWithFallback
                       src={item.imageUrl}
                       alt={item.name}
                       className="h-full w-full object-cover"

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Order } from "@shared/schema";
 import { formatPrice } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ImageWithFallback } from "@/components/ui/image";
 
 export default function OrderConfirmation() {
   const [, params] = useRoute("/order-confirmation/:id");
@@ -145,7 +146,7 @@ export default function OrderConfirmation() {
               {orderItems.map((item: any, index: number) => (
                 <li key={index} className="py-3 flex items-center">
                   <div className="h-16 w-16 bg-gray-100 rounded overflow-hidden">
-                    <img
+                    <ImageWithFallback
                       src={item.imageUrl}
                       alt={item.name}
                       className="h-full w-full object-cover"
