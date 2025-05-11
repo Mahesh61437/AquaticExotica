@@ -79,27 +79,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Detailed system health check endpoint
-  app.get("/api/system/health", (_req: Request, res: Response) => {
-    // Get database info from environment variables
-    const dbUrl = process.env.DATABASE_URL || "custom connection";
-    const isSafeDbUrl = dbUrl.replace(/:[^:@]+@/, ':***@'); // Hide password
+  app.get("/api/system/health", async (_req: Request, res: Response) => {
+    // Get database info from the pool connection
+    const connectionString = process.env.DATABASE_URL || "custom connection";
+    const isSafeDbUrl = connectionString.replace(/:[^:@]+@/, ':***@'); // Hide password
+    
+    // Get actual database connection in use
+    let usedDbUrl = "unknown";
+    try {
+      const dbInfo = await storage.getDatabaseInfo();
+      if (dbInfo && dbInfo.url) {
+        usedDbUrl = dbInfo.url.replace(/:[^:@]+@/, ':***@');
+      }
+    } catch (error) {
+      console.error("Error getting database info:", error);
+    }
     
     // Database region detection
     let dbRegion = "unknown";
-    if (dbUrl.includes("ap-southeast-1")) {
+    if (usedDbUrl.includes("ap-southeast-1")) {
       dbRegion = "ap-southeast-1 (Asia Pacific)";
-    } else if (dbUrl.includes("us-west-2")) {
+    } else if (usedDbUrl.includes("us-west-2")) {
       dbRegion = "us-west-2 (US West)";
     }
     
+    // Try to get schema info
+    let schemaStatus = "unknown";
+    let tablesStatus: {[key: string]: string} = {};
+    try {
+      // List tables
+      const tableInfo = await storage.getTableInfo();
+      schemaStatus = tableInfo.hasRequiredTables ? "ok" : "incomplete";
+      tablesStatus = tableInfo.tables;
+    } catch (error) {
+      console.error("Error checking database tables:", error);
+      schemaStatus = "error";
+    }
+    
     // Redis connection info
-    const redisUrl = process.env.REDIS_URL || "not configured";
+    const redisUrl = process.env.REDIS_URL || 
+      "redis://default:5mv30LZpIAHW1S5ayT5w6ZhqdfpAoGt1@redis-12665.c212.ap-south-1-1.ec2.redns.redis-cloud.com:12665";
     const isSafeRedisUrl = redisUrl.replace(/:[^:@]+@/, ':***@'); // Hide password
     
-    // Get Redis connection status (using the serverCache.isRedisAvailable method if available)
+    // Get Redis connection status
     let redisConnected = false;
     try {
-      // @ts-ignore - May not exist if we haven't added it yet
       if (typeof serverCache.isRedisAvailable === 'function') {
         redisConnected = serverCache.isRedisAvailable();
       }
@@ -114,9 +138,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       environment: process.env.NODE_ENV || "development",
       nodeVersion: process.version,
       database: {
-        url: isSafeDbUrl,
+        configured_url: isSafeDbUrl,
+        actual_url: usedDbUrl,
         region: dbRegion,
-        connected: true // Assume connected if the app is running
+        connected: true, // Assume connected if the app is running
+        schema_status: schemaStatus,
+        tables: tablesStatus
       },
       redis: {
         url: isSafeRedisUrl,

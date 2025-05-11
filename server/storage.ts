@@ -9,6 +9,10 @@ import {
 // modify the interface with any CRUD methods
 // you might need
 export interface IStorage {
+  // System methods
+  getDatabaseInfo(): Promise<{url: string, name: string, connected: boolean}>;
+  getTableInfo(): Promise<{hasRequiredTables: boolean, tables: {[key: string]: string}}>;
+  
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -55,6 +59,27 @@ export class MemStorage implements IStorage {
   private productCurrentId: number;
   private categoryCurrentId: number;
   private orderCurrentId: number;
+  
+  // System methods
+  async getDatabaseInfo(): Promise<{url: string, name: string, connected: boolean}> {
+    return {
+      url: "in-memory",
+      name: "memory",
+      connected: true
+    };
+  }
+  
+  async getTableInfo(): Promise<{hasRequiredTables: boolean, tables: {[key: string]: string}}> {
+    return {
+      hasRequiredTables: true,
+      tables: {
+        users: 'exists',
+        products: 'exists',
+        categories: 'exists',
+        orders: 'exists'
+      }
+    };
+  }
 
   constructor() {
     this.users = new Map();

@@ -33,8 +33,9 @@ class ServerCache {
   
   private async initialize(): Promise<void> {
     try {
-      // Configure Redis using environment variables if available
-      const redisUrl = process.env.REDIS_URL;
+      // Set a hardcoded Redis URL if it's not in environment variables
+      // This ensures the Redis URL is always available
+      const redisUrl = process.env.REDIS_URL || "redis://default:5mv30LZpIAHW1S5ayT5w6ZhqdfpAoGt1@redis-12665.c212.ap-south-1-1.ec2.redns.redis-cloud.com:12665";
       
       if (redisUrl) {
         try {

@@ -5,11 +5,87 @@ import {
   orders, type Order, type InsertOrder
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, like, asc, desc } from "drizzle-orm";
+import { eq, like, asc, desc, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
 
 // Database implementation of storage
 export class DatabaseStorage implements IStorage {
+  // System methods
+  async getDatabaseInfo(): Promise<{url: string, name: string, connected: boolean}> {
+    try {
+      // Get database connection info from pool
+      const connectionString = process.env.DATABASE_URL || "custom connection";
+      
+      // Execute a simple query to test connection
+      const result = await db.execute(sql`SELECT current_database()`);
+      const dbName = result.rows[0]?.current_database || "unknown";
+      
+      return {
+        url: connectionString,
+        name: dbName.toString(),
+        connected: true
+      };
+    } catch (error) {
+      console.error("Error getting database info:", error);
+      return {
+        url: "unknown",
+        name: "unknown",
+        connected: false
+      };
+    }
+  }
+  
+  async getTableInfo(): Promise<{hasRequiredTables: boolean, tables: {[key: string]: string}}> {
+    try {
+      // Get list of tables
+      const result = await db.execute(sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+      `);
+      
+      const tableNames: string[] = [];
+      for (const row of result.rows) {
+        if (row.table_name) {
+          tableNames.push(row.table_name.toString());
+        }
+      }
+      
+      const tables: {[key: string]: string} = {};
+      
+      // Required tables
+      const requiredTables = ['users', 'products', 'categories', 'orders'];
+      let allTablesExist = true;
+      
+      // Check each required table
+      for (const table of requiredTables) {
+        const exists = tableNames.includes(table);
+        tables[table] = exists ? 'exists' : 'missing';
+        if (!exists) {
+          allTablesExist = false;
+        }
+      }
+      
+      // Add any additional tables found
+      for (const table of tableNames) {
+        if (!requiredTables.includes(table)) {
+          tables[table] = 'exists';
+        }
+      }
+      
+      return {
+        hasRequiredTables: allTablesExist,
+        tables
+      };
+    } catch (error) {
+      console.error("Error getting table info:", error);
+      return {
+        hasRequiredTables: false,
+        tables: {}
+      };
+    }
+  }
+  
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     try {
