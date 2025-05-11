@@ -35,7 +35,7 @@ export function FeaturedCategories() {
               href={`/shop/${category.slug}`} 
               className="group relative overflow-hidden rounded-lg aspect-square"
             >
-              <img 
+              <ImageWithFallback 
                 src={category.imageUrl} 
                 alt={`${category.name} Fashion`} 
                 className="object-cover w-full h-full transform group-hover:scale-105 transition duration-300"
