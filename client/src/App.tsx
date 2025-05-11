@@ -34,8 +34,41 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 // Test pages
 import SignupTest from "./pages/SignupTest";
+// Performance optimization
+import { useEffect } from "react";
+import { prefetchHomepageData } from "@/lib/api-cache";
 
 function Router() {
+  // Prefetch all homepage data as soon as the app loads
+  useEffect(() => {
+    // Initialize prefetching immediately
+    prefetchHomepageData();
+    
+    // Set up homepage data prefetching when user is idle
+    let idleCallbackId: number;
+    
+    if ('requestIdleCallback' in window) {
+      idleCallbackId = window.requestIdleCallback(() => {
+        prefetchHomepageData();
+      }, { timeout: 2000 }); // 2-second timeout in case the browser never gets to an "idle" state
+    } else {
+      // Fallback for browsers without requestIdleCallback
+      const timeoutId = setTimeout(() => {
+        prefetchHomepageData();
+      }, 200);
+      
+      idleCallbackId = Number(timeoutId);
+    }
+    
+    return () => {
+      if ('requestIdleCallback' in window) {
+        window.cancelIdleCallback(idleCallbackId);
+      } else {
+        clearTimeout(idleCallbackId);
+      }
+    };
+  }, []);
+  
   return (
     <div className="flex flex-col min-h-screen">
       <Header />
