@@ -2,39 +2,39 @@ export function InstagramFeed() {
   const instagramPosts = [
     {
       id: 1,
-      imageUrl: "https://images.unsplash.com/photo-1509631179647-0177331693ae?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1520057806991-23c2a28fbc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Fashion lifestyle image of person with product in urban setting"
+      alt: "Beautiful tropical aquarium with colorful fish and plants"
     },
     {
       id: 2,
-      imageUrl: "https://images.pexels.com/photos/2584269/pexels-photo-2584269.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      imageUrl: "https://images.unsplash.com/photo-1535591273668-578e31182c4f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Person wearing our knit sweater in outdoor setting"
+      alt: "Vibrant aquatic plants in a planted aquarium setup"
     },
     {
       id: 3,
-      imageUrl: "https://images.unsplash.com/photo-1574201635302-388dd92a4c3f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1555443805-658637491dd4?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Urban street fashion featuring our denim jacket"
+      alt: "Close-up of betta fish with stunning colors in aquarium"
     },
     {
       id: 4,
-      imageUrl: "https://images.pexels.com/photos/934063/pexels-photo-934063.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      imageUrl: "https://images.unsplash.com/photo-1635111529283-cb1347fb7a91?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Close-up of our leather accessories arranged aesthetically"
+      alt: "Professionally aquascaped nature style aquarium"
     },
     {
       id: 5,
-      imageUrl: "https://images.pexels.com/photos/292999/pexels-photo-292999.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1",
+      imageUrl: "https://images.unsplash.com/photo-1616843413587-9e3a37f7bbd8?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Person showing off our footwear in casual setting"
+      alt: "Discus fish swimming in a well-maintained aquarium"
     },
     {
       id: 6,
-      imageUrl: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
+      imageUrl: "https://images.unsplash.com/photo-1548269355-c4ca476d14a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=300&q=80",
       link: "#",
-      alt: "Fashion shoot with model wearing our latest collection"
+      alt: "Impressive large aquarium setup with various fish species"
     }
   ];
 
@@ -42,7 +42,7 @@ export function InstagramFeed() {
     <section className="py-12 bg-gray-50">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-heading font-bold text-center mb-2">Follow Us on Instagram</h2>
-        <p className="text-center text-gray-600 mb-8">@modernshop_fashion</p>
+        <p className="text-center text-gray-600 mb-8">@aquaticexotica</p>
         
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
           {instagramPosts.map((post) => (
