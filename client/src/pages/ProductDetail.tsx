@@ -122,7 +122,7 @@ export default function ProductDetail() {
       <div className="container mx-auto px-4 py-12">
         {/* Breadcrumbs */}
         <div className="flex items-center text-sm text-gray-500 mb-8">
-          <a href="/" className="hover:text-primary">Home</a>
+          <a href="/home" className="hover:text-primary">Home</a>
           <ChevronRight className="h-4 w-4 mx-2" />
           <a href="/shop" className="hover:text-primary">Shop</a>
           <ChevronRight className="h-4 w-4 mx-2" />

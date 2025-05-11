@@ -74,7 +74,7 @@ export default function OrderConfirmation() {
         <div className="max-w-2xl mx-auto">
           {/* Breadcrumbs */}
           <div className="flex items-center text-sm text-gray-500 mb-8">
-            <Link href="/" className="hover:text-primary">Home</Link>
+            <Link href="/home" className="hover:text-primary">Home</Link>
             <ChevronRight className="h-4 w-4 mx-2" />
             <Link href="/shop" className="hover:text-primary">Shop</Link>
             <ChevronRight className="h-4 w-4 mx-2" />
@@ -180,7 +180,7 @@ export default function OrderConfirmation() {
 
           <div className="flex justify-center space-x-4">
             <Button asChild variant="outline" className="border-2">
-              <Link href="/">Return to Home</Link>
+              <Link href="/home">Return to Home</Link>
             </Button>
             <Button asChild>
               <Link href="/shop">Continue Shopping</Link>

@@ -77,7 +77,7 @@ export default function Checkout() {
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-3xl font-heading font-bold mb-2">Checkout</h1>
         <div className="flex items-center text-sm text-gray-500 mb-8">
-          <Link href="/" className="hover:text-primary">Home</Link>
+          <Link href="/home" className="hover:text-primary">Home</Link>
           <span className="mx-2">/</span>
           <Link href="/shop" className="hover:text-primary">Shop</Link>
           <span className="mx-2">/</span>

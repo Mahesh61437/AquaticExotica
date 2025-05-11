@@ -76,7 +76,12 @@ function Router() {
         {/* This component handles cart merging when users log in */}
         <AuthCartIntegration />
         <Switch>
-          <Route path="/" component={Home} />
+          <Route path="/home" component={Home} />
+          <Route path="/" component={() => {
+            // Redirect to /home
+            window.location.href = '/home';
+            return null;
+          }} />
           <Route path="/shop" component={Shop} />
           <Route path="/shop/:category" component={Shop} />
           <Route path="/product/:id" component={ProductDetail} />

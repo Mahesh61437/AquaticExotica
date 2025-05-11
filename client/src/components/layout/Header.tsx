@@ -24,7 +24,7 @@ export function Header() {
   
   const handleSignOut = async () => {
     await signOut();
-    setLocation("/");
+    setLocation("/home");
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -40,13 +40,13 @@ export function Header() {
         {/* Top Nav */}
         <div className="py-4 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-heading font-bold text-primary">
+          <Link href="/home" className="text-2xl font-heading font-bold text-primary">
             AquaticExotica
           </Link>
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
-            <Link href="/" className={`font-medium hover:text-primary transition ${location === '/' ? 'text-primary' : ''}`}>
+            <Link href="/home" className={`font-medium hover:text-primary transition ${location === '/home' ? 'text-primary' : ''}`}>
               Home
             </Link>
             <Link href="/shop" className={`font-medium hover:text-primary transition ${location === '/shop' ? 'text-primary' : ''}`}>
@@ -150,11 +150,11 @@ export function Header() {
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-center mb-6">
                     <Link 
-                      href="/"
+                      href="/home"
                       onClick={() => setIsMobileMenuOpen(false)}
                       className="text-2xl font-heading font-bold text-primary"
                     >
-                      ModernShop
+                      AquaticExotica
                     </Link>
                     <Button 
                       variant="ghost" 
@@ -166,7 +166,7 @@ export function Header() {
                   </div>
                   <nav className="flex flex-col space-y-4">
                     <Link 
-                      href="/" 
+                      href="/home" 
                       onClick={() => setIsMobileMenuOpen(false)} 
                       className="py-2 border-b border-gray-100 font-medium"
                     >
