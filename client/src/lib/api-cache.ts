@@ -209,24 +209,19 @@ class ApiCache {
 // Create a singleton instance
 export const apiCache = new ApiCache();
 
-// Function to prefetch all homepage data at once
+// Function to prefetch only categories for homepage
 export function prefetchHomepageData(): Promise<void> {
   // Use a longer cache time for prefetched data (30 minutes)
   const prefetchTTL = 30 * 60 * 1000;
   
-  return Promise.all([
-    // Prefetch all required homepage data in parallel
-    apiCache.prefetch('/api/categories', undefined, prefetchTTL),
-    apiCache.prefetch('/api/products/featured', undefined, prefetchTTL),
-    apiCache.prefetch('/api/products/trending', undefined, prefetchTTL),
-    apiCache.prefetch('/api/products/new', undefined, prefetchTTL),
-    apiCache.prefetch('/api/products/sale', undefined, prefetchTTL)
-  ]).then(() => {
-    console.log('Homepage data prefetched successfully');
-  }).catch(error => {
-    // Log but don't throw to avoid breaking app startup
-    console.error('Failed to prefetch homepage data:', error);
-  });
+  return apiCache.prefetch('/api/categories', undefined, prefetchTTL)
+    .then(() => {
+      console.log('Categories data prefetched successfully');
+    })
+    .catch(error => {
+      // Log but don't throw to avoid breaking app startup
+      console.error('Failed to prefetch categories data:', error);
+    });
 }
 
 // Function to clear cache when user logs in/out
