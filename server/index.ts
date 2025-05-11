@@ -102,13 +102,23 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // First register the health check route - always respond with simple 'OK' for root endpoint
+  // Register pure root health check first - no database dependency
   app.get("/", (_req, res) => {
     console.log("Health check request received at root endpoint");
-    // Respond immediately with a lightweight 'OK' response
+    // Respond immediately with a lightweight 'OK' response for deployment health checks
     res.status(200).send('OK');
   });
 
+  // Register other routes before Vite middleware
+  await registerRoutes(app, server);
+
+  // Then register Vite middleware in development (after health check endpoint)
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+  
   // Move the database check to a separate endpoint
   app.get("/api/health", async (_req, res) => {
     try {
@@ -134,16 +144,6 @@ app.use((req, res, next) => {
       });
     }
   });
-
-  // Then register Vite middleware in development
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-
-  // Then register all other routes
-  await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
