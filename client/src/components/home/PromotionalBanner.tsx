@@ -32,12 +32,12 @@ export function PromotionalBanner() {
     <section className="py-16 bg-primary bg-opacity-10">
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
         <div>
-          <span className="text-primary font-semibold">SPECIAL OFFER</span>
+          <span className="text-primary font-semibold">EXCLUSIVE OFFER</span>
           <h2 className="text-3xl lg:text-4xl font-heading font-bold mt-2">
-            Get 25% Off On Your First Purchase
+            Get 15% Off On Premium Aquatic Plants
           </h2>
           <p className="mt-4 text-gray-600">
-            Sign up for our newsletter and receive an exclusive discount code for your first order. Limited time offer, don't miss out!
+            Subscribe to our newsletter for exclusive care tips, new arrivals, and special offers on premium aquatic plants and equipment. Limited time discount available!
           </p>
           
           <form className="mt-6 flex flex-col sm:flex-row" onSubmit={handleSubmit}>
@@ -58,13 +58,15 @@ export function PromotionalBanner() {
         </div>
         
         <div className="relative h-[300px] lg:h-[400px]">
-          <img 
-            src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=800&q=80" 
-            alt="Fashion Model" 
-            className="absolute inset-0 w-full h-full object-cover rounded-lg"
-          />
+          <div className="absolute inset-0 bg-black rounded-lg">
+            <img 
+              src="/images/aquarium_promo.jpeg" 
+              alt="Premium Aquatic Plants" 
+              className="w-full h-full object-contain rounded-lg"
+            />
+          </div>
           <div className="absolute top-0 right-0 bg-accent text-white font-bold rounded-bl-lg p-4 text-4xl">
-            25% OFF
+            15% OFF
           </div>
         </div>
       </div>
