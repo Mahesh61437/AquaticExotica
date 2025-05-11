@@ -102,11 +102,11 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // First register the health check route - always respond with success for root endpoint
+  // First register the health check route - always respond with simple 'OK' for root endpoint
   app.get("/", (_req, res) => {
     console.log("Health check request received at root endpoint");
-    // Respond immediately without database check for root health checks
-    res.status(200).send('<html><body><h1>Service is running</h1></body></html>');
+    // Respond immediately with a lightweight 'OK' response
+    res.status(200).send('OK');
   });
 
   // Move the database check to a separate endpoint
@@ -160,6 +160,7 @@ app.use((req, res, next) => {
   server.listen(port, "0.0.0.0", () => {
     log(`Server running on http://0.0.0.0:${port}`);
     log(`Environment: ${process.env.NODE_ENV}`);
+    log('Server initialized and ready to handle requests');
   });
 
   // Handle termination signals properly
