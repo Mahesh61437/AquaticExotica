@@ -1095,6 +1095,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Health check endpoints for Replit deployment
+  app.get("/api/health", (req, res) => {
+    res.status(200).json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      message: "AquaticExotica API is running"
+    });
+  });
+
+  // Root health check (easier for Replit to access)
+  app.get("/health", (req, res) => {
+    res.status(200).json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      message: "AquaticExotica API is running"
+    });
+  });
+  
+  // Super simple plain text health check for maximum compatibility
+  app.get("/healthz", (req, res) => {
+    res.status(200).send("OK");
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
