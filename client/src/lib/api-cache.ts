@@ -211,9 +211,16 @@ export const apiCache = new ApiCache();
 
 // Function to prefetch all homepage data at once
 export function prefetchHomepageData(): Promise<void> {
+  // Use a longer cache time for prefetched data (30 minutes)
+  const prefetchTTL = 30 * 60 * 1000;
+  
   return Promise.all([
-    // Only prefetch categories with 10-minute TTL as requested
-    apiCache.prefetch('/api/categories', undefined, 10 * 60 * 1000),
+    // Prefetch all required homepage data in parallel
+    apiCache.prefetch('/api/categories', undefined, prefetchTTL),
+    apiCache.prefetch('/api/products/featured', undefined, prefetchTTL),
+    apiCache.prefetch('/api/products/trending', undefined, prefetchTTL),
+    apiCache.prefetch('/api/products/new', undefined, prefetchTTL),
+    apiCache.prefetch('/api/products/sale', undefined, prefetchTTL)
   ]).then(() => {
     console.log('Homepage data prefetched successfully');
   }).catch(error => {

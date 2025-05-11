@@ -357,10 +357,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products
+  // Products with server-side caching
   app.get("/api/products", async (req, res) => {
     try {
-      const products = await storage.getAllProducts();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for all products
+      const cacheKey = 'all_products';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const products = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh products data');
+          return storage.getAllProducts();
+        },
+        10 * 60 * 1000 // 10 minute TTL
+      );
+      
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch products" });
@@ -368,9 +383,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Special product collections - must come before the :id route
+  // All with server-side caching
   app.get("/api/products/featured", async (req, res) => {
     try {
-      const products = await storage.getFeaturedProducts();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for featured products
+      const cacheKey = 'featured_products';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const products = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh featured products data');
+          return storage.getFeaturedProducts();
+        },
+        10 * 60 * 1000 // 10 minute TTL
+      );
+      
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch featured products" });
@@ -379,7 +410,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/trending", async (req, res) => {
     try {
-      const products = await storage.getTrendingProducts();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for trending products
+      const cacheKey = 'trending_products';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const products = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh trending products data');
+          return storage.getTrendingProducts();
+        },
+        10 * 60 * 1000 // 10 minute TTL
+      );
+      
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch trending products" });
@@ -388,7 +434,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/new", async (req, res) => {
     try {
-      const products = await storage.getNewProducts();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for new products
+      const cacheKey = 'new_products';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const products = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh new products data');
+          return storage.getNewProducts();
+        },
+        10 * 60 * 1000 // 10 minute TTL
+      );
+      
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch new products" });
@@ -397,7 +458,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/products/sale", async (req, res) => {
     try {
-      const products = await storage.getSaleProducts();
+      // Import server cache
+      const { serverCache } = await import('./cache-manager');
+      
+      // Cache key for sale products
+      const cacheKey = 'sale_products';
+      
+      // Try to get from cache or fetch fresh data with 10 minute TTL
+      const products = await serverCache.getOrSet(
+        cacheKey,
+        async () => {
+          console.log('[cache-miss] Fetching fresh sale products data');
+          return storage.getSaleProducts();
+        },
+        10 * 60 * 1000 // 10 minute TTL
+      );
+      
       res.json(products);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch sale products" });
