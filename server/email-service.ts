@@ -35,7 +35,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
     const msg = {
       to: options.to,
-      from: 'info@elegantclothing.in', // Replace with your verified sender
+      from: 'info@aquaticexotica.in', // Verified sender for Aquatic Exotica
       subject: options.subject,
       text: options.text || 'Please view this email in a modern email client that supports HTML',
       html: options.html,

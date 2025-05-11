@@ -75,29 +75,20 @@ const firstAdminSchema = z.object({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint - important for deployment
   app.get("/", async (_req, res) => {
+    console.log("Health check request received at root endpoint");
     try {
       // Actually check the database connection
       const client = await pool.connect();
       try {
         await client.query('SELECT NOW()');
-        const timestamp = new Date().toISOString();
-        res.status(200).json({
-          status: "healthy",
-          timestamp,
-          message: "OK",
-          database: "connected"
-        });
+        // For root endpoint, respond with text/html for better health check compatibility
+        res.status(200).send('<html><body><h1>Service is running</h1></body></html>');
       } finally {
         client.release();
       }
     } catch (error) {
       console.error("Health check failed:", error);
-      res.status(500).json({
-        status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        message: "Service unavailable",
-        error: error instanceof Error ? error.message : String(error)
-      });
+      res.status(500).send('Service unavailable');
     }
   });
   
