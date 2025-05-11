@@ -9,6 +9,11 @@ import { pool } from "./db";
 const PgSession = connectPgSimple(session);
 
 const app = express();
+// Add root health check endpoint for Replit deployments
+app.get("/", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
