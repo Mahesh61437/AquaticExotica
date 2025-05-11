@@ -146,6 +146,7 @@ app.use((req, res, next) => {
   }, 60000); // Log every minute to show the server is alive
   
   // Ensure the interval reference is not lost
+  // @ts-ignore - Safely storing interval reference
   global.keepAliveInterval = keepAlive;
 
   // Handle termination signals properly
