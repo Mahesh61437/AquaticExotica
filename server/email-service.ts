@@ -98,7 +98,7 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
         New Order #${order.id}
       </h2>
       
-      <p>A new order has been placed on Elegant Clothing.</p>
+      <p>A new order has been placed on Aquatic Exotica.</p>
       
       <h3 style="color: #555;">Order Details:</h3>
       <p><strong>Order ID:</strong> ${order.id}</p>
@@ -140,8 +140,8 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
   `;
 
   return sendEmail({
-    to: 'admin@elegantclothing.in', // Change to the actual admin email
-    subject: `New Order #${order.id} - Elegant Clothing`,
+    to: 'mahesh@aquaticexotica.in', // Admin email for Aquatic Exotica
+    subject: `New Order #${order.id} - Aquatic Exotica`,
     html: emailHtml
   });
 }
@@ -164,7 +164,7 @@ export async function sendStockNotification(email: string, productName: string):
       </div>
       
       <p>
-        <a href="https://elegantclothing.in" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <a href="https://aquaticexotica.in" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
           Shop Now
         </a>
       </p>
@@ -177,7 +177,7 @@ export async function sendStockNotification(email: string, productName: string):
 
   return sendEmail({
     to: email,
-    subject: `${productName} is Back in Stock! - Elegant Clothing`,
+    subject: `${productName} is Back in Stock! - Aquatic Exotica`,
     html: emailHtml
   });
 }
