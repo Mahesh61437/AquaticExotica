@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { DataTable, PaginationProps } from "@/components/admin/DataTable";
+import { ImageWithFallback } from "@/components/ui/image";
 import {
   Dialog,
   DialogContent,
@@ -356,7 +357,7 @@ export default function ProductManagement() {
               header: "Image",
               accessor: (product: Product) => (
                 product.imageUrl ? (
-                  <img 
+                  <ImageWithFallback 
                     src={product.imageUrl} 
                     alt={product.name} 
                     className="h-12 w-12 object-cover rounded" 
