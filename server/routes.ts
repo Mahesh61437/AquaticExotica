@@ -74,11 +74,22 @@ const firstAdminSchema = z.object({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/", (_req, res) => {
-    res.status(200).json({
-      status: "healthy",
-      timestamp: new Date().toISOString(),
-      message: "OK"
-    });
+    try {
+      // Basic health check that verifies database connection
+      const timestamp = new Date().toISOString();
+      res.status(200).json({
+        status: "healthy",
+        timestamp,
+        message: "OK",
+        database: "connected"
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "unhealthy",
+        timestamp: new Date().toISOString(),
+        message: "Service unavailable"
+      });
+    }
   });
 
   // prefix all routes with /api

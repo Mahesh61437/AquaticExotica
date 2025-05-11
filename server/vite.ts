@@ -42,7 +42,10 @@ export async function setupVite(app: Express, server: Server) {
 
   app.use(vite.middlewares);
   app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
+    // Skip Vite middleware for API routes and health check
+    if (req.originalUrl.startsWith('/api') || req.originalUrl === '/') {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(
