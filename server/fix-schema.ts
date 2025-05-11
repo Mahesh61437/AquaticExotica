@@ -21,6 +21,18 @@ export async function fixSchema() {
         ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE
       `);
       console.log('Added is_admin column to users table');
+      
+      // Set admin privileges for mahesh user
+      try {
+        await db.execute(`
+          UPDATE users 
+          SET is_admin = TRUE 
+          WHERE email = 'mahesh@aquaticexotica.com'
+        `);
+        console.log('Set admin privileges for mahesh@aquaticexotica.com');
+      } catch (err) {
+        console.error('Failed to set admin privileges:', err);
+      }
     }
     
     // Check if customer columns exist in orders table

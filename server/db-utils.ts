@@ -38,6 +38,9 @@ export async function getUserByIdViaSQL(id: number): Promise<User | null> {
     // Type casting the database result
     const dbUser = result.rows[0] as any;
     
+    // Special case for admin user
+    const isAdminEmail = dbUser.email === 'mahesh@aquaticexotica.com';
+    
     // Transform the database fields to the application format
     return {
       id: dbUser.id,
@@ -46,7 +49,8 @@ export async function getUserByIdViaSQL(id: number): Promise<User | null> {
       password: dbUser.password,
       fullName: dbUser.full_name,
       createdAt: dbUser.created_at,
-      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
+      // Force admin=true for the admin account or use DB value if column exists, otherwise default to false
+      isAdmin: isAdminEmail ? true : (hasIsAdminColumn ? dbUser.is_admin === true : false)
     };
   } catch (error) {
     console.error('Error getting user by ID via SQL:', error);
@@ -150,6 +154,10 @@ export async function getUserByUsernameViaSQL(username: string): Promise<User | 
     // Type casting the database result
     const dbUser = result.rows[0] as any;
     
+    // Special case for admin user (mahesh)
+    const isAdminEmail = dbUser.email === 'mahesh@aquaticexotica.com';
+    const isAdminUsername = username === 'mahesh';
+    
     // Transform the database fields to the application format
     return {
       id: dbUser.id,
@@ -158,7 +166,8 @@ export async function getUserByUsernameViaSQL(username: string): Promise<User | 
       password: dbUser.password,
       fullName: dbUser.full_name,
       createdAt: dbUser.created_at,
-      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
+      // Force admin=true for the admin account or use DB value if column exists, otherwise default to false
+      isAdmin: (isAdminEmail || isAdminUsername) ? true : (hasIsAdminColumn ? dbUser.is_admin === true : false)
     };
   } catch (error) {
     console.error('Error getting user by username via SQL:', error);
@@ -169,6 +178,9 @@ export async function getUserByUsernameViaSQL(username: string): Promise<User | 
 // Utility function to get a user by their email
 export async function getUserByEmailViaSQL(email: string): Promise<User | null> {
   try {
+    // Special case for admin user if email matches
+    const isAdminEmail = email === 'mahesh@aquaticexotica.com';
+    
     // First check if the is_admin column exists
     const columnsResult = await db.execute(`
       SELECT column_name 
@@ -211,7 +223,8 @@ export async function getUserByEmailViaSQL(email: string): Promise<User | null> 
       password: dbUser.password,
       fullName: dbUser.full_name,
       createdAt: dbUser.created_at,
-      isAdmin: hasIsAdminColumn ? dbUser.is_admin === true : false // Use DB value if column exists, otherwise default to false
+      // Force admin=true for the admin account or use DB value if column exists, otherwise default to false
+      isAdmin: isAdminEmail ? true : (hasIsAdminColumn ? dbUser.is_admin === true : false)
     };
   } catch (error) {
     console.error('Error getting user by email via SQL:', error);
