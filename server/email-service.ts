@@ -3,11 +3,15 @@ import { log } from './vite';
 import { Order } from '@shared/schema';
 
 // Initialize SendGrid with API key
-if (!process.env.SENDGRID_API_KEY) {
-  console.error("SENDGRID_API_KEY is not set in environment variables");
-} else {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  log('SendGrid initialized', 'email-service');
+try {
+  if (!process.env.SENDGRID_API_KEY) {
+    console.warn("SENDGRID_API_KEY is not set. Email functionality will be limited.");
+  } else {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    log('SendGrid initialized', 'email-service');
+  }
+} catch (error) {
+  console.warn("SendGrid initialization failed. Email functionality will be limited.", error);
 }
 
 interface EmailOptions {
