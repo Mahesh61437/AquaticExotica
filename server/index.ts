@@ -4,6 +4,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
+import { createServer } from "http";
 
 // Add declaration for global keepAliveInterval
 declare global {
@@ -70,6 +71,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Create HTTP server instance first
+  const server = createServer(app);
+  
   // Run database migration and initialize with demo data
   try {
     // Fix the database schema first
@@ -98,7 +102,8 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  const server = await registerRoutes(app);
+  // Pass the existing server instance to registerRoutes
+  await registerRoutes(app, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -72,7 +72,7 @@ const firstAdminSchema = z.object({
   secretKey: z.string().min(1, "Secret key is required")
 });
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(app: Express, server: Server): Promise<Server> {
   // Health check endpoint - important for deployment
   app.get("/", async (_req, res) => {
     console.log("Health check request received at root endpoint");
@@ -1142,7 +1142,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-
-  return httpServer;
+  // Return the server instance that was passed in
+  return server;
 }
