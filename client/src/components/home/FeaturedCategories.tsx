@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Category } from "@shared/schema";
+import { ImageWithFallback } from "@/components/ui/image";
 
 export function FeaturedCategories() {
   const { data: categories = [], isLoading } = useQuery<Category[]>({

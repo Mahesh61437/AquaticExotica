@@ -28,6 +28,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import { ImageWithFallback } from "@/components/ui/image";
 
 // Define order item type
 interface OrderItem {
@@ -348,7 +349,7 @@ export default function OrderManagement() {
                           <tr key={index} className="border-b">
                             <td className="p-2 flex items-center gap-2">
                               {item.imageUrl && (
-                                <img 
+                                <ImageWithFallback 
                                   src={item.imageUrl} 
                                   alt={item.name} 
                                   className="w-10 h-10 object-cover rounded" 
