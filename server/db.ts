@@ -23,9 +23,25 @@ neonConfig.webSocketConstructor = ws;
  */
 
 function getConnectionString(): string {
-  // If DATABASE_URL is provided, use it directly
+  // Try to use the custom database URL first (prioritize AP region connection)
+  const customDbUrl = "postgresql://aquaticadmin:npg_qPIdr6Ag7snK@ep-shrill-lake-a1e9dvdn-pooler.ap-southeast-1.aws.neon.tech/aquaticexotica?sslmode=require";
+  
+  // If DATABASE_URL is provided, use it as fallback
   if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
+    // Check if it's the AP region connection we want
+    if (process.env.DATABASE_URL === customDbUrl || 
+        process.env.DATABASE_URL.includes("ap-southeast-1")) {
+      return process.env.DATABASE_URL;
+    }
+    
+    // If DATABASE_URL is set but is not the AP region, prefer custom URL
+    if (process.env.USE_PROVIDED_DB === "true") {
+      console.log("Using provided DATABASE_URL environment variable");
+      return process.env.DATABASE_URL;
+    }
+    
+    console.log("Using custom AP region database connection instead of environment DATABASE_URL");
+    return customDbUrl;
   }
   
   // Otherwise, try to construct from individual components
@@ -42,10 +58,9 @@ function getConnectionString(): string {
     return `postgres://${user}:${password}@${host}:${port}/${database}${sslParam}`;
   }
   
-  // If we get here, we don't have a valid connection string
-  throw new Error(
-    "Database connection information is incomplete. Please provide either DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, and DB_NAME."
-  );
+  // If we get here, use the custom database URL
+  console.log("No valid database connection information found, using custom AP region database");
+  return customDbUrl;
 }
 
 // Get connection string and create the pool

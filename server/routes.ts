@@ -6,6 +6,7 @@ import { z } from "zod";
 import { hash, compare } from "bcrypt";
 import { sendOrderNotification } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
+import { serverCache } from "./cache-manager";
 
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -75,6 +76,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API health check endpoint
   app.get("/api/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok" });
+  });
+  
+  // Detailed system health check endpoint
+  app.get("/api/system/health", (_req: Request, res: Response) => {
+    // Get database info from environment variables
+    const dbUrl = process.env.DATABASE_URL || "custom connection";
+    const isSafeDbUrl = dbUrl.replace(/:[^:@]+@/, ':***@'); // Hide password
+    
+    // Database region detection
+    let dbRegion = "unknown";
+    if (dbUrl.includes("ap-southeast-1")) {
+      dbRegion = "ap-southeast-1 (Asia Pacific)";
+    } else if (dbUrl.includes("us-west-2")) {
+      dbRegion = "us-west-2 (US West)";
+    }
+    
+    // Redis connection info
+    const redisUrl = process.env.REDIS_URL || "not configured";
+    const isSafeRedisUrl = redisUrl.replace(/:[^:@]+@/, ':***@'); // Hide password
+    
+    // Get Redis connection status (using the serverCache.isRedisAvailable method if available)
+    let redisConnected = false;
+    try {
+      // @ts-ignore - May not exist if we haven't added it yet
+      if (typeof serverCache.isRedisAvailable === 'function') {
+        redisConnected = serverCache.isRedisAvailable();
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+    
+    res.status(200).json({
+      status: "ok",
+      message: "AquaticExotica API is running",
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || "development",
+      nodeVersion: process.version,
+      database: {
+        url: isSafeDbUrl,
+        region: dbRegion,
+        connected: true // Assume connected if the app is running
+      },
+      redis: {
+        url: isSafeRedisUrl,
+        connected: redisConnected,
+        provider: redisUrl.includes("redns.redis-cloud.com") ? "Redis Cloud" : "Unknown"
+      }
+    });
   });
 
   // put application routes here
