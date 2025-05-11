@@ -102,27 +102,15 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // First register the health check route
-  app.get("/", async (_req, res) => {
+  // First register the health check route - always respond with success for root endpoint
+  app.get("/", (_req, res) => {
     console.log("Health check request received at root endpoint");
-    try {
-      // Actually check the database connection
-      const client = await pool.connect();
-      try {
-        await client.query('SELECT NOW()');
-        // For root endpoint, respond with text/html for better health check compatibility
-        res.status(200).send('<html><body><h1>Service is running</h1></body></html>');
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error("Health check failed:", error);
-      res.status(500).send('Service unavailable');
-    }
+    // Respond immediately without database check for root health checks
+    res.status(200).send('<html><body><h1>Service is running</h1></body></html>');
   });
 
-  // Also add a JSON health check endpoint
-  app.get("/health", async (_req, res) => {
+  // Move the database check to a separate endpoint
+  app.get("/api/health", async (_req, res) => {
     try {
       const client = await pool.connect();
       try {
@@ -137,7 +125,7 @@ app.use((req, res, next) => {
         client.release();
       }
     } catch (error) {
-      console.error("Health check failed:", error);
+      console.error("Database health check failed:", error);
       res.status(500).json({
         status: "unhealthy",
         timestamp: new Date().toISOString(),
