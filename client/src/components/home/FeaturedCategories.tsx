@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Category } from "@shared/schema";
-import { ImageWithFallback } from "@/components/ui/image";
 
 export function FeaturedCategories() {
   const { data: categories = [], isLoading } = useQuery<Category[]>({
@@ -35,7 +34,7 @@ export function FeaturedCategories() {
               href={`/shop/${category.slug}`} 
               className="group relative overflow-hidden rounded-lg aspect-square"
             >
-              <ImageWithFallback 
+              <img 
                 src={category.imageUrl} 
                 alt={`${category.name} Fashion`} 
                 className="object-cover w-full h-full transform group-hover:scale-105 transition duration-300"

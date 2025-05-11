@@ -3,17 +3,11 @@ import { log } from './vite';
 import { Order } from '@shared/schema';
 
 // Initialize SendGrid with API key
-try {
-  if (!process.env.SENDGRID_API_KEY) {
-    console.warn("SENDGRID_API_KEY is not set. Email functionality will be disabled.");
-  } else if (!process.env.SENDGRID_API_KEY.startsWith('SG.')) {
-    console.warn("Invalid SENDGRID_API_KEY format. Email functionality will be disabled.");
-  } else {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    log('SendGrid initialized successfully', 'email-service');
-  }
-} catch (error) {
-  console.warn("SendGrid initialization failed. Email functionality will be disabled.", error);
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("SENDGRID_API_KEY is not set in environment variables");
+} else {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  log('SendGrid initialized', 'email-service');
 }
 
 interface EmailOptions {
@@ -35,7 +29,7 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 
     const msg = {
       to: options.to,
-      from: 'info@aquaticexotica.in', // Verified sender for Aquatic Exotica
+      from: 'info@elegantclothing.in', // Replace with your verified sender
       subject: options.subject,
       text: options.text || 'Please view this email in a modern email client that supports HTML',
       html: options.html,
@@ -98,7 +92,7 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
         New Order #${order.id}
       </h2>
       
-      <p>A new order has been placed on Aquatic Exotica.</p>
+      <p>A new order has been placed on Elegant Clothing.</p>
       
       <h3 style="color: #555;">Order Details:</h3>
       <p><strong>Order ID:</strong> ${order.id}</p>
@@ -140,8 +134,8 @@ export async function sendOrderNotification(order: Order): Promise<boolean> {
   `;
 
   return sendEmail({
-    to: 'mahesh@aquaticexotica.in', // Admin email for Aquatic Exotica
-    subject: `New Order #${order.id} - Aquatic Exotica`,
+    to: 'admin@elegantclothing.in', // Change to the actual admin email
+    subject: `New Order #${order.id} - Elegant Clothing`,
     html: emailHtml
   });
 }
@@ -164,7 +158,7 @@ export async function sendStockNotification(email: string, productName: string):
       </div>
       
       <p>
-        <a href="https://aquaticexotica.in" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
+        <a href="https://elegantclothing.in" style="display: inline-block; background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">
           Shop Now
         </a>
       </p>
@@ -177,7 +171,7 @@ export async function sendStockNotification(email: string, productName: string):
 
   return sendEmail({
     to: email,
-    subject: `${productName} is Back in Stock! - Aquatic Exotica`,
+    subject: `${productName} is Back in Stock! - Elegant Clothing`,
     html: emailHtml
   });
 }

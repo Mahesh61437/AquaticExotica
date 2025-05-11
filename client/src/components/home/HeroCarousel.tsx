@@ -3,7 +3,6 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import useEmblaCarousel from 'embla-carousel-react';
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { ImageWithFallback } from "@/components/ui/image";
 
 // Define the structure for each carousel slide
 export interface CarouselSlide {
@@ -72,12 +71,13 @@ export function HeroCarousel({ slides, autoplayDelay = 5000 }: HeroCarouselProps
         <div className="flex">
           {slides.map((slide) => (
             <div key={slide.id} className="relative min-w-full h-[60vh] flex items-center">
-              <div className="absolute inset-0">
-                <ImageWithFallback
-                  src={slide.imageUrl}
-                  alt={slide.title}
-                  className="w-full h-full object-cover"
-                />
+              <div 
+                className="absolute inset-0 bg-cover bg-center" 
+                style={{ 
+                  backgroundImage: `url(${slide.imageUrl})`,
+                  backgroundSize: 'cover',
+                }}
+              >
                 {/* Overlay for better text readability */}
                 <div className="absolute inset-0 bg-black bg-opacity-50"></div>
               </div>

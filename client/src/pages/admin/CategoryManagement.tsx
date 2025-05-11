@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { DataTable, PaginationProps } from "@/components/admin/DataTable";
-import { ImageWithFallback } from "@/components/ui/image";
 import {
   Dialog,
   DialogContent,
@@ -278,7 +277,7 @@ export default function CategoryManagement() {
               header: "Image",
               accessor: (category: Category) => (
                 category.imageUrl ? (
-                  <ImageWithFallback 
+                  <img 
                     src={category.imageUrl} 
                     alt={category.name} 
                     className="h-12 w-12 object-cover rounded" 

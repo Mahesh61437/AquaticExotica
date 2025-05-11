@@ -1,5 +1,3 @@
-import { ImageWithFallback } from "@/components/ui/image";
-
 export function InstagramFeed() {
   const instagramPosts = [
     {
@@ -54,7 +52,7 @@ export function InstagramFeed() {
               className="relative group overflow-hidden aspect-square"
               aria-label={`View our Instagram post: ${post.alt}`}
             >
-              <ImageWithFallback 
+              <img 
                 src={post.imageUrl} 
                 alt={post.alt} 
                 className="w-full h-full object-cover transition duration-300 group-hover:scale-110"

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Check, ImageIcon, X } from "lucide-react";
-import { ImageWithFallback } from "@/components/ui/image";
 
 interface FirebaseImageSelectorProps {
   onImageSelected: (url: string) => void;
@@ -53,34 +52,32 @@ export function FirebaseImageSelector({
       const url = createFirebaseStorageUrl(imagePath, accessToken);
       console.log("Trying to load Firebase image from URL:", url);
       
-      // Set the preview URL immediately to let the ImageWithFallback component handle the loading
-      setPreviewUrl(url);
-      onImageSelected(url);
-      setLoading(false);
+      // Test the image URL by creating an Image object
+      const img = new Image();
       
-      // Create a hidden image to test if it loads correctly
-      const testImg = new Image();
-      
-      testImg.onload = () => {
-        // Image loaded successfully
+      img.onload = () => {
+        setPreviewUrl(url);
+        onImageSelected(url);
+        setLoading(false);
         toast({
           title: "Success",
           description: "Image loaded successfully",
         });
       };
       
-      testImg.onerror = (e) => {
+      img.onerror = (e) => {
         console.error("Failed to load image:", e);
-        // We don't need to set error state here - the ImageWithFallback component will handle it
+        setLoading(false);
+        setErrorLoading(true);
         toast({
-          title: "Warning",
-          description: `Image might not display correctly. Check if the path is correct: ${imagePath}`,
+          title: "Error",
+          description: `Failed to load image. Please check if the image exists at path: ${imagePath}`,
           variant: "destructive",
         });
       };
       
-      // Set the source to trigger loading test
-      testImg.src = url;
+      // Set the source to trigger loading
+      img.src = url;
     } catch (error) {
       console.error("Error loading Firebase image:", error);
       setLoading(false);
@@ -157,13 +154,13 @@ export function FirebaseImageSelector({
         <div className="mt-4">
           <div className="border rounded-md overflow-hidden">
             <div className="aspect-square relative bg-muted">
-              <ImageWithFallback
+              <img
                 src={previewUrl}
                 alt="Preview"
                 className="object-contain w-full h-full"
                 onError={() => setErrorLoading(true)}
               />
-              {!errorLoading && previewUrl && (
+              {!errorLoading && (
                 <div className="absolute top-2 right-2 flex gap-2">
                   <Button
                     variant="destructive"

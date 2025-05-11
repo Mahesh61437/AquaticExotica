@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { ImageWithFallback } from "@/components/ui/image";
 
 export function PromotionalBanner() {
   const [email, setEmail] = useState("");
@@ -60,7 +59,7 @@ export function PromotionalBanner() {
         
         <div className="relative h-[300px] lg:h-[400px]">
           <div className="absolute inset-0 bg-black rounded-lg">
-            <ImageWithFallback 
+            <img 
               src="/images/aquarium_promo.jpeg" 
               alt="Premium Aquatic Plants" 
               className="w-full h-full object-contain rounded-lg"

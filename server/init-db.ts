@@ -59,7 +59,7 @@ export async function initializeDatabase() {
     const hashedPassword = await hashPassword("Mahesh61437");
     const adminUser = await createUserViaSQL(
       "mahesh",
-      "mahesh@aquaticexotica.com",
+      "mahesh@aquaticexoctica.com",
       hashedPassword,
       "mahesh",
       true

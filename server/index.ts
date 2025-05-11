@@ -4,15 +4,6 @@ import { setupVite, serveStatic, log } from "./vite";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { pool } from "./db";
-import { createServer } from "http";
-import path from "path";
-import fs from "fs";
-
-// Add declaration for global references to prevent garbage collection
-declare global {
-  var keepAliveInterval: NodeJS.Timeout;
-  var keepAlivePromise: Promise<any>;
-}
 
 // Create PostgreSQL session store
 const PgSession = connectPgSimple(session);
@@ -74,9 +65,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Create HTTP server instance first
-  const server = createServer(app);
-  
   // Run database migration and initialize with demo data
   try {
     // Fix the database schema first
@@ -105,60 +93,7 @@ app.use((req, res, next) => {
     console.error("Database setup failed:", error);
   }
 
-  // Add health check at /api/status endpoint for deployment monitoring
-  app.get("/api/status", (_req, res) => {
-    // Fast, lightweight response with no logging or DB operations
-    res.set('Connection', 'close').status(200).send('OK');
-  });
-  
-  // Serve a static index.html at the root path for health checks and deployment
-  app.get("/", (_req, res) => {
-    try {
-      const indexPath = path.resolve(process.cwd(), 'static-index.html');
-      const content = fs.readFileSync(indexPath, 'utf8');
-      res.status(200).send(content);
-    } catch (error) {
-      console.error('Error serving static index page:', error);
-      res.status(200).send('OK - AquaticExotica');
-    }
-  });
-
-  // Register API routes first
-  await registerRoutes(app, server);
-
-  // Set up Vite middleware for development or static serving for production
-  // This needs to come AFTER API routes to prevent conflicts
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
-  
-  // Move the database check to a separate endpoint
-  app.get("/api/health", async (_req, res) => {
-    try {
-      const client = await pool.connect();
-      try {
-        await client.query('SELECT NOW()');
-        res.status(200).json({
-          status: "healthy",
-          timestamp: new Date().toISOString(),
-          message: "OK",
-          database: "connected"
-        });
-      } finally {
-        client.release();
-      }
-    } catch (error) {
-      console.error("Database health check failed:", error);
-      res.status(500).json({
-        status: "unhealthy",
-        timestamp: new Date().toISOString(),
-        message: error instanceof Error ? error.message : String(error),
-        database: "disconnected"
-      });
-    }
-  });
+  const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -168,63 +103,24 @@ app.use((req, res, next) => {
     throw err;
   });
 
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = Number(process.env.PORT || 5000);
-  // Ensure correct interface binding for deployment
-  server.listen(port, "0.0.0.0", () => {
-    log(`Server running on http://0.0.0.0:${port}`);
-    log(`Environment: ${process.env.NODE_ENV}`);
-    log('Server initialized and ready to handle requests');
+  const port = 5000;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
   });
-
-  // Handle termination signals properly
-  process.on('SIGTERM', () => {
-    log('Received SIGTERM signal, keeping application alive');
-  });
-
-  process.on('SIGINT', () => {
-    log('Received SIGINT signal, keeping application alive');
-  });
-
-  // Prevent unhandled promise rejections from crashing the app
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  });
-  
-  // Keep the server alive indefinitely - critical for deployment
-  const keepAlive = setInterval(() => {
-    log('Server is running...');
-  }, 60000); // Log every minute to show the server is alive
-  
-  // Ensure the interval reference is not lost
-  // @ts-ignore - Safely storing interval reference
-  global.keepAliveInterval = keepAlive;
-
-  // Handle termination signals properly
-  process.on('SIGTERM', () => {
-    log('Received SIGTERM signal, keeping application alive');
-  });
-
-  process.on('SIGINT', () => {
-    log('Received SIGINT signal, keeping application alive');
-  });
-
-  // Prevent unhandled promise rejections from crashing the app
-  process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  });
-  
-  // Prevent the main Promise from resolving to keep the process alive
-  // Also add a global reference to ensure the Promise isn't garbage collected
-  const neverEndingPromise = new Promise(() => {
-    log('Server started and will remain running');
-  });
-  
-  // Store a reference in the global scope to avoid garbage collection
-  // @ts-ignore - Safely storing Promise reference
-  global.keepAlivePromise = neverEndingPromise;
-  
-  return neverEndingPromise;
 })();

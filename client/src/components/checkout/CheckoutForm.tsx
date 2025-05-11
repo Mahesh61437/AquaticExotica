@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatPrice } from "@/lib/utils";
 import { indianStates, getCitiesByState, validatePinCode, validateIndianPhone } from "@/lib/india-states";
-import { ImageWithFallback } from "@/components/ui/image";
 import {
   Card,
   CardContent,
@@ -777,7 +776,7 @@ export function CheckoutForm() {
               <div key={item.id} className="flex justify-between items-center pb-2 border-b">
                 <div className="flex items-center gap-2">
                   <div className="h-12 w-12 bg-gray-100 rounded overflow-hidden">
-                    <ImageWithFallback
+                    <img
                       src={item.imageUrl}
                       alt={item.name}
                       className="h-full w-full object-cover"

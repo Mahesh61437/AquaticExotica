@@ -3,7 +3,6 @@ import { Product } from "@shared/schema";
 import { Link } from "wouter";
 import { formatPrice, generateStarRating } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ImageWithFallback } from "@/components/ui/image";
 
 export function TrendingProducts() {
   const { data: trendingProducts = [], isLoading } = useQuery<Product[]>({
@@ -36,7 +35,7 @@ export function TrendingProducts() {
                 href={`/product/${product.id}`}
                 className="bg-gray-50 p-4 rounded-lg flex items-center gap-4 hover:shadow-md transition"
               >
-                <ImageWithFallback 
+                <img 
                   src={product.imageUrl} 
                   alt={product.name} 
                   className="w-24 h-24 object-cover rounded-md"

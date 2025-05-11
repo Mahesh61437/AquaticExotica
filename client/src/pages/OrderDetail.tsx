@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
 import { formatPrice } from "../lib/utils";
-import { ImageWithFallback } from "@/components/ui/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -238,7 +237,7 @@ export default function OrderDetail() {
                 {order.items.map((item) => (
                   <div key={item.id} className="flex gap-4 pb-4 border-b">
                     <div className="w-16 h-16 rounded overflow-hidden bg-gray-100 flex-shrink-0">
-                      <ImageWithFallback 
+                      <img 
                         src={item.imageUrl} 
                         alt={item.name} 
                         className="w-full h-full object-cover"

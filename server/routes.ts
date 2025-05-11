@@ -1,4 +1,4 @@
-import express, { type Express, Request, Response, NextFunction } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertProductSchema, cartSchema, insertOrderSchema, insertUserSchema, insertCategorySchema, orderValidationSchema } from "@shared/schema";
@@ -6,7 +6,6 @@ import { z } from "zod";
 import { hash, compare } from "bcrypt";
 import { sendOrderNotification } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
-import { pool } from "./db";
 
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -72,14 +71,8 @@ const firstAdminSchema = z.object({
   secretKey: z.string().min(1, "Secret key is required")
 });
 
-export async function registerRoutes(app: Express, server: Server): Promise<Server> {
-  // Health check endpoints have been moved to index.ts to be registered before Vite middleware
-
-  // Add a lightweight home route that redirects to client pages
-  app.get("/__api_home", (_req, res) => {
-    res.status(200).send("API Home - Use client routes for UI");
-  });
-
+export async function registerRoutes(app: Express): Promise<Server> {
+  // put application routes here
   // prefix all routes with /api
 
   // Authentication routes
@@ -1102,6 +1095,7 @@ export async function registerRoutes(app: Express, server: Server): Promise<Serv
     }
   });
 
-  // Return the server instance that was passed in
-  return server;
+  const httpServer = createServer(app);
+
+  return httpServer;
 }
