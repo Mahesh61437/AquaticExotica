@@ -1,12 +1,11 @@
 import { Helmet } from "react-helmet";
 import { Suspense, lazy } from "react";
-import { HeroBanner } from "@/components/home/HeroBanner";
+import { SimpleBanner } from "@/components/home/SimpleBanner";
+import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy loaded components
 const FeaturedCategories = lazy(() => import("@/components/home/FeaturedCategories"));
-const FeaturedProducts = lazy(() => import("@/components/home/FeaturedProducts"));
-const TrendingProducts = lazy(() => import("@/components/home/TrendingProducts").then(module => ({ default: module.TrendingProducts })));
 
 // Simple fallback component
 function SectionPlaceholder({ title, height, bgColor = "bg-white" }: { title: string; height: string; bgColor?: string }) {
@@ -38,21 +37,16 @@ export default function Home() {
         <meta property="og:image" content="/images/aquarium_banner.jpeg" />
       </Helmet>
 
-      {/* Hero Banner renders immediately */}
-      <HeroBanner />
+      {/* Simple Hero Banner */}
+      <SimpleBanner />
 
-      {/* Lazy loaded components with suspense fallbacks */}
+      {/* Featured Categories */}
       <Suspense fallback={<SectionPlaceholder title="Featured Categories" height="12rem" />}>
         <FeaturedCategories />
       </Suspense>
 
-      <Suspense fallback={<SectionPlaceholder title="Featured Products" height="24rem" bgColor="bg-gray-50" />}>
-        <FeaturedProducts />
-      </Suspense>
-
-      <Suspense fallback={<SectionPlaceholder title="Trending Now" height="18rem" />}>
-        <TrendingProducts />
-      </Suspense>
+      {/* Promotional Banner instead of Featured Products */}
+      <PromotionalBanner />
     </>
   );
 }
