@@ -53,32 +53,34 @@ export function FirebaseImageSelector({
       const url = createFirebaseStorageUrl(imagePath, accessToken);
       console.log("Trying to load Firebase image from URL:", url);
       
-      // Test the image URL by creating an Image object
-      const img = new Image();
+      // Set the preview URL immediately to let the ImageWithFallback component handle the loading
+      setPreviewUrl(url);
+      onImageSelected(url);
+      setLoading(false);
       
-      img.onload = () => {
-        setPreviewUrl(url);
-        onImageSelected(url);
-        setLoading(false);
+      // Create a hidden image to test if it loads correctly
+      const testImg = new Image();
+      
+      testImg.onload = () => {
+        // Image loaded successfully
         toast({
           title: "Success",
           description: "Image loaded successfully",
         });
       };
       
-      img.onerror = (e) => {
+      testImg.onerror = (e) => {
         console.error("Failed to load image:", e);
-        setLoading(false);
-        setErrorLoading(true);
+        // We don't need to set error state here - the ImageWithFallback component will handle it
         toast({
-          title: "Error",
-          description: `Failed to load image. Please check if the image exists at path: ${imagePath}`,
+          title: "Warning",
+          description: `Image might not display correctly. Check if the path is correct: ${imagePath}`,
           variant: "destructive",
         });
       };
       
-      // Set the source to trigger loading
-      img.src = url;
+      // Set the source to trigger loading test
+      testImg.src = url;
     } catch (error) {
       console.error("Error loading Firebase image:", error);
       setLoading(false);
@@ -155,13 +157,13 @@ export function FirebaseImageSelector({
         <div className="mt-4">
           <div className="border rounded-md overflow-hidden">
             <div className="aspect-square relative bg-muted">
-              <img
+              <ImageWithFallback
                 src={previewUrl}
                 alt="Preview"
                 className="object-contain w-full h-full"
                 onError={() => setErrorLoading(true)}
               />
-              {!errorLoading && (
+              {!errorLoading && previewUrl && (
                 <div className="absolute top-2 right-2 flex gap-2">
                   <Button
                     variant="destructive"

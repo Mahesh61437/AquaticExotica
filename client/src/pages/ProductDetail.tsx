@@ -18,6 +18,7 @@ import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
+import { ImageWithFallback } from "@/components/ui/image";
 
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
@@ -135,7 +136,7 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Product Image */}
           <div className="aspect-[3/4] overflow-hidden rounded-lg">
-            <img 
+            <ImageWithFallback 
               src={product.imageUrl} 
               alt={product.name} 
               className="w-full h-full object-cover"
