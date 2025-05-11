@@ -6,6 +6,7 @@ import { Link } from "wouter";
 import { Product } from "@shared/schema";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { ImageWithFallback } from "@/components/ui/image";
 
 interface ProductCardProps {
   product: Product;
@@ -43,7 +44,11 @@ export function ProductCard({ product }: ProductCardProps) {
       className="product-card group"
     >
       <div className="product-image">
-        <img src={product.imageUrl} alt={product.name} />
+        <ImageWithFallback 
+          src={product.imageUrl} 
+          alt={product.name}
+          className="w-full h-full object-cover"
+        />
         
         {/* Sale or New Badge */}
         {product.isSale && (
