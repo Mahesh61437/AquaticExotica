@@ -1,45 +1,103 @@
 import { Link } from "wouter";
-import { useState, useEffect } from "react";
-
-// Static categories with gradient backgrounds
-const staticCategories = [
-  {
-    id: 1,
-    name: "Fish",
-    slug: "fish",
-    gradient: "from-blue-600 to-indigo-700"
-  },
-  {
-    id: 2,
-    name: "Plants",
-    slug: "plants",
-    gradient: "from-green-500 to-emerald-700"
-  },
-  {
-    id: 3,
-    name: "Equipment",
-    slug: "equipment",
-    gradient: "from-gray-600 to-gray-900"
-  },
-  {
-    id: 4,
-    name: "Decoration",
-    slug: "decoration",
-    gradient: "from-amber-400 to-orange-500"
-  }
-];
+import { useState, useEffect, useRef } from "react";
+import { Category } from "@shared/schema";
+import { apiCache } from "@/lib/api-cache";
 
 export default function FeaturedCategories() {
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
+  const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
+  
+  // Function to get gradient based on category name
+  const getCategoryGradient = (name: string): string => {
+    const lowerName = name.toLowerCase();
+    
+    if (lowerName.includes('women')) return "from-pink-500 to-rose-600";
+    if (lowerName.includes('men')) return "from-blue-600 to-indigo-700";
+    if (lowerName.includes('kids')) return "from-yellow-400 to-orange-500";
+    if (lowerName.includes('accessories')) return "from-purple-500 to-violet-700";
+    
+    // Default gradient
+    return "from-blue-500 to-cyan-600";
+  };
 
   useEffect(() => {
-    // Simulate short loading time (300ms) for consistent UI transition
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Try to get categories from cache first (30 minute cache time)
+        const data = await apiCache.get<Category[]>('/api/categories', undefined, 30 * 60 * 1000);
+        setCategories(data);
+        
+        // Initialize image loading states
+        const initialLoadedState: Record<number, boolean> = {};
+        data.forEach(cat => {
+          initialLoadedState[cat.id] = false;
+        });
+        setLoadedImages(initialLoadedState);
+      } catch (error) {
+        console.error('Failed to load categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
+    loadData();
   }, []);
+
+  // Intersection Observer for lazy loading images
+  useEffect(() => {
+    if (isLoading || categories.length === 0) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            const categoryId = Number(img.dataset.categoryId);
+            
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.onload = () => {
+                setLoadedImages(prev => ({
+                  ...prev,
+                  [categoryId]: true
+                }));
+              };
+              img.onerror = () => {
+                // On error, mark as loaded but use gradient background
+                setLoadedImages(prev => ({
+                  ...prev,
+                  [categoryId]: false
+                }));
+              };
+              
+              // Remove data-src to avoid setting the src again
+              img.removeAttribute('data-src');
+            }
+            
+            observer.unobserve(img);
+          }
+        });
+      },
+      {
+        rootMargin: '200px 0px',
+        threshold: 0.01
+      }
+    );
+    
+    Object.entries(imageRefs.current).forEach(([categoryId, imgRef]) => {
+      if (imgRef) {
+        observer.observe(imgRef);
+      }
+    });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [isLoading, categories]);
 
   if (isLoading) {
     return (
@@ -62,50 +120,32 @@ export default function FeaturedCategories() {
         <h2 className="text-3xl font-heading font-bold text-center mb-8">Shop By Category</h2>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {staticCategories.map((category) => (
+          {categories.map((category) => (
             <Link 
               key={category.id} 
               href={`/shop/${category.slug}`} 
-              className="group relative overflow-hidden rounded-lg aspect-square flex items-center justify-center"
+              className="group relative overflow-hidden rounded-lg aspect-square"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient}`}></div>
+              {/* Gradient background (shows when image fails to load or while loading) */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(category.name)} transition-opacity duration-300 ${
+                loadedImages[category.id] ? 'opacity-0' : 'opacity-100'
+              }`}></div>
               
-              {/* Category Icon */}
-              <div className="relative z-10 text-white text-center p-4">
-                <div className="w-16 h-16 mx-auto mb-3 flex items-center justify-center">
-                  {category.name === "Fish" && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-                      <path d="M18 12.5a5.5 5.5 0 0 1-5.5 5.5 5.5 5.5 0 0 1-5.5-5.5c0-2.8 2.2-5.5 5.5-5.5 3.3 0 5.5 2.7 5.5 5.5z" />
-                      <path d="M18.5 7.5c.9 0 1.5.7 1.5 1.5s-.6 1.5-1.5 1.5-1.5-.7-1.5-1.5.6-1.5 1.5-1.5z" />
-                      <path d="M5 12.5c3.5-1 6.5-3.5 6.5-3.5s-3 2.5-6.5 3.5z" />
-                      <path d="m5 12.5 5 2" />
-                    </svg>
-                  )}
-                  {category.name === "Plants" && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-                      <path d="M11.9 3c-2 0-6 8-6 12 0 2 1 3 3 3 1.31 0 2.42-.8 2.8-2" />
-                      <path d="M18 3c2.39 0 6 8 6 12 0 2-1 3-3 3-1.31 0-2.42-.8-2.8-2" />
-                      <path d="M3 15h8" />
-                      <path d="M19 15h2" />
-                      <path d="M12 22v-8" />
-                    </svg>
-                  )}
-                  {category.name === "Equipment" && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-                      <circle cx="12" cy="12" r="3" />
-                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                    </svg>
-                  )}
-                  {category.name === "Decoration" && (
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12">
-                      <path d="M5 22h14" />
-                      <path d="M5 22v-8h14v8" />
-                      <path d="M10 14v-1" />
-                      <path d="M2 22v-5c0-8 4-12 10-12 6 0 10 4 10 12v5" />
-                    </svg>
-                  )}
-                </div>
-                <span className="text-white font-heading font-semibold text-xl block">
+              {/* Category image with lazy loading */}
+              <img 
+                ref={(el) => imageRefs.current[category.id] = el}
+                data-src={category.imageUrl}
+                data-category-id={category.id}
+                alt={`${category.name} Category`}
+                className={`object-cover w-full h-full transform group-hover:scale-105 transition duration-300 ${
+                  loadedImages[category.id] ? 'opacity-100' : 'opacity-0'
+                }`}
+                src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
+              />
+              
+              {/* Category name overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
+                <span className="text-white font-heading font-semibold text-xl">
                   {category.name}
                 </span>
               </div>
