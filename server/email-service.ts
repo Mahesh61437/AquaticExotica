@@ -5,13 +5,15 @@ import { Order } from '@shared/schema';
 // Initialize SendGrid with API key
 try {
   if (!process.env.SENDGRID_API_KEY) {
-    console.warn("SENDGRID_API_KEY is not set. Email functionality will be limited.");
+    console.warn("SENDGRID_API_KEY is not set. Email functionality will be disabled.");
+  } else if (!process.env.SENDGRID_API_KEY.startsWith('SG.')) {
+    console.warn("Invalid SENDGRID_API_KEY format. Email functionality will be disabled.");
   } else {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    log('SendGrid initialized', 'email-service');
+    log('SendGrid initialized successfully', 'email-service');
   }
 } catch (error) {
-  console.warn("SendGrid initialization failed. Email functionality will be limited.", error);
+  console.warn("SendGrid initialization failed. Email functionality will be disabled.", error);
 }
 
 interface EmailOptions {
