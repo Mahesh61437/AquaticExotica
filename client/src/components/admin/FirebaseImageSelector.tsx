@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Check, ImageIcon } from "lucide-react";
+import { Loader2, Check, ImageIcon, X } from "lucide-react";
 
 interface FirebaseImageSelectorProps {
   onImageSelected: (url: string) => void;
@@ -161,8 +161,22 @@ export function FirebaseImageSelector({
                 onError={() => setErrorLoading(true)}
               />
               {!errorLoading && (
-                <div className="absolute top-2 right-2 bg-green-500 text-white rounded-full p-1">
-                  <Check className="h-4 w-4" />
+                <div className="absolute top-2 right-2 flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      setPreviewUrl("");
+                      onImageSelected("");
+                    }}
+                    type="button"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <div className="bg-green-500 text-white rounded-full p-1">
+                    <Check className="h-4 w-4" />
+                  </div>
                 </div>
               )}
             </div>

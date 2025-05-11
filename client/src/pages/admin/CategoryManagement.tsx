@@ -390,28 +390,6 @@ export default function CategoryManagement() {
                   onImageSelected={(url) => setFormData({ ...formData, imageUrl: url })}
                   className="w-full"
                 />
-                
-                {formData.imageUrl && (
-                  <div className="mt-2 relative w-full h-48 border rounded-md overflow-hidden">
-                    <img 
-                      src={formData.imageUrl} 
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "https://placehold.co/600x800/e6e6e6/999999?text=Category";
-                      }}
-                    />
-                    <Button
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => setFormData({ ...formData, imageUrl: "" })}
-                      type="button"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
             
