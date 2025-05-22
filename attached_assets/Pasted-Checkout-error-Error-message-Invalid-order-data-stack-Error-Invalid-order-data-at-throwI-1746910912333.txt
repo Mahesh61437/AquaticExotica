@@ -1,0 +1,39 @@
+Checkout error: 
+Error {}
+message: "Invalid order data"
+stack: "Error: Invalid order data↵ at throwIfResNotOk (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/lib/queryClient.ts:21:11)↵ at async apiRequest (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/lib/queryClient.ts:29:3)↵ at async onSubmit (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/components/checkout/CheckoutForm.tsx?t=1746910683224:220:24)↵ at async https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CXJMC5RA.js?v=63066a46:1465:9"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
+Submitting order data: 
+Object {status: "pending", total: "346.98", totalAmount: "346.98", items: "[{"id":1,"name":"Denim…", shippingAddress: "{"firstName":"sveffwv","lastName":"fvqfvwefv","email":"mahesh@aquaticexoctica.com","ph…", …}
+Checkout error: 
+Error {}
+
+Submitting order data: 
+Object {status: "pending", total: "346.98", totalAmount: "346.98", items: "[{"id":1,"name":"Denim…", shippingAddress: "{"firstName":"sveffwv","lastName":"fvqfvwefv","email":"mahesh@aquaticexoctica.com","ph…", …}
+Checkout error: 
+Error {}
+message: "Invalid order data"
+stack: "Error: Invalid order data↵ at throwIfResNotOk (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/lib/queryClient.ts:21:11)↵ at async apiRequest (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/lib/queryClient.ts:29:3)↵ at async onSubmit (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/src/components/checkout/CheckoutForm.tsx?t=1746910683224:220:24)↵ at async https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CXJMC5RA.js?v=63066a46:1465:9"
+get stack: ƒ ()
+set stack: ƒ ()
+[[Prototype]]: Object
+constructor: ƒ Error()
+message: "Invalid order data"
+name: "Error"
+toString: ƒ toString()
+length: 0
+name: "toString"
+[[Prototype]]: ƒ ()
+[[Prototype]]: Object
+
+at t.value (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://5d6b6cb4-9f39-401a-91e6-2c211230a08d-00-unwzwpotehpt.sisko.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
