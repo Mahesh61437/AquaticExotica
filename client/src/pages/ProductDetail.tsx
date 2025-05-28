@@ -236,7 +236,7 @@ export default function ProductDetail() {
             <div className="mt-8 space-y-4">
               <div className="flex items-center">
                 <Truck className="h-5 w-5 text-primary mr-2" />
-                <span className="text-sm">Free shipping on orders above ₹2000</span>
+                <span className="text-sm">Delivering across India</span>
               </div>
               <div className="flex items-center">
                 <RotateCcw className="h-5 w-5 text-primary mr-2" />

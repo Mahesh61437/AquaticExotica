@@ -57,7 +57,7 @@ export default function Terms() {
               Our shipping charges are as follows:
             </p>
             <ul className="list-disc list-inside mt-2 mb-2">
-              <li>Free shipping on orders above ₹2000</li>
+              <li>Delivering across India</li>
               <li>₹100 per kg for Karnataka</li>
               <li>₹120 per kg for Andhra Pradesh, Kerala, Tamil Nadu</li>
               <li>₹150 per kg for other places in India</li>

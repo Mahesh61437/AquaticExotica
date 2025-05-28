@@ -6,6 +6,7 @@ import { z } from "zod";
 import { hash, compare } from "bcrypt";
 import { sendOrderNotification, sendContactFormMessage, sendOrderStatusUpdate } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
+import { cacheMiddleware, invalidateProductCache, invalidateCategoryCache } from './redis';
 
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -72,6 +73,9 @@ const firstAdminSchema = z.object({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Apply cache middleware to all GET routes
+  app.use(cacheMiddleware);
+
   // API health check endpoint
   app.get("/api/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok" });
@@ -410,135 +414,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Products with server-side caching
+  // Products API routes
   app.get("/api/products", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for all products
-      const cacheKey = 'all_products';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const products = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh products data');
-          return storage.getAllProducts();
-        },
-        10 * 60 * 1000 // 10 minute TTL
-      );
-      
-      res.json(products);
+      const products = await storage.getAllProducts();
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch products" });
+      console.error("Error fetching products:", error);
+      res.status(500).json({ error: "Failed to fetch products" });
     }
   });
 
-  // Special product collections - must come before the :id route
-  // All with server-side caching
   app.get("/api/products/featured", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for featured products
-      const cacheKey = 'featured_products';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const products = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh featured products data');
-          return storage.getFeaturedProducts();
-        },
-        10 * 60 * 1000 // 10 minute TTL
-      );
-      
-      res.json(products);
+      const products = await storage.getFeaturedProducts();
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch featured products" });
+      console.error("Error fetching featured products:", error);
+      res.status(500).json({ error: "Failed to fetch featured products" });
     }
   });
 
   app.get("/api/products/trending", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for trending products
-      const cacheKey = 'trending_products';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const products = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh trending products data');
-          return storage.getTrendingProducts();
-        },
-        10 * 60 * 1000 // 10 minute TTL
-      );
-      
-      res.json(products);
+      const products = await storage.getTrendingProducts();
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch trending products" });
+      console.error("Error fetching trending products:", error);
+      res.status(500).json({ error: "Failed to fetch trending products" });
     }
   });
 
   app.get("/api/products/new", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for new products
-      const cacheKey = 'new_products';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const products = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh new products data');
-          return storage.getNewProducts();
-        },
-        10 * 60 * 1000 // 10 minute TTL
-      );
-      
-      res.json(products);
+      const products = await storage.getNewProducts();
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch new products" });
+      console.error("Error fetching new products:", error);
+      res.status(500).json({ error: "Failed to fetch new products" });
     }
   });
 
   app.get("/api/products/sale", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for sale products
-      const cacheKey = 'sale_products';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const products = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh sale products data');
-          return storage.getSaleProducts();
-        },
-        10 * 60 * 1000 // 10 minute TTL
-      );
-      
-      res.json(products);
+      const products = await storage.getSaleProducts();
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch sale products" });
+      console.error("Error fetching sale products:", error);
+      res.status(500).json({ error: "Failed to fetch sale products" });
     }
   });
 
   app.get("/api/products/category/:category", async (req, res) => {
     try {
-      const products = await storage.getProductsByCategory(req.params.category);
-      res.json(products);
+      const { category } = req.params;
+      const products = await storage.getProductsByCategory(category);
+      res.json(products || []);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch products by category" });
+      console.error("Error fetching products by category:", error);
+      res.status(500).json({ error: "Failed to fetch products by category" });
     }
   });
 
@@ -588,42 +522,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Categories with server-side caching
+  // Categories API routes
   app.get("/api/categories", async (req, res) => {
     try {
-      // Import server cache
-      const { serverCache } = await import('./cache-manager');
-      
-      // Cache key for categories
-      const cacheKey = 'all_categories';
-      
-      // Try to get from cache or fetch fresh data with 10 minute TTL
-      const categories = await serverCache.getOrSet(
-        cacheKey,
-        async () => {
-          console.log('[cache-miss] Fetching fresh categories data');
-          return storage.getAllCategories();
-        },
-        10 * 60 * 1000 // 10 minute TTL as requested
-      );
-      
-      res.json(categories);
+      const categories = await storage.getAllCategories();
+      res.json(categories || []);
     } catch (error) {
-      console.error("Error getting categories:", error);
-      res.status(500).json({ message: "Failed to fetch categories" });
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
 
   app.get("/api/categories/:slug", async (req, res) => {
     try {
-      const category = await storage.getCategoryBySlug(req.params.slug);
+      const { slug } = req.params;
+      const category = await storage.getCategoryBySlug(slug);
       if (!category) {
-        return res.status(404).json({ message: "Category not found" });
+        return res.status(404).json({ error: "Category not found" });
       }
-      
       res.json(category);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch category" });
+      console.error("Error fetching category:", error);
+      res.status(500).json({ error: "Failed to fetch category" });
     }
   });
 
@@ -806,6 +726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const productData = insertProductSchema.parse(req.body);
       const product = await storage.createProduct(productData);
+      await invalidateProductCache();
       res.status(201).json(product);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -830,9 +751,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const productData = insertProductSchema.parse(req.body);
-      // Add update product method to storage interface
       const updatedProduct = await storage.updateProduct(id, productData);
-      
+      await invalidateProductCache();
       res.json(updatedProduct);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -851,9 +771,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid product ID" });
       }
 
-      // Add delete product method to storage interface
       await storage.deleteProduct(id);
-      
+      await invalidateProductCache();
       res.status(204).send();
     } catch (error) {
       console.error("Admin delete product error:", error);
@@ -906,6 +825,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const categoryData = insertCategorySchema.parse(req.body);
       const category = await storage.createCategory(categoryData);
+      await invalidateCategoryCache();
       res.status(201).json(category);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -930,9 +850,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const categoryData = insertCategorySchema.parse(req.body);
-      // Add update category method to storage interface
       const updatedCategory = await storage.updateCategory(id, categoryData);
-      
+      await invalidateCategoryCache();
       res.json(updatedCategory);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -951,9 +870,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid category ID" });
       }
 
-      // Add delete category method to storage interface
       await storage.deleteCategory(id);
-      
+      await invalidateCategoryCache();
       res.status(204).send();
     } catch (error) {
       console.error("Admin delete category error:", error);

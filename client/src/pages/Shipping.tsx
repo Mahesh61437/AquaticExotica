@@ -34,7 +34,7 @@ export default function Shipping() {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Shipping Charges</h3>
                   <p>
-                    <strong className="text-primary">Free shipping on orders more than ₹2000</strong>
+                    <strong className="text-primary">Delivering across India</strong>
                   </p>
                   <p className="mt-2">Delivery charges per kg:</p>
                   <ul className="list-disc list-inside mt-2 space-y-1">

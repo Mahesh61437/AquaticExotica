@@ -2,32 +2,14 @@ import { initializeApp, FirebaseOptions } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
-// Check required environment variables
-const requiredVars = [
-  'VITE_FIREBASE_API_KEY', 
-  'VITE_FIREBASE_PROJECT_ID', 
-  'VITE_FIREBASE_APP_ID'
-];
-
-const missingVars = requiredVars.filter(varName => !import.meta.env[varName]);
-if (missingVars.length > 0) {
-  console.error(`Missing required Firebase environment variables: ${missingVars.join(', ')}`);
-}
-
-// Use fallbacks for optional values if needed
-const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID as string;
-const authDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string || 
-                   (projectId ? `${projectId}.firebaseapp.com` : '');
-// Use the specific storage bucket for the application
-const storageBucket = "aqua-india-61437.firebasestorage.app";
-
+// Firebase configuration for development
 const firebaseConfig: FirebaseOptions = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY as string,
-  authDomain,
-  projectId,
-  storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID as string,
+  apiKey: "AIzaSyCKNnGmzKQl39oq5s9tceHHagD7tZTQsms",
+  authDomain: "aqua-india-61437.firebaseapp.com",
+  projectId: "aqua-india-61437",
+  storageBucket: "aqua-india-61437.firebasestorage.app",
+  messagingSenderId: "562620265018",
+  appId: "1:562620265018:web:805f156d3f2416dd15bb03"
 };
 
 // Initialize Firebase
@@ -76,7 +58,7 @@ export function createFirebaseStorageUrl(path: string, accessToken?: string): st
   const normalizedPath = path.startsWith('/') ? path.substring(1) : path;
   
   // Create the Firebase Storage URL
-  let url = `https://firebasestorage.googleapis.com/v0/b/${storageBucket}/o/${encodeURIComponent(normalizedPath)}?alt=media`;
+  let url = `https://firebasestorage.googleapis.com/v0/b/${firebaseConfig.storageBucket}/o/${encodeURIComponent(normalizedPath)}?alt=media`;
   
   // Add access token if provided
   if (accessToken) {

@@ -13,11 +13,20 @@ import { runMigration } from './db-migrate';
 import { fixSchema } from './fix-schema';
 import { initializeDatabase } from './init-db';
 import helmet from 'helmet';
+import cors from 'cors';
 
 // Create PostgreSQL session store
 const PgSession = connectPgSimple(session);
 
 const app = express();
+
+// Enable CORS for development
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' 
+    ? ['https://aquaticexotica.com', 'https://www.aquaticexotica.com']
+    : ['http://localhost:5000', 'http://127.0.0.1:5000'],
+  credentials: true
+}));
 
 // Set up security headers with Helmet
 // Configure with appropriate settings for development
@@ -31,7 +40,7 @@ app.use(
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "data:"],
         imgSrc: ["'self'", "data:", "https://firebasestorage.googleapis.com", "https://images.unsplash.com", "https:"],
-        connectSrc: ["'self'", "https:", "wss:", "ws:"],
+        connectSrc: ["'self'", "https:", "wss:", "ws:", "http:", "http://localhost:*", "http://127.0.0.1:*"],
         mediaSrc: ["'self'", "https:"],
         objectSrc: ["'none'"],
         frameSrc: ["'self'"]
@@ -40,11 +49,10 @@ app.use(
     // Other security settings that won't break development
     xssFilter: true,
     noSniff: true,
-    hsts: {
-      maxAge: 63072000, // 2 years in seconds
-      includeSubDomains: true,
-      preload: true
-    } // Enable HSTS for better security
+    hsts: false, // Disable HSTS in development
+    crossOriginEmbedderPolicy: false, // Disable in development
+    crossOriginOpenerPolicy: false, // Disable in development
+    crossOriginResourcePolicy: false // Disable in development
   })
 );
 
@@ -193,14 +201,12 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
+  // ALWAYS serve the app on port 3000
   // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = process.env.PORT || 3000;
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
   });

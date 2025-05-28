@@ -17,7 +17,7 @@ export default function FAQ() {
         },
         {
           question: "Do you offer free shipping?",
-          answer: "Yes! We offer free delivery on all orders above ₹2000. For orders below ₹2000, a standard shipping fee of ₹99 applies."
+          answer: "Yes! We offer free delivery on all orders above ₹2000. For orders below ₹2000, a standard shipping fee of ₹99 applies. Delivering across India."
         },
         {
           question: "How do you ship live plants and fish?",
