@@ -17,9 +17,8 @@ const env = process.env.NODE_ENV || 'development';
 const config = redisConfig[env as keyof typeof redisConfig];
 
 // Create Redis client
-const redisClient = createClient({
-  url: config.url,
-  password: config.password,
+export const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
 });
 
 // Handle Redis client events

@@ -26,10 +26,10 @@ export default function Checkout() {
     return (
       <>
         <Helmet>
-          <title>Checkout - ModernShop</title>
-          <meta name="description" content="Complete your purchase at ModernShop with our secure checkout process." />
-          <meta property="og:title" content="Checkout - ModernShop" />
-          <meta property="og:description" content="Complete your purchase at ModernShop with our secure checkout process." />
+          <title>Checkout - Aquatic Exotica</title>
+          <meta name="description" content="Complete your purchase at Aquatic Exotica with our secure checkout process." />
+          <meta property="og:title" content="Checkout - Aquatic Exotica" />
+          <meta property="og:description" content="Complete your purchase at Aquatic Exotica with our secure checkout process." />
         </Helmet>
 
         <div className="container mx-auto px-4 py-16 text-center">
@@ -49,7 +49,7 @@ export default function Checkout() {
     return (
       <>
         <Helmet>
-          <title>Login Required - ModernShop</title>
+          <title>Login Required - Aquatic Exotica</title>
           <meta name="description" content="Please login to continue with checkout." />
         </Helmet>
 
@@ -68,10 +68,10 @@ export default function Checkout() {
   return (
     <>
       <Helmet>
-        <title>Checkout - ModernShop</title>
-        <meta name="description" content="Complete your purchase at ModernShop with our secure checkout process." />
-        <meta property="og:title" content="Checkout - ModernShop" />
-        <meta property="og:description" content="Complete your purchase at ModernShop with our secure checkout process." />
+        <title>Checkout - Aquatic Exotica</title>
+        <meta name="description" content="Complete your purchase at Aquatic Exotica with our secure checkout process." />
+        <meta property="og:title" content="Checkout - Aquatic Exotica" />
+        <meta property="og:description" content="Complete your purchase at Aquatic Exotica with our secure checkout process." />
       </Helmet>
 
       <div className="container mx-auto px-4 py-12">

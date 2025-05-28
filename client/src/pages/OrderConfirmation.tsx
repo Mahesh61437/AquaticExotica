@@ -63,9 +63,9 @@ export default function OrderConfirmation() {
   return (
     <>
       <Helmet>
-        <title>Order Confirmation - ModernShop</title>
+        <title>Order Confirmation - Aquatic Exotica</title>
         <meta name="description" content={`Thank you for your order #${order.id}. Your purchase has been confirmed and will be shipped soon.`} />
-        <meta property="og:title" content="Order Confirmation - ModernShop" />
+        <meta property="og:title" content="Order Confirmation - Aquatic Exotica" />
         <meta property="og:description" content={`Thank you for your order #${order.id}. Your purchase has been confirmed and will be shipped soon.`} />
         <meta property="og:type" content="website" />
       </Helmet>

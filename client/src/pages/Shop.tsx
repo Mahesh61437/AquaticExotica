@@ -57,10 +57,10 @@ export default function Shop() {
   return (
     <>
       <Helmet>
-        <title>{pageTitle} - ModernShop</title>
-        <meta name="description" content={`Browse our collection of ${pageTitle.toLowerCase()} at ModernShop. Find the perfect style for any occasion with free shipping on orders over $50.`} />
-        <meta property="og:title" content={`${pageTitle} - ModernShop`} />
-        <meta property="og:description" content={`Browse our collection of ${pageTitle.toLowerCase()} at ModernShop. Find the perfect style for any occasion with free shipping on orders over $50.`} />
+        <title>{pageTitle} - Aquatic Exotica</title>
+        <meta name="description" content={`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`} />
+        <meta property="og:title" content={`${pageTitle} - Aquatic Exotica`} />
+        <meta property="og:description" content={`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`} />
         <meta property="og:type" content="website" />
       </Helmet>
 

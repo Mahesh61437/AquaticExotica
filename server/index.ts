@@ -14,6 +14,10 @@ import { fixSchema } from './fix-schema';
 import { initializeDatabase } from './init-db';
 import helmet from 'helmet';
 import cors from 'cors';
+import { logger, createLogger } from './logger';
+import { initRedis } from './redis';
+
+const serverLogger = createLogger('server');
 
 // Create PostgreSQL session store
 const PgSession = connectPgSimple(session);
@@ -26,6 +30,33 @@ const allowedOrigins = [
   "https://aquaticexotica.com",
   "https://www.aquaticexotica.com"
 ];
+
+// Log all incoming requests
+app.use((req, res, next) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    const logData = {
+      method: req.method,
+      url: req.originalUrl,
+      status: res.statusCode,
+      duration: `${duration}ms`,
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    };
+    
+    if (res.statusCode >= 500) {
+      serverLogger.error('Server error response', logData);
+    } else if (res.statusCode >= 400) {
+      serverLogger.warn('Client error response', logData);
+    } else {
+      serverLogger.info('Request completed', logData);
+    }
+  });
+  
+  next();
+});
 
 app.use(
   cors({
@@ -58,6 +89,7 @@ app.use(
 
       // Otherwise, block
       callback(new Error("Not allowed by CORS"));
+      serverLogger.warn(`CORS blocked request from origin: ${origin}`);
     },
     credentials: true,
   })
@@ -114,8 +146,11 @@ app.use((req, res, next) => {
 });
 
 // Log information about the current environment
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('Server starting in', process.env.NODE_ENV || 'development', 'mode with security headers');
+serverLogger.info('NODE_ENV:', { env: process.env.NODE_ENV });
+serverLogger.info('Server starting', { 
+  mode: process.env.NODE_ENV || 'development',
+  withSecurity: 'with security headers'
+});
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -175,23 +210,34 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  serverLogger.info('Starting server initialization...');
+  
+  // Initialize Redis
+  try {
+    await initRedis();
+    serverLogger.info('Redis initialized successfully');
+  } catch (error) {
+    serverLogger.error('Failed to initialize Redis', { error: error instanceof Error ? error.message : error });
+    // Continue without Redis if it fails
+  }
+  
   // Run database migration and initialize with demo data
   try {
     // Fix the database schema first
-    console.log("Running database schema migration...");
+    serverLogger.info("Running database schema migration...");
     const { fixSchema } = await import("./fix-schema");
     await fixSchema().catch(err => {
-      console.warn("Schema fix warning (continuing):", err.message);
+      serverLogger.warn("Schema fix warning (continuing):", { error: err.message });
     });
-    console.log("Database schema migration completed");
+    serverLogger.info("Database schema migration completed");
     
     // Then run the standard database migration
-    console.log("Running database schema migration...");
+    serverLogger.info("Running standard database migration...");
     const { runMigration } = await import("./db-migrate");
     await runMigration().catch(err => {
-      console.warn("Migration warning (continuing):", err.message);
+      serverLogger.warn("Migration warning (continuing):", { error: err.message });
     });
-    console.log("Database migration completed");
+    serverLogger.info("Database migration completed");
     
     // Check if we need to initialize the database
     // Get the directory name properly in ESM
@@ -200,15 +246,18 @@ app.use((req, res, next) => {
     const dbInitFlagPath = path.join(__dirname, '..', '.db_initialized');
     
     // Always check and ensure admin users exist, but don't recreate data
-    console.log("Initializing database with admin user if needed...");
+    serverLogger.info("Initializing database with admin user if needed...");
     const { initializeDatabase } = await import("./init-db");
     await initializeDatabase().catch(err => {
-      console.warn("Database initialization warning (continuing):", err.message);
+      serverLogger.warn("Database initialization warning (continuing):", { error: err.message });
     });
   } catch (error) {
     // Log but don't exit the process
-    console.error("Database setup encountered issues:", error);
-    console.log("Continuing server startup despite database issues");
+    serverLogger.error("Database setup encountered issues:", { 
+      error: error instanceof Error ? error.message : error,
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    serverLogger.info("Continuing server startup despite database issues");
   }
 
   // Initialize image optimization middleware
@@ -219,14 +268,6 @@ app.use((req, res, next) => {
   
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    console.error("Server error:", err);
-  });
-
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
@@ -236,6 +277,40 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  // 404 handler and logger - MUST be after static file serving
+  app.use((req, res) => {
+    serverLogger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`, {
+      ip: req.ip,
+      userAgent: req.get('user-agent')
+    });
+    res.status(404).json({ message: "Not Found" });
+  });
+
+  // Global error handler with detailed logging
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    const logMsg = `${status} Error on ${req.method} ${req.originalUrl}: ${message}`;
+
+    if (status >= 500) {
+      serverLogger.error(logMsg, { 
+        stack: err.stack,
+        body: req.body,
+        query: req.query,
+        params: req.params,
+        headers: req.headers
+      });
+    } else {
+      serverLogger.warn(logMsg, {
+        body: req.body,
+        query: req.query,
+        params: req.params
+      });
+    }
+
+    res.status(status).json({ message });
+  });
+
   // ALWAYS serve the app on port 3000
   // this serves both the API and the client.
   const port = process.env.PORT || 3000;
@@ -243,6 +318,44 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
   }, () => {
-    log(`serving on port ${port}`);
+    serverLogger.info(`Server started successfully`, {
+      port,
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version
+    });
+  });
+
+  // Handle graceful shutdown
+  process.on('SIGTERM', () => {
+    serverLogger.info('SIGTERM signal received: closing HTTP server');
+    server.close(() => {
+      serverLogger.info('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    serverLogger.info('SIGINT signal received: closing HTTP server');
+    server.close(() => {
+      serverLogger.info('HTTP server closed');
+      process.exit(0);
+    });
+  });
+
+  // Log unhandled errors
+  process.on('uncaughtException', (error) => {
+    serverLogger.error('Uncaught Exception:', { 
+      error: error.message, 
+      stack: error.stack 
+    });
+    process.exit(1);
+  });
+
+  process.on('unhandledRejection', (reason, promise) => {
+    serverLogger.error('Unhandled Rejection at:', { 
+      promise, 
+      reason: reason instanceof Error ? reason.message : reason,
+      stack: reason instanceof Error ? reason.stack : undefined
+    });
   });
 })();

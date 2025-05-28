@@ -7,106 +7,56 @@ import {
 import { db, pool } from "./db";
 import { eq, like, asc, desc, sql } from "drizzle-orm";
 import { IStorage } from "./storage";
+import { createLogger } from './logger';
+
+const dbLogger = createLogger('database');
 
 // Database implementation of storage
 export class DatabaseStorage implements IStorage {
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     try {
-      // Import at function level to avoid circular dependencies
-      const { getUserByIdViaSQL } = await import('./db-utils');
-      
-      // Get the user
-      const user = await getUserByIdViaSQL(id);
-      
-      // Force the admin check for mahesh user
-      if (user && user.id === 1 && user.email === 'mahesh@aquaticexotica.com') {
-        // Create a new object to ensure we're not dealing with a readonly property
-        const adminUser = {
-          ...user,
-          isAdmin: true // Explicitly set to true
-        };
-        console.log(`ADMIN CHECK: User ${adminUser.username} force-set admin status to ${adminUser.isAdmin}`);
-        return adminUser;
-      }
-      
-      return user || undefined;
+      dbLogger.debug(`Fetching user with id: ${id}`);
+      const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+      return result[0] || undefined;
     } catch (error) {
-      console.error('Error in getUser:', error);
-      return undefined;
+      dbLogger.error(`Error fetching user ${id}:`, { error });
+      throw error;
     }
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     try {
-      // Import at function level to avoid circular dependencies
-      const { getUserByUsernameViaSQL } = await import('./db-utils');
-      
-      // Get the user
-      const user = await getUserByUsernameViaSQL(username);
-      
-      // Force the admin check for mahesh user
-      if (user && user.id === 1 && user.email === 'mahesh@aquaticexotica.com' && username === 'mahesh') {
-        // Create a new object to ensure we're not dealing with a readonly property
-        const adminUser = {
-          ...user,
-          isAdmin: true // Explicitly set to true
-        };
-        console.log(`ADMIN CHECK: User ${adminUser.username} via username force-set admin status to ${adminUser.isAdmin}`);
-        return adminUser;
-      }
-      
-      return user || undefined;
+      dbLogger.debug(`Fetching user by username: ${username}`);
+      const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      return result[0] || undefined;
     } catch (error) {
-      console.error('Error in getUserByUsername:', error);
-      return undefined;
+      dbLogger.error(`Error fetching user by username ${username}:`, { error });
+      throw error;
     }
   }
   
   async getUserByEmail(email: string): Promise<User | undefined> {
     try {
-      // Import at function level to avoid circular dependencies
-      const { getUserByEmailViaSQL } = await import('./db-utils');
-      
-      // Get the user
-      const user = await getUserByEmailViaSQL(email);
-      
-      // Force the admin check for mahesh user (highest priority fix)
-      if (user && user.id === 1 && email === 'mahesh@aquaticexotica.com') {
-        // Create a new object to ensure we're not dealing with a readonly property
-        const adminUser = {
-          ...user,
-          isAdmin: true // Explicitly set to true
-        };
-        console.log(`ADMIN CHECK: User ${adminUser.username} via email force-set admin status to ${adminUser.isAdmin}`);
-        return adminUser;
-      }
-      
-      return user || undefined;
+      dbLogger.debug(`Fetching user by email: ${email}`);
+      const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      return result[0] || undefined;
     } catch (error) {
-      console.error('Error in getUserByEmail:', error);
-      return undefined;
+      dbLogger.error(`Error fetching user by email ${email}:`, { error });
+      throw error;
     }
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    // Import at function level to avoid circular dependencies
-    const { createUserViaSQL } = await import('./db-utils');
-    
-    // Use our SQL utility function
-    const user = await createUserViaSQL(
-      insertUser.username,
-      insertUser.email,
-      insertUser.password,
-      insertUser.fullName,
-      insertUser.isAdmin || false
-    );
-    
-    if (!user) {
-      throw new Error("Failed to create user");
+    try {
+      dbLogger.info(`Creating new user with email: ${insertUser.email}`);
+      const result = await db.insert(users).values(insertUser).returning();
+      dbLogger.info(`User created successfully with id: ${result[0].id}`);
+      return result[0];
+    } catch (error) {
+      dbLogger.error(`Error creating user:`, { error });
+      throw error;
     }
-    
-    return user;
   }
   
   async updateUser(id: number, updates: Partial<User>): Promise<User> {
@@ -158,6 +108,12 @@ export class DatabaseStorage implements IStorage {
         RETURNING id, username, email, password, full_name, created_at, is_admin
       `;
       
+      // Combine query and values into a single SQL string
+      let finalQuery = query;
+      [...values, id].forEach((value, index) => {
+        finalQuery = finalQuery.replace(`$${index + 1}`, typeof value === 'string' ? `'${value}'` : String(value));
+      });
+      
       const result = await db.execute<{
         id: number;
         username: string;
@@ -166,7 +122,7 @@ export class DatabaseStorage implements IStorage {
         full_name: string;
         created_at: Date;
         is_admin: boolean;
-      }>(query, [...values, id]);
+      }>(finalQuery);
       
       if (result.rows.length === 0) {
         throw new Error("User not found");

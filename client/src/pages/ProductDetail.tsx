@@ -111,9 +111,9 @@ export default function ProductDetail() {
   return (
     <>
       <Helmet>
-        <title>{product.name} - ModernShop</title>
+        <title>{product.name} - Aquatic Exotica</title>
         <meta name="description" content={product.description} />
-        <meta property="og:title" content={`${product.name} - ModernShop`} />
+        <meta property="og:title" content={`${product.name} - Aquatic Exotica`} />
         <meta property="og:description" content={product.description} />
         <meta property="og:image" content={product.imageUrl} />
         <meta property="og:type" content="product" />

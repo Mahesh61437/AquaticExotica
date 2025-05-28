@@ -105,13 +105,5 @@ export async function fixSchema() {
   }
 }
 
-// Execute the function if this script is run directly
-// Using ESM approach which is different from CommonJS require.main === module
-if (import.meta.url === `file://${process.argv[1]}`) {
-  fixSchema()
-    .then(() => process.exit(0))
-    .catch(error => {
-      console.error('Error fixing schema:', error);
-      process.exit(1);
-    });
-}
+// Remove the direct execution block to prevent process.exit() in production builds
+// If you need to run this script directly, create a separate script file that imports and calls fixSchema()
