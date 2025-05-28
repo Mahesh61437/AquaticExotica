@@ -14,10 +14,7 @@ import { fixSchema } from './fix-schema';
 import { initializeDatabase } from './init-db';
 import helmet from 'helmet';
 import cors from 'cors';
-import { logger, createLogger } from './logger';
 import { initRedis } from './redis';
-
-const serverLogger = createLogger('server');
 
 // Create PostgreSQL session store
 const PgSession = connectPgSimple(session);
@@ -28,31 +25,31 @@ const vercelRegex = /\.vercel\.app$/;
 
 
 // Log all incoming requests
-app.use((req, res, next) => {
-  const start = Date.now();
+// app.use((req, res, next) => {
+//   const start = Date.now();
   
-  res.on('finish', () => {
-    const duration = Date.now() - start;
-    const logData = {
-      method: req.method,
-      url: req.originalUrl,
-      status: res.statusCode,
-      duration: `${duration}ms`,
-      ip: req.ip,
-      userAgent: req.get('user-agent')
-    };
+//   res.on('finish', () => {
+//     const duration = Date.now() - start;
+//     const logData = {
+//       method: req.method,
+//       url: req.originalUrl,
+//       status: res.statusCode,
+//       duration: `${duration}ms`,
+//       ip: req.ip,
+//       userAgent: req.get('user-agent')
+//     };
     
-    if (res.statusCode >= 500) {
-      serverLogger.error('Server error response', logData);
-    } else if (res.statusCode >= 400) {
-      serverLogger.warn('Client error response', logData);
-    } else {
-      serverLogger.info('Request completed', logData);
-    }
-  });
+//     if (res.statusCode >= 500) {
+//       console.error('Server error response', logData);
+//     } else if (res.statusCode >= 400) {
+//       console.warn('Client error response', logData);
+//     } else {
+//       console.log('Request completed', logData);
+//     }
+//   });
   
-  next();
-});
+//   next();
+// });
 
 
 const allowedDomainPatterns = [
@@ -82,7 +79,7 @@ const corsOptions: cors.CorsOptions = {
     }
 
     // Otherwise, block
-    serverLogger.warn(`CORS blocked request from origin: ${origin}`);
+    console.warn(`CORS blocked request from origin: ${origin}`);
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true
@@ -141,8 +138,8 @@ app.use((req, res, next) => {
 });
 
 // Log information about the current environment
-serverLogger.info('NODE_ENV:', { env: process.env.NODE_ENV });
-serverLogger.info('Server starting', { 
+console.log('NODE_ENV:', { env: process.env.NODE_ENV });
+console.log('Server starting', { 
   mode: process.env.NODE_ENV || 'development',
   withSecurity: 'with security headers'
 });
@@ -205,34 +202,34 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  serverLogger.info('Starting server initialization...');
+  console.log('Starting server initialization...');
   
   // Initialize Redis
   try {
     await initRedis();
-    serverLogger.info('Redis initialized successfully');
+    console.log('Redis initialized successfully');
   } catch (error) {
-    serverLogger.error('Failed to initialize Redis', { error: error instanceof Error ? error.message : error });
+    console.error('Failed to initialize Redis', { error: error instanceof Error ? error.message : error });
     // Continue without Redis if it fails
   }
   
   // Run database migration and initialize with demo data
   try {
     // Fix the database schema first
-    serverLogger.info("Running database schema migration...");
+    console.log("Running database schema migration...");
     const { fixSchema } = await import("./fix-schema");
     await fixSchema().catch(err => {
-      serverLogger.warn("Schema fix warning (continuing):", { error: err.message });
+      console.warn("Schema fix warning (continuing):", { error: err.message });
     });
-    serverLogger.info("Database schema migration completed");
+    console.log("Database schema migration completed");
     
     // Then run the standard database migration
-    serverLogger.info("Running standard database migration...");
+    console.log("Running standard database migration...");
     const { runMigration } = await import("./db-migrate");
     await runMigration().catch(err => {
-      serverLogger.warn("Migration warning (continuing):", { error: err.message });
+      console.warn("Migration warning (continuing):", { error: err.message });
     });
-    serverLogger.info("Database migration completed");
+    console.log("Database migration completed");
     
     // Check if we need to initialize the database
     // Get the directory name properly in ESM
@@ -241,18 +238,15 @@ app.use((req, res, next) => {
     const dbInitFlagPath = path.join(__dirname, '..', '.db_initialized');
     
     // Always check and ensure admin users exist, but don't recreate data
-    serverLogger.info("Initializing database with admin user if needed...");
+    console.log("Initializing database with admin user if needed...");
     const { initializeDatabase } = await import("./init-db");
     await initializeDatabase().catch(err => {
-      serverLogger.warn("Database initialization warning (continuing):", { error: err.message });
+      console.warn("Database initialization warning (continuing):", err.message);
     });
   } catch (error) {
     // Log but don't exit the process
-    serverLogger.error("Database setup encountered issues:", { 
-      error: error instanceof Error ? error.message : error,
-      stack: error instanceof Error ? error.stack : undefined
-    });
-    serverLogger.info("Continuing server startup despite database issues");
+    console.error("Database setup encountered issues:", error);
+    console.log("Continuing server startup despite database issues");
   }
 
   // Initialize image optimization middleware
@@ -262,6 +256,14 @@ app.use((req, res, next) => {
   setupCaching(app);
   
   const server = await registerRoutes(app);
+
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    console.error("Server error:", err);
+  });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -274,7 +276,7 @@ app.use((req, res, next) => {
 
   // 404 handler and logger - MUST be after static file serving
   app.use((req, res) => {
-    serverLogger.warn(`404 Not Found: ${req.method} ${req.originalUrl}`, {
+    console.warn(`404 Not Found: ${req.method} ${req.originalUrl}`, {
       ip: req.ip,
       userAgent: req.get('user-agent')
     });
@@ -288,7 +290,7 @@ app.use((req, res, next) => {
     const logMsg = `${status} Error on ${req.method} ${req.originalUrl}: ${message}`;
 
     if (status >= 500) {
-      serverLogger.error(logMsg, { 
+      console.error(logMsg, { 
         stack: err.stack,
         body: req.body,
         query: req.query,
@@ -296,7 +298,7 @@ app.use((req, res, next) => {
         headers: req.headers
       });
     } else {
-      serverLogger.warn(logMsg, {
+      console.warn(logMsg, {
         body: req.body,
         query: req.query,
         params: req.params
@@ -313,44 +315,40 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
   }, () => {
-    serverLogger.info(`Server started successfully`, {
-      port,
-      environment: process.env.NODE_ENV || 'development',
-      nodeVersion: process.version
-    });
+    log(`serving on port ${port}`);
   });
 
   // Handle graceful shutdown
-  process.on('SIGTERM', () => {
-    serverLogger.info('SIGTERM signal received: closing HTTP server');
-    server.close(() => {
-      serverLogger.info('HTTP server closed');
-      process.exit(0);
-    });
-  });
+//   process.on('SIGTERM', () => {
+//     console.log('SIGTERM signal received: closing HTTP server');
+//     server.close(() => {
+//       console.log('HTTP server closed');
+//       process.exit(0);
+//     });
+//   });
 
-  process.on('SIGINT', () => {
-    serverLogger.info('SIGINT signal received: closing HTTP server');
-    server.close(() => {
-      serverLogger.info('HTTP server closed');
-      process.exit(0);
-    });
-  });
+//   process.on('SIGINT', () => {
+//     console.log('SIGINT signal received: closing HTTP server');
+//     server.close(() => {
+//       console.log('HTTP server closed');
+//       process.exit(0);
+//     });
+//   });
 
-  // Log unhandled errors
-  process.on('uncaughtException', (error) => {
-    serverLogger.error('Uncaught Exception:', { 
-      error: error.message, 
-      stack: error.stack 
-    });
-    process.exit(1);
-  });
+//   // Log unhandled errors
+//   process.on('uncaughtException', (error) => {
+//     console.error('Uncaught Exception:', { 
+//       error: error.message, 
+//       stack: error.stack 
+//     });
+//     process.exit(1);
+//   });
 
-  process.on('unhandledRejection', (reason, promise) => {
-    serverLogger.error('Unhandled Rejection at:', { 
-      promise, 
-      reason: reason instanceof Error ? reason.message : reason,
-      stack: reason instanceof Error ? reason.stack : undefined
-    });
-  });
-})();
+//   process.on('unhandledRejection', (reason, promise) => {
+//     console.error('Unhandled Rejection at:', { 
+//       promise, 
+//       reason: reason instanceof Error ? reason.message : reason,
+//       stack: reason instanceof Error ? reason.stack : undefined
+//     });
+//   });
+// })();

@@ -7,50 +7,47 @@ import { hash, compare } from "bcrypt";
 import { sendOrderNotification, sendContactFormMessage, sendOrderStatusUpdate } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
 import { cacheMiddleware, invalidateProductCache, invalidateCategoryCache } from './redis';
-import { createLogger } from './logger';
-
-const routesLogger = createLogger('routes');
 
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.session) {
-      routesLogger.error("Admin middleware: No session object available");
+      console.error("Admin middleware: No session object available");
       return res.status(500).json({ message: "Server error: Session unavailable" });
     }
     
     if (!req.session.userId) {
-      routesLogger.debug("Admin access denied: No user ID in session");
+      console.debug("Admin access denied: No user ID in session");
       return res.status(401).json({ message: "Unauthorized: Please log in first" });
     }
 
-    routesLogger.debug(`Admin middleware: Checking admin status for user ID: ${req.session.userId}`);
+    console.debug(`Admin middleware: Checking admin status for user ID: ${req.session.userId}`);
     
     // Get user directly from database to ensure latest data
     try {
       const user = await storage.getUser(req.session.userId);
       
       if (!user) {
-        routesLogger.warn(`Admin access denied: User with ID ${req.session.userId} not found in database`);
+        console.warn(`Admin access denied: User with ID ${req.session.userId} not found in database`);
         // Clear invalid session
         req.session.destroy(() => {});
         return res.status(401).json({ message: "Unauthorized: User not found" });
       }
       
       if (!user.isAdmin) {
-        routesLogger.warn(`Admin access denied: User ${user.username} (${user.email}) is not an admin`);
+        console.warn(`Admin access denied: User ${user.username} (${user.email}) is not an admin`);
         return res.status(403).json({ message: "Forbidden: Admin access required" });
       }
       
-      routesLogger.info(`Admin access granted for user: ${user.username} (${user.email})`);
+      console.info(`Admin access granted for user: ${user.username} (${user.email})`);
       // Everything is good, proceed
       next();
     } catch (dbError) {
-      routesLogger.error("Admin middleware: Database error when retrieving user:", { error: dbError });
+      console.error("Admin middleware: Database error when retrieving user:", { error: dbError });
       return res.status(500).json({ message: "Server error: Could not verify admin status" });
     }
   } catch (error) {
-    routesLogger.error("Critical error in admin middleware:", { error });
+    console.error("Critical error in admin middleware:", { error });
     return res.status(500).json({ message: "Internal server error checking admin status" });
   }
 };

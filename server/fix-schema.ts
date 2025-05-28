@@ -105,5 +105,11 @@ export async function fixSchema() {
   }
 }
 
-// Remove the direct execution block to prevent process.exit() in production builds
-// If you need to run this script directly, create a separate script file that imports and calls fixSchema()
+if (import.meta.url === `file://${process.argv[1]}`) {
+  fixSchema()
+    // .then(() => process.exit(0))
+    .catch(error => {
+      console.error('Error fixing schema:', error);
+      // process.exit(1);
+    });
+}
