@@ -92,6 +92,7 @@ app.use(
       console.log(`CORS blocked request from origin: ${origin}`);
     },
     credentials: true,
+    optionsSuccessStatus: 204   
   })
 );
 
