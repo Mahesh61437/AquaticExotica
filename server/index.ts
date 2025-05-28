@@ -23,7 +23,7 @@ const app = express();
 // Enable CORS for development
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://aquaticexotica.com', 'https://www.aquaticexotica.com']
+    ? ['https://aquaticexotica.com', 'https://www.aquaticexotica.com', 'https://aquatic-exotica.vercel.app/']
     : ['http://localhost:5000', 'http://127.0.0.1:5000'],
   credentials: true
 }));
