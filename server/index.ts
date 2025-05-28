@@ -20,13 +20,48 @@ const PgSession = connectPgSimple(session);
 
 const app = express();
 
-// Enable CORS for development
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://aquaticexotica.com', 'https://www.aquaticexotica.com', 'https://aquatic-exotica.vercel.app/']
-    : ['http://localhost:5000', 'http://127.0.0.1:5000'],
-  credentials: true
-}));
+const vercelRegex = /\.vercel\.app$/;
+
+const allowedOrigins = [
+  "https://aquaticexotica.com",
+  "https://www.aquaticexotica.com"
+];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      // Allow localhost for local development
+      if (
+        origin.startsWith("http://localhost") ||
+        origin.startsWith("http://127.0.0.1")
+      ) {
+        return callback(null, true);
+      }
+
+      // Allow specific production domains
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Allow any *.vercel.app domain
+      try {
+        const { hostname } = new URL(origin);
+        if (vercelRegex.test(hostname)) {
+          return callback(null, true);
+        }
+      } catch (e) {
+        // If origin is not a valid URL, reject
+      }
+
+      // Otherwise, block
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+  })
+);
 
 // Set up security headers with Helmet
 // Configure with appropriate settings for development
