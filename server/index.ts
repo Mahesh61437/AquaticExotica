@@ -26,10 +26,6 @@ const app = express();
 
 const vercelRegex = /\.vercel\.app$/;
 
-const allowedOrigins = [
-  "https://aquaticexotica.com",
-  "https://www.aquaticexotica.com"
-];
 
 // Log all incoming requests
 app.use((req, res, next) => {
@@ -58,42 +54,41 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, etc.)
-      if (!origin) return callback(null, true);
 
-      // Allow localhost for local development
-      if (
-        origin.startsWith("http://localhost") ||
-        origin.startsWith("http://127.0.0.1")
-      ) {
-        return callback(null, true);
-      }
+const allowedDomainPatterns = [
+  /^https:\/\/aquaticexotica\.com$/,
+  /^https:\/\/www\.aquaticexotica\.com$/,
+  /^https:\/\/aquaticexotica-[\w-]+\.railway\.app$/
+];
 
-      // Allow specific production domains
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      // Allow requests with no origin (e.g., mobile apps, curl, etc.)
+      return callback(null, true);
+    }
 
-      // Allow any *.vercel.app domain
-      try {
-        const { hostname } = new URL(origin);
-        if (vercelRegex.test(hostname)) {
-          return callback(null, true);
-        }
-      } catch (e) {
-        // If origin is not a valid URL, reject
-      }
+    // Allow localhost and 127.0.0.1 for development
+    if (
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1')
+    ) {
+      return callback(null, true);
+    }
 
-      // Otherwise, block
-      callback(new Error("Not allowed by CORS"));
-      serverLogger.warn(`CORS blocked request from origin: ${origin}`);
-    },
-    credentials: true,
-  })
-);
+    // Check against regex patterns
+    if (allowedDomainPatterns.some(pattern => pattern.test(origin))) {
+      return callback(null, true);
+    }
+
+    // Otherwise, block
+    serverLogger.warn(`CORS blocked request from origin: ${origin}`);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
 
 // Set up security headers with Helmet
 // Configure with appropriate settings for development
