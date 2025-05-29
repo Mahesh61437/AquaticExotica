@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
     try {
-      const response = await apiRequest<User & { message?: string }>('/api/auth/signup', {
+      const response = await apiRequest<User & { message?: string }>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string): Promise<User | null> => {
     try {
-      const user = await apiRequest<User>('/api/auth/login', {
+      const user = await apiRequest<User>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (): Promise<void> => {
     try {
-      await apiRequest('/api/auth/logout', {
+      await apiRequest('https://aquaticexotica-production-88d0.up.railway.app/api/auth/logout', {
         method: 'POST'
       });
       
@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       // Update user on server
-      await apiRequest('/api/auth/update-profile', {
+      await apiRequest('https://aquaticexotica-production-88d0.up.railway.app/api/auth/update-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -254,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       // Update user on server
-      await apiRequest('/api/auth/update-profile', {
+      await apiRequest('https://aquaticexotica-production-88d0.up.railway.app/api/auth/update-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -315,7 +315,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       
       // Update user on server
-      await apiRequest('/api/auth/update-profile', {
+      await apiRequest('https://aquaticexotica-production-88d0.up.railway.app/api/auth/update-profile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
