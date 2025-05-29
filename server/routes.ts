@@ -161,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/auth/signup", async (req: Request, res: Response) => {
+  app.all("/api/auth/signup", async (req: Request, res: Response) => {
     try {
       const result = signupSchema.safeParse(req.body);
       
