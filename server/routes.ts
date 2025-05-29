@@ -161,10 +161,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.all("/api/auth/signup", async (req: Request, res: Response) => {
+  app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
+      console.log("=== SIGNUP ROUTE HIT ===");
+      console.log("Method:", req.method);
+      console.log("URL:", req.url);
+      console.log("Headers:", req.headers);
+      console.log("Body:", req.body);
+      
       const result = signupSchema.safeParse(req.body);
       
+      console.log("Result:", result);
+
       if (!result.success) {
         // Extract the first error message for a simpler error response
         const errors = result.error.format();
