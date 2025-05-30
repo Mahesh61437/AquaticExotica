@@ -7,7 +7,7 @@ import { hash, compare } from "bcrypt";
 import { sendOrderNotification, sendContactFormMessage, sendOrderStatusUpdate } from "./email-service";
 import { subscribeToStockNotification, notifyProductBackInStock } from "./stock-notifications";
 import { cacheMiddleware, invalidateProductCache, invalidateCategoryCache } from './redis';
-
+import cors from 'cors';
 // Admin middleware - completely rewritten for better error handling
 const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -161,6 +161,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  app.options('/api/auth/signup', cors());
+
+
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
       console.log("=== SIGNUP ROUTE HIT ===");

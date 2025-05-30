@@ -92,11 +92,17 @@ app.use(
       console.log(`CORS blocked request from origin: ${origin}`);
     },
     credentials: true,
-    optionsSuccessStatus: 204   
+    optionsSuccessStatus: 204,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: '*'
   })
 );
 
-
+// app.use(cors({
+//   origin: 'your-frontend-domain',
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization']
+// }));
 
 // Set up security headers with Helmet
 // Configure with appropriate settings for development
