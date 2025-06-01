@@ -162,9 +162,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.options('/api/auth/signup', cors());
-
-
+  app.options('/api/auth/signup', (req, res) => {
+    res.set({
+      'Access-Control-Allow-Origin': 'https://www.aquaticexotica.com',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    });
+    res.sendStatus(204); // No Content
+  });
+  
   app.post("/api/auth/signup", async (req: Request, res: Response) => {
     try {
       console.log("=== SIGNUP ROUTE HIT ===");

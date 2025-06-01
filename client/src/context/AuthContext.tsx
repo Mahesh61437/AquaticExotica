@@ -95,6 +95,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //   }
   // };
 
+  // const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
+  //   console.log("signUp function called with:", { email, fullName });
+  
+  //   try {
+  //     const requestBody = {
+  //       email,
+  //       password,
+  //       fullName,
+  //     };
+  
+  //     console.log("📦 Constructed request body:", requestBody);
+  
+  //     const requestOptions = {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify(requestBody)
+  //     };
+  
+  //     console.log("📤 Sending request to API endpoint with options:", requestOptions);
+  
+  //     const response = await apiRequest<User & { message?: string }>(
+  //       'https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup',
+  //       requestOptions
+  //     );
+  
+  //     console.log("✅ Received response from API:", response);
+  
+  //     toast({
+  //       title: "Account created successfully",
+  //       description: "Please sign in with your new account",
+  //     });
+  
+  //     return response;
+  
+  //   } catch (error: any) {
+  //     console.log("❌ Signup error caught:", error);
+  
+  //     // Try to log deeper error information
+  //     if (error.response) {
+  //       console.log("🧾 Error response:", {
+  //         status: error.response.status,
+  //         data: error.response.data,
+  //         headers: error.response.headers,
+  //       });
+  //     } else if (error.request) {
+  //       console.log("📭 Error request made but no response received:", error.request);
+  //     } else {
+  //       console.error("📌 General error info:", error.message);
+  //     }
+  
+  //     toast({
+  //       title: "Sign up failed",
+  //       description: error.message || "Failed to create account",
+  //       variant: "destructive",
+  //     });
+  
+  //     throw error;
+  //   } finally {
+  //     console.log("🧹 signUp function finished (success or failure)");
+  //   }
+  // };
+
   const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
     console.log("signUp function called with:", { email, fullName });
   
@@ -105,47 +169,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fullName,
       };
   
-      console.log("📦 Constructed request body:", requestBody);
+      console.log("Constructed request body:", requestBody);
   
-      const requestOptions = {
+      const requestOptions: RequestInit = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
+        credentials: 'include'
       };
   
-      console.log("📤 Sending request to API endpoint with options:", requestOptions);
+      console.log("Sending request to /api/auth/signup with options:", requestOptions);
   
-      const response = await apiRequest<User & { message?: string }>(
-        'https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup',
-        requestOptions
-      );
+      const response = await fetch('/api/auth/signup', requestOptions);
   
-      console.log("✅ Received response from API:", response);
+      console.log("Raw response object:", response);
+      console.log("Response status:", response.status);
+  
+      const responseData = await response.json().catch(() => {
+        console.warn("Failed to parse JSON from response");
+        return null;
+      });
+  
+      console.log("Parsed response JSON:", responseData);
+  
+      if (!response.ok) {
+        const errorMsg = responseData?.message || `Unexpected status code ${response.status}`;
+        throw new Error(errorMsg);
+      }
+  
+      // Assuming responseData is of type `User & { message?: string }`
+      const { message, ...user } = responseData;
+  
+      console.log("User object extracted from response:", user);
   
       toast({
         title: "Account created successfully",
         description: "Please sign in with your new account",
       });
   
-      return response;
+      return user as User;
   
     } catch (error: any) {
-      console.error("❌ Signup error caught:", error);
-  
-      // Try to log deeper error information
-      if (error.response) {
-        console.error("🧾 Error response:", {
-          status: error.response.status,
-          data: error.response.data,
-          headers: error.response.headers,
-        });
-      } else if (error.request) {
-        console.error("📭 Error request made but no response received:", error.request);
-      } else {
-        console.error("📌 General error info:", error.message);
-      }
+      console.log("Signup error caught:", error);
   
       toast({
         title: "Sign up failed",
@@ -153,9 +220,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
   
-      throw error;
+      return null; // return null on failure
     } finally {
-      console.log("🧹 signUp function finished (success or failure)");
+      console.log("signUp function finished (success or failure)");
     }
   };
 
