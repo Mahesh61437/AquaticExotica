@@ -71,12 +71,12 @@ export default function Signup() {
       
       // The message handling is primarily done in the AuthContext
       // Handle specific error cases here
-      if (error.message?.includes("already exists")) {
-        // Add a small delay before redirecting to login page
-        setTimeout(() => {
-          setLocation("/login");
-        }, 1500);
-      }
+      // if (error.message?.includes("already exists")) {
+      //   // Add a small delay before redirecting to login page
+      //   setTimeout(() => {
+      //     setLocation("/login");
+      //   }, 1500);
+      // }
       // The toast error message is already being shown in the AuthContext
     } finally {
       setLoading(false);

@@ -61,40 +61,105 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     checkAuth();
   }, []);
 
+  // const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
+  //   try {
+  //     const response = await apiRequest<User & { message?: string }>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json'
+  //       },
+  //       body: JSON.stringify({
+  //         email,
+  //         password,
+  //         fullName
+  //       })
+  //     });
+      
+  //     // Do not set current user after signup
+  //     // User must log in manually
+      
+  //     toast({
+  //       title: "Account created successfully",
+  //       description: "Please sign in with your new account",
+  //     });
+      
+  //     return response;
+  //   } catch (error: any) {
+  //     console.error("Signup error", error);
+  //     toast({
+  //       title: "Sign up failed",
+  //       description: error.message || "Failed to create account",
+  //       variant: "destructive",
+  //     });
+  //     throw error;
+  //   }
+  // };
+
   const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
+    console.log("signUp function called with:", { email, fullName });
+  
     try {
-      const response = await apiRequest<User & { message?: string }>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup', {
+      const requestBody = {
+        email,
+        password,
+        fullName,
+      };
+  
+      console.log("📦 Constructed request body:", requestBody);
+  
+      const requestOptions = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          email,
-          password,
-          fullName
-        })
-      });
-      
-      // Do not set current user after signup
-      // User must log in manually
-      
+        body: JSON.stringify(requestBody)
+      };
+  
+      console.log("📤 Sending request to API endpoint with options:", requestOptions);
+  
+      const response = await apiRequest<User & { message?: string }>(
+        'https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup',
+        requestOptions
+      );
+  
+      console.log("✅ Received response from API:", response);
+  
       toast({
         title: "Account created successfully",
         description: "Please sign in with your new account",
       });
-      
+  
       return response;
+  
     } catch (error: any) {
-      console.error("Signup error", error);
+      console.error("❌ Signup error caught:", error);
+  
+      // Try to log deeper error information
+      if (error.response) {
+        console.error("🧾 Error response:", {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers,
+        });
+      } else if (error.request) {
+        console.error("📭 Error request made but no response received:", error.request);
+      } else {
+        console.error("📌 General error info:", error.message);
+      }
+  
       toast({
         title: "Sign up failed",
         description: error.message || "Failed to create account",
         variant: "destructive",
       });
+  
       throw error;
+    } finally {
+      console.log("🧹 signUp function finished (success or failure)");
     }
   };
 
+  
   const signIn = async (email: string, password: string): Promise<User | null> => {
     try {
       const user = await apiRequest<User>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/login', {
