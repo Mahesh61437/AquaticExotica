@@ -133,26 +133,26 @@ app.use(
 );
 
 // Add middleware to handle HTTPS and www redirection
-app.use((req, res, next) => {
-  const host = req.hostname;
+// app.use((req, res, next) => {
+//   const host = req.hostname;
   
-  // In production, enforce HTTPS and www subdomain
-  if (process.env.NODE_ENV === 'production') {
-    // If not on HTTPS, redirect to HTTPS
-    if (req.headers['x-forwarded-proto'] !== 'https') {
-      // Determine the correct host (with www if needed)
-      const targetHost = host === 'aquaticexotica.com' ? 'www.aquaticexotica.com' : host;
-      return res.redirect(301, `https://${targetHost}${req.originalUrl}`);
-    }
+//   // In production, enforce HTTPS and www subdomain
+//   if (process.env.NODE_ENV === 'production') {
+//     // If not on HTTPS, redirect to HTTPS
+//     if (req.headers['x-forwarded-proto'] !== 'https') {
+//       // Determine the correct host (with www if needed)
+//       const targetHost = host === 'aquaticexotica.com' ? 'www.aquaticexotica.com' : host;
+//       return res.redirect(301, `https://${targetHost}${req.originalUrl}`);
+//     }
     
-    // If on root domain without www, redirect to www subdomain
-    if (host === 'aquaticexotica.com') {
-      return res.redirect(301, `https://www.${host}${req.originalUrl}`);
-    }
-  }
+//     // If on root domain without www, redirect to www subdomain
+//     if (host === 'aquaticexotica.com') {
+//       return res.redirect(301, `https://www.${host}${req.originalUrl}`);
+//     }
+//   }
   
-  next();
-});
+//   next();
+// });
 
 // Log information about the current environment
 console.log('NODE_ENV:', { env: process.env.NODE_ENV });
