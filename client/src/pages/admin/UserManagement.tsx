@@ -49,7 +49,7 @@ export default function UserManagement() {
 
   // Fetch users with pagination and search
   const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<UserWithoutPassword>>({
-    queryKey: ["/api/users", currentPage, itemsPerPage, searchEmail],
+    queryKey: ["/api/users/", currentPage, itemsPerPage, searchEmail],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -79,7 +79,7 @@ export default function UserManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/"] });
       toast({
         title: "Success",
         description: "Admin privileges granted successfully",
@@ -105,7 +105,7 @@ export default function UserManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users/"] });
       toast({
         title: "Success",
         description: "Admin privileges revoked successfully",

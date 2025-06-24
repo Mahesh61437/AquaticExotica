@@ -77,7 +77,7 @@ export default function ProductManagement() {
 
   // Fetch products with pagination and search
   const { data: productsResponse, isLoading } = useQuery({
-    queryKey: ["/api/products", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/products/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -99,9 +99,9 @@ export default function ProductManagement() {
   
   // Fetch categories for dropdown
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
-    queryKey: ["/api/categories"],
+    queryKey: ["/api/categories/"],
     queryFn: async () => {
-      return await apiRequest("/api/categories");
+      return await apiRequest("/api/categories/");
     },
   });
   
@@ -123,15 +123,15 @@ export default function ProductManagement() {
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertProduct) => {
-      return await apiRequest("/api/products", {
+      return await apiRequest("/api/products/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -158,8 +158,8 @@ export default function ProductManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
       toast({
         title: "Success",
         description: "Product updated successfully",
@@ -185,8 +185,8 @@ export default function ProductManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -681,8 +681,8 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={editingProduct}
                 onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/products"] });
-                  queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
                 }}
               />
             </div>

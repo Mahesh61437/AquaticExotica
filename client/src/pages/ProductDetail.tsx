@@ -34,7 +34,7 @@ export default function ProductDetail() {
   
   // Also fetch related products based on category
   const { data: relatedProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+    queryKey: ["/api/products/"],
     enabled: !!product,
     select: (data) => {
       return data

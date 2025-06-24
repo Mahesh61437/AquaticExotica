@@ -233,7 +233,7 @@ export function prefetchHomepageData(): Promise<void> {
   const prefetchTTL = 30 * 60 * 1000;
   
   if (!CACHING_ENABLED) return Promise.resolve();
-  return apiCache.prefetch('/api/categories', undefined, prefetchTTL)
+  return apiCache.prefetch('/api/categories/', undefined, prefetchTTL)
     .then(() => {
       console.log('Categories data prefetched successfully');
     })

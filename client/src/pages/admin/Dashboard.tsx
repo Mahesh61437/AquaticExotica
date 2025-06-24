@@ -33,10 +33,10 @@ export default function AdminDashboard() {
       try {
         // Get counts for all entities
         const [products, categories, orders, users] = await Promise.all([
-          apiRequest('/api/products?limit=1000'),
-          apiRequest('/api/categories?limit=1000'),
-          apiRequest('/api/orders?limit=1000'),
-          apiRequest('/api/users?limit=1000')
+          apiRequest('/api/products/?limit=1000'),
+          apiRequest('/api/categories/?limit=1000'),
+          apiRequest('/api/orders/?limit=1000'),
+          apiRequest('/api/users/?limit=1000')
         ]);
         
         setStats({

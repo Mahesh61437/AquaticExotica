@@ -84,7 +84,7 @@ export default function OrderManagement() {
 
   // Fetch orders with pagination and search
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ["/api/orders", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -115,7 +115,7 @@ export default function OrderManagement() {
     },
     onSuccess: () => {
       // Invalidate query to refresh orders list
-      const queryKey = ["/api/orders", currentPage, itemsPerPage, debouncedSearchQuery];
+      const queryKey = ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery];
       queryKey.forEach((_, index) => {
         const partialKey = queryKey.slice(0, index + 1);
         queryClient.invalidateQueries({ queryKey: partialKey });

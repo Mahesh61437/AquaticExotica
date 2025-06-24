@@ -28,7 +28,7 @@ export default function FeaturedCategories() {
       
       try {
         // Try to get categories from cache first (30 minute cache time)
-        const data = await apiCache.get<Category[]>('/api/categories', undefined, 30 * 60 * 1000);
+        const data = await apiCache.get<Category[]>('/api/categories/', undefined, 30 * 60 * 1000);
         setCategories(data);
         
         // Initialize image loading states

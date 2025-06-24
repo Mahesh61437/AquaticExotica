@@ -49,7 +49,7 @@ export default function CategoryManagement() {
 
   // Fetch categories with pagination and search
   const { data: categoriesResponse, isLoading } = useQuery({
-    queryKey: ["/api/categories", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/categories/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -72,15 +72,14 @@ export default function CategoryManagement() {
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      return await apiRequest("/api/categories", {
+      return await apiRequest("/api/categories/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
       toast({
         title: "Success",
         description: "Category created successfully",
@@ -107,8 +106,8 @@ export default function CategoryManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
       toast({
         title: "Success",
         description: "Category updated successfully",
@@ -134,8 +133,8 @@ export default function CategoryManagement() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
       toast({
         title: "Success",
         description: "Category deleted successfully",

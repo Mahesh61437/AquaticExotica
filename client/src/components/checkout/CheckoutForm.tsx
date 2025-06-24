@@ -232,7 +232,7 @@ export function CheckoutForm() {
       console.log("Submitting order data:", orderData);
       
       // Submit order to API using apiRequest
-      const response = await apiRequest("/api/orders", {
+      const response = await apiRequest("/api/orders/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
