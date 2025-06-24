@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
 
-// Define our user interface
+// Define our user interface - updated for Django JWT response
 interface Address {
   id?: string;
   name: string;
@@ -20,9 +20,19 @@ interface User {
   id: number;
   username: string;
   email: string;
-  fullName: string;
+  fullName?: string; // Optional since Django might not send this
   isAdmin: boolean;
   addresses?: Address[];
+}
+
+// Django JWT response interface
+interface DjangoAuthResponse {
+  refresh: string;
+  access: string;
+  isAdmin: boolean;
+  username: string;
+  email: string;
+  id: number;
 }
 
 interface AuthContextType {
@@ -35,9 +45,30 @@ interface AuthContextType {
   updateAddress: (address: Address) => Promise<void>;
   deleteAddress: (addressId: string) => Promise<void>;
   getDefaultAddress: () => Address | undefined;
+  getAccessToken: () => string | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+// Token storage utilities
+const TOKEN_KEY = 'aquaticexotica_access_token';
+const REFRESH_TOKEN_KEY = 'aquaticexotica_refresh_token';
+
+const getStoredToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+};
+
+const setStoredToken = (token: string): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(TOKEN_KEY, token);
+};
+
+const removeStoredToken = (): void => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -48,11 +79,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        const token = getStoredToken();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        // Try to get user info with stored token
         const user = await apiRequest<User>('/api/auth/me');
         setCurrentUser(user);
       } catch (error) {
-        // This would be a 401 if not authenticated, which is fine
-        console.log('Not authenticated');
+        // Token might be expired, clear it
+        removeStoredToken();
+        console.log('Not authenticated or token expired');
       } finally {
         setLoading(false);
       }
@@ -95,141 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
-  //   console.log("signUp function called with:", { email, fullName });
-  
-  //   try {
-  //     const requestBody = {
-  //       email,
-  //       password,
-  //       fullName,
-  //     };
-  
-  //     console.log("📦 Constructed request body:", requestBody);
-  
-  //     const requestOptions = {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       },
-  //       body: JSON.stringify(requestBody)
-  //     };
-  
-  //     console.log("📤 Sending request to API endpoint with options:", requestOptions);
-  
-  //     const response = await apiRequest<User & { message?: string }>(
-  //       'https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup',
-  //       requestOptions
-  //     );
-  
-  //     console.log("✅ Received response from API:", response);
-  
-  //     toast({
-  //       title: "Account created successfully",
-  //       description: "Please sign in with your new account",
-  //     });
-  
-  //     return response;
-  
-  //   } catch (error: any) {
-  //     console.log("❌ Signup error caught:", error);
-  
-  //     // Try to log deeper error information
-  //     if (error.response) {
-  //       console.log("🧾 Error response:", {
-  //         status: error.response.status,
-  //         data: error.response.data,
-  //         headers: error.response.headers,
-  //       });
-  //     } else if (error.request) {
-  //       console.log("📭 Error request made but no response received:", error.request);
-  //     } else {
-  //       console.error("📌 General error info:", error.message);
-  //     }
-  
-  //     toast({
-  //       title: "Sign up failed",
-  //       description: error.message || "Failed to create account",
-  //       variant: "destructive",
-  //     });
-  
-  //     throw error;
-  //   } finally {
-  //     console.log("🧹 signUp function finished (success or failure)");
-  //   }
-  // };
-
-  // const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
-  //   console.log("signUp function called with:", { email, fullName });
-  
-  //   try {
-  //     const requestBody = {
-  //       email,
-  //       password,
-  //       fullName,
-  //     };
-  
-  //     console.log("Constructed request body:", requestBody);
-  
-  //     const requestOptions: RequestInit = {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json'
-  //       },
-  //       body: JSON.stringify(requestBody),
-  //       credentials: 'include'
-  //     };
-  
-  //     console.log("Sending request to /api/auth/signup with options:", requestOptions);
-  
-  //     const response = await fetch('/api/auth/signup', requestOptions);
-  
-  //     console.log("Raw response object:", response);
-  //     console.log("Response status:", response.status);
-  
-  //     const responseData = await response.json().catch(() => {
-  //       console.warn("Failed to parse JSON from response");
-  //       return null;
-  //     });
-  
-  //     console.log("Parsed response JSON:", responseData);
-  
-  //     if (!response.ok) {
-  //       const errorMsg = responseData?.message || `Unexpected status code ${response.status}`;
-  //       throw new Error(errorMsg);
-  //     }
-  
-  //     // Assuming responseData is of type `User & { message?: string }`
-  //     const { message, ...user } = responseData;
-  
-  //     console.log("User object extracted from response:", user);
-  
-  //     toast({
-  //       title: "Account created successfully",
-  //       description: "Please sign in with your new account",
-  //     });
-  
-  //     return user as User;
-  
-  //   } catch (error: any) {
-  //     console.log("Signup error caught:", error);
-  
-  //     toast({
-  //       title: "Sign up failed",
-  //       description: error.message || "Failed to create account",
-  //       variant: "destructive",
-  //     });
-  
-  //     return null; // return null on failure
-  //   } finally {
-  //     console.log("signUp function finished (success or failure)");
-  //   }
-  // };
-
-  
   const signIn = async (email: string, password: string): Promise<User | null> => {
     try {
-      const user = await apiRequest<User>('/api/auth/login', {
+      const response = await apiRequest<DjangoAuthResponse>('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -239,6 +146,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password
         })
       });
+      
+      // Store the tokens
+      setStoredToken(response.access);
+      localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh);
+      
+      // Convert Django response to our User interface
+      const user: User = {
+        id: response.id,
+        username: response.username,
+        email: response.email,
+        fullName: response.username, // Use username as fullName if not provided
+        isAdmin: response.isAdmin,
+        addresses: []
+      };
       
       setCurrentUser(user);
       
@@ -260,10 +181,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async (): Promise<void> => {
     try {
-      await apiRequest('/api/auth/logout', {
-        method: 'POST'
-      });
-      
+      // Clear tokens
+      removeStoredToken();
       setCurrentUser(null);
       
       toast({
@@ -272,12 +191,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (error: any) {
       console.error("Sign out error", error);
+      // Even if logout API fails, clear local state
+      removeStoredToken();
+      setCurrentUser(null);
       toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive",
+        title: "Signed out",
+        description: "You have been signed out",
       });
     }
+  };
+
+  const getAccessToken = (): string | null => {
+    return getStoredToken();
   };
 
   // Address management functions
@@ -429,14 +354,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("Address not found");
       }
       
-      // Check if deleting the default address
-      const isDefault = addresses[addressIndex].isDefault;
-      
       // Remove the address
       addresses.splice(addressIndex, 1);
       
-      // If we deleted the default address and there are other addresses, make the first one default
-      if (isDefault && addresses.length > 0) {
+      // If we removed the default address and there are other addresses, make the first one default
+      if (addresses.length > 0 && !addresses.some(addr => addr.isDefault)) {
         addresses[0].isDefault = true;
       }
       
@@ -459,7 +381,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       toast({
         title: "Address deleted",
-        description: "Your address has been removed",
+        description: "Your address has been removed successfully",
       });
     } catch (error: any) {
       console.error("Delete address error:", error);
@@ -471,24 +393,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       throw error;
     }
   };
-  
+
   const getDefaultAddress = (): Address | undefined => {
-    if (!currentUser || !currentUser.addresses || currentUser.addresses.length === 0) {
-      return undefined;
-    }
-    
-    // Find the default address
-    const defaultAddress = currentUser.addresses.find(a => a.isDefault);
-    
-    // If no default is set but we have addresses, return the first one
-    if (!defaultAddress && currentUser.addresses.length > 0) {
-      return currentUser.addresses[0];
-    }
-    
-    return defaultAddress;
+    if (!currentUser?.addresses) return undefined;
+    return currentUser.addresses.find(addr => addr.isDefault);
   };
 
-  const value = {
+  const value: AuthContextType = {
     currentUser,
     loading,
     signUp,
@@ -497,17 +408,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     addAddress,
     updateAddress,
     deleteAddress,
-    getDefaultAddress
+    getDefaultAddress,
+    getAccessToken
   };
 
-  return React.createElement(
-    AuthContext.Provider,
-    { value: value },
-    !loading && children
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
-// Fix the Fast Refresh incompatibility by moving to a named constant export
 const useAuthContext = () => {
   const context = useContext(AuthContext);
   if (!context) {

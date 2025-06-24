@@ -11,6 +11,12 @@ function buildUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
 
+// Helper to get stored JWT token
+function getStoredToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('aquaticexotica_access_token');
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
@@ -43,9 +49,30 @@ export async function apiRequest<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  // Get the stored token
+  const token = getStoredToken();
+  
+  // Prepare headers
+  const headers: Record<string, string> = {};
+  
+  // Copy existing headers if any
+  if (options?.headers) {
+    if (typeof options.headers === 'object' && !Array.isArray(options.headers)) {
+      Object.entries(options.headers).forEach(([key, value]) => {
+        headers[key] = value;
+      });
+    }
+  }
+  
+  // Add Authorization header if token exists
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
   const res = await fetch(buildUrl(url), {
     credentials: "include",
-    ...options
+    ...options,
+    headers
   });
 
   await throwIfResNotOk(res);
@@ -58,8 +85,20 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
+    // Get the stored token
+    const token = getStoredToken();
+    
+    // Prepare headers
+    const headers: Record<string, string> = {};
+    
+    // Add Authorization header if token exists
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
     const res = await fetch(buildUrl(queryKey[0] as string), {
       credentials: "include",
+      headers
     });
 
     if (unauthorizedBehavior === "returnNull" && res.status === 401) {
