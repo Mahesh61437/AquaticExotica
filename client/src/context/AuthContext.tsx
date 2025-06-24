@@ -56,18 +56,24 @@ const REFRESH_TOKEN_KEY = 'aquaticexotica_refresh_token';
 
 const getStoredToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
+  const token = localStorage.getItem(TOKEN_KEY);
+  console.log('🔍 getStoredToken called, result:', token ? 'Token found' : 'No token');
+  return token;
 };
 
 const setStoredToken = (token: string): void => {
   if (typeof window === 'undefined') return;
+  console.log('💾 setStoredToken called with token:', token ? 'Token provided' : 'No token');
   localStorage.setItem(TOKEN_KEY, token);
+  console.log('💾 Token stored in localStorage');
 };
 
 const removeStoredToken = (): void => {
   if (typeof window === 'undefined') return;
+  console.log('🗑️ removeStoredToken called');
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  console.log('🗑️ Tokens removed from localStorage');
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -136,6 +142,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string): Promise<User | null> => {
     try {
+      console.log('🔐 Starting signIn process...');
+      console.log('📧 Email:', email);
+      
       const response = await apiRequest<DjangoAuthResponse>('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -147,9 +156,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
       });
       
+      console.log('✅ Login API response received:', response);
+      
       // Store the tokens
+      console.log('💾 Storing access token:', response.access);
       setStoredToken(response.access);
+      
+      console.log('💾 Storing refresh token:', response.refresh);
       localStorage.setItem(REFRESH_TOKEN_KEY, response.refresh);
+      
+      // Verify tokens are stored
+      const storedAccessToken = getStoredToken();
+      const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+      console.log('🔍 Verification - Stored access token:', storedAccessToken ? '✅ Found' : '❌ Not found');
+      console.log('🔍 Verification - Stored refresh token:', storedRefreshToken ? '✅ Found' : '❌ Not found');
       
       // Convert Django response to our User interface
       const user: User = {
@@ -161,7 +181,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         addresses: []
       };
       
+      console.log('👤 Created user object:', user);
+      
       setCurrentUser(user);
+      
+      console.log('✅ User state updated, currentUser should now be set');
       
       toast({
         title: "Signed in successfully",
@@ -169,7 +193,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       return user;
     } catch (error: any) {
-      console.error("Sign in error", error);
+      console.error("❌ Sign in error", error);
+      console.error("❌ Error details:", {
+        message: error.message,
+        stack: error.stack,
+        response: error.response
+      });
       toast({
         title: "Sign in failed",
         description: error.message || "Invalid email or password",

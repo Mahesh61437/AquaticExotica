@@ -35,6 +35,8 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 // Test pages
 import SignupTest from "./pages/SignupTest";
+// Debug component
+import DebugLogin from "./components/DebugLogin";
 // Performance optimization
 import { useEffect } from "react";
 import { prefetchHomepageData } from "@/lib/api-cache";
@@ -101,6 +103,7 @@ function Router() {
           <Route path="/terms" component={Terms} />
           <Route path="/privacy" component={Privacy} />
           <Route path="/signup-test" component={SignupTest} />
+          <Route path="/debug" component={DebugLogin} />
           <Route component={NotFound} />
         </Switch>
       </main>

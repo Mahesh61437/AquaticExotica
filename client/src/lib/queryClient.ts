@@ -8,7 +8,9 @@ function buildUrl(path: string): string {
   // If already absolute URL, return as-is
   if (/^https?:\/\//i.test(path)) return path;
   // Otherwise prepend API_BASE
-  return `${API_BASE}${path}`;
+  const fullUrl = `${API_BASE}${path}`;
+  console.log('🌐 Building URL:', { path, API_BASE, fullUrl });
+  return fullUrl;
 }
 
 // Helper to get stored JWT token
@@ -49,8 +51,11 @@ export async function apiRequest<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
+  console.log('🚀 apiRequest called with:', { url, options });
+  
   // Get the stored token
   const token = getStoredToken();
+  console.log('🔑 Current token:', token ? 'Token exists' : 'No token');
   
   // Prepare headers
   const headers: Record<string, string> = {};
@@ -69,14 +74,23 @@ export async function apiRequest<T = any>(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
-  const res = await fetch(buildUrl(url), {
+  const fullUrl = buildUrl(url);
+  console.log('🌐 Making request to:', fullUrl);
+  console.log('📋 Request headers:', headers);
+  
+  const res = await fetch(fullUrl, {
     credentials: "include",
     ...options,
     headers
   });
 
+  console.log('📡 Response status:', res.status);
+  console.log('📡 Response headers:', Object.fromEntries(res.headers.entries()));
+
   await throwIfResNotOk(res);
-  return await res.json();
+  const data = await res.json();
+  console.log('📦 Response data:', data);
+  return data;
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
