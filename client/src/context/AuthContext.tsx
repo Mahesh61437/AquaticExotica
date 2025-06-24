@@ -63,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string): Promise<User | null> => {
     try {
-      const response = await apiRequest<User & { message?: string }>('https://aquaticexotica-production-88d0.up.railway.app/api/auth/signup', {
+      const response = await apiRequest<User & { message?: string }>('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
