@@ -248,8 +248,10 @@ export function clearUserDependentCache(): void {
   apiCache.clear('/api/auth/me').catch(err => {
     console.warn('Failed to clear user cache:', err);
   });
-}// Base URL for API calls (set via environment variable VITE_API_BASE)
-export const API_BASE: string = (typeof import.meta.env.VITE_API_BASE === 'string' && import.meta.env.VITE_API_BASE !== '') ? import.meta.env.VITE_API_BASE.replace(/\/+$/, '') : 'http://127.0.0.1:4000';
+}
+
+// Base URL for API calls (set via environment variable VITE_API_BASE)
+export const API_BASE: string = (typeof import.meta.env.VITE_API_BASE === 'string' && import.meta.env.VITE_API_BASE !== '') ? import.meta.env.VITE_API_BASE.replace(/\/+$/, '') : 'https://web-production-b3867.up.railway.app';
 
 // Helper to prepend API_BASE to relative paths
 export function buildUrl(path: string): string {

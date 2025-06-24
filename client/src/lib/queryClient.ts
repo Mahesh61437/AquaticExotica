@@ -1,7 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 // API base URL - set via environment variable VITE_API_BASE
-const API_BASE = import.meta.env.VITE_API_BASE || '';
+const API_BASE = import.meta.env.VITE_API_BASE || 'https://web-production-b3867.up.railway.app';
 
 // Helper to build full URL for API calls
 function buildUrl(path: string): string {
