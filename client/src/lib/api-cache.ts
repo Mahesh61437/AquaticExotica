@@ -3,6 +3,10 @@
  * Provides efficient browser-based caching for optimal performance
  */
 
+// --- CACHING TOGGLE ---
+// Set to false to disable all browser-side caching entirely.
+const CACHING_ENABLED = false;
+
 interface CacheEntry {
   data: any;
   timestamp: number;
@@ -24,8 +28,8 @@ class ApiCache {
   // Initialize the cache
   private async initialize(): Promise<void> {
     try {
-      // Only use localStorage in browser
-      if (typeof window !== 'undefined') {
+      // Skip storage interaction if caching disabled
+      if (CACHING_ENABLED && typeof window !== 'undefined') {
         this.loadCacheFromLocalStorage();
         
         // Set up event listener to save cache before page unload
@@ -48,6 +52,8 @@ class ApiCache {
   
   // Save cache to localStorage (browser environment)
   private saveCacheToLocalStorage(): void {
+    if (!CACHING_ENABLED) return;
+    
     if (typeof window === 'undefined' || !window.localStorage) return;
     
     try {
@@ -66,6 +72,8 @@ class ApiCache {
   
   // Load cache from localStorage (browser environment)
   private loadCacheFromLocalStorage(): void {
+    if (!CACHING_ENABLED) return;
+    
     if (typeof window === 'undefined' || !window.localStorage) return;
     
     try {
@@ -90,12 +98,14 @@ class ApiCache {
   
   // Cleanup expired entries from the cache
   private cleanupExpiredEntries(): void {
+    if (!CACHING_ENABLED) return;
+    
     try {
       const now = Date.now();
       let removed = 0;
       
       // Check each cache entry and remove expired ones
-      for (const [key, entry] of this.cache.entries()) {
+      for (const [key, entry] of Array.from(this.cache.entries())) {
         if (now - entry.timestamp >= entry.expiry) {
           this.cache.delete(key);
           removed++;
@@ -121,23 +131,23 @@ class ApiCache {
   async get<T>(url: string, options?: RequestInit, maxAge?: number): Promise<T> {
     await this.waitForReady();
     
-    const cacheKey = url;
+    const cacheKey = buildUrl(url);
     const entryMaxAge = maxAge || this.maxAge;
     
     // Check if we have a valid cache entry
-    const entry = this.cache.get(cacheKey);
-    if (entry && Date.now() - entry.timestamp < entry.expiry) {
+    const entry = CACHING_ENABLED ? this.cache.get(cacheKey) : undefined;
+    if (CACHING_ENABLED && entry && Date.now() - entry.timestamp < entry.expiry) {
       // Return cached data immediately
       return entry.data as T;
     }
     
     // Check if we're already fetching this URL
-    if (this.fetchPromises.has(cacheKey)) {
+    if (CACHING_ENABLED && this.fetchPromises.has(cacheKey)) {
       return this.fetchPromises.get(cacheKey) as Promise<T>;
     }
     
     // Start a new fetch
-    const fetchPromise = fetch(url, options)
+    const fetchPromise = fetch(buildUrl(url), options)
       .then(response => {
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -152,8 +162,10 @@ class ApiCache {
           expiry: entryMaxAge
         };
         
-        this.cache.set(cacheKey, entry);
-        this.fetchPromises.delete(cacheKey);
+        if (CACHING_ENABLED) {
+          this.cache.set(cacheKey, entry);
+          this.fetchPromises.delete(cacheKey);
+        }
         
         // Save to localStorage
         if (typeof window !== 'undefined') {
@@ -163,17 +175,24 @@ class ApiCache {
         return data as T;
       })
       .catch(error => {
-        this.fetchPromises.delete(cacheKey);
+        if (CACHING_ENABLED) {
+          this.fetchPromises.delete(cacheKey);
+        }
         throw error;
       });
     
-    this.fetchPromises.set(cacheKey, fetchPromise);
+    if (CACHING_ENABLED) {
+      this.fetchPromises.set(cacheKey, fetchPromise);
+    }
     return fetchPromise;
   }
   
   // Prefetch data and store in cache
   prefetch(url: string, options?: RequestInit, maxAge?: number): Promise<void> {
-    // Use a longer cache time for prefetched data (30 minutes or the specified maxAge)
+    // If caching is disabled just perform a normal fetch and ignore result
+    if (!CACHING_ENABLED) {
+      return fetch(buildUrl(url), options).then(() => {});
+    }
     const prefetchMaxAge = maxAge || 30 * 60 * 1000;
     return this.get(url, options, prefetchMaxAge).then(() => {});
   }
@@ -182,12 +201,12 @@ class ApiCache {
   async clear(url?: string): Promise<void> {
     await this.waitForReady();
     
-    if (url) {
-      // Clear specific entry
-      this.cache.delete(url);
-    } else {
-      // Clear entire cache
-      this.cache.clear();
+    if (CACHING_ENABLED) {
+      if (url) {
+        this.cache.delete(buildUrl(url));
+      } else {
+        this.cache.clear();
+      }
     }
     
     // Update localStorage
@@ -198,10 +217,9 @@ class ApiCache {
   
   // Get a fresh copy, bypassing the cache
   async getFresh<T>(url: string, options?: RequestInit): Promise<T> {
-    // Clear any existing cache for this URL
-    await this.clear(url);
-    
-    // Use default maxAge
+    if (CACHING_ENABLED) {
+      await this.clear(url);
+    }
     return this.get<T>(url, options);
   }
 }
@@ -214,6 +232,7 @@ export function prefetchHomepageData(): Promise<void> {
   // Use a longer cache time for prefetched data (30 minutes)
   const prefetchTTL = 30 * 60 * 1000;
   
+  if (!CACHING_ENABLED) return Promise.resolve();
   return apiCache.prefetch('/api/categories', undefined, prefetchTTL)
     .then(() => {
       console.log('Categories data prefetched successfully');
@@ -229,4 +248,12 @@ export function clearUserDependentCache(): void {
   apiCache.clear('/api/auth/me').catch(err => {
     console.warn('Failed to clear user cache:', err);
   });
+}// Base URL for API calls (set via environment variable VITE_API_BASE)
+export const API_BASE: string = (typeof import.meta.env.VITE_API_BASE === 'string' && import.meta.env.VITE_API_BASE !== '') ? import.meta.env.VITE_API_BASE.replace(/\/+$/, '') : 'http://127.0.0.1:4000';
+
+// Helper to prepend API_BASE to relative paths
+export function buildUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
 }
+

@@ -1,5 +1,16 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// API base URL - set via environment variable VITE_API_BASE
+const API_BASE = import.meta.env.VITE_API_BASE || '';
+
+// Helper to build full URL for API calls
+function buildUrl(path: string): string {
+  // If already absolute URL, return as-is
+  if (/^https?:\/\//i.test(path)) return path;
+  // Otherwise prepend API_BASE
+  return `${API_BASE}${path}`;
+}
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
@@ -32,7 +43,7 @@ export async function apiRequest<T = any>(
   url: string,
   options?: RequestInit
 ): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(buildUrl(url), {
     credentials: "include",
     ...options
   });
@@ -47,7 +58,7 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const res = await fetch(buildUrl(queryKey[0] as string), {
       credentials: "include",
     });
 
