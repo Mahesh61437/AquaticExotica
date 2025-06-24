@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function AdminDashboard() {
   const { currentUser, loading } = useAuth();
@@ -31,17 +32,12 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         // Get counts for all entities
-        const [productsRes, categoriesRes, ordersRes, usersRes] = await Promise.all([
-          fetch('/api/admin/products?limit=1000'),
-          fetch('/api/admin/categories?limit=1000'),
-          fetch('/api/admin/orders?limit=1000'),
-          fetch('/api/admin/users?limit=1000')
+        const [products, categories, orders, users] = await Promise.all([
+          apiRequest('/api/products?limit=1000'),
+          apiRequest('/api/categories?limit=1000'),
+          apiRequest('/api/orders?limit=1000'),
+          apiRequest('/api/users?limit=1000')
         ]);
-        
-        const products = await productsRes.json();
-        const categories = await categoriesRes.json();
-        const orders = await ordersRes.json();
-        const users = await usersRes.json();
         
         setStats({
           products: products.data?.length || 0,

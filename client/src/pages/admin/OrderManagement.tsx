@@ -27,7 +27,7 @@ import { Loader2, Eye, PenLine } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Define order item type
 interface OrderItem {
@@ -84,7 +84,7 @@ export default function OrderManagement() {
 
   // Fetch orders with pagination and search
   const { data: ordersResponse, isLoading } = useQuery({
-    queryKey: ["/api/admin/orders", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/orders", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -100,33 +100,22 @@ export default function OrderManagement() {
         params.append('query', query);
       }
       
-      const res = await fetch(`${basePath}?${params.toString()}`, {
-        credentials: "include"
-      });
-      
-      if (!res.ok) throw new Error("Failed to fetch orders");
-      return await res.json();
+      return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      const res = await fetch(`/api/admin/orders/${id}`, {
+      return await apiRequest(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-        credentials: "include"
+        body: JSON.stringify({ status })
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to update order status");
-      }
-      return await res.json();
     },
     onSuccess: () => {
       // Invalidate query to refresh orders list
-      const queryKey = ["/api/admin/orders", currentPage, itemsPerPage, debouncedSearchQuery];
+      const queryKey = ["/api/orders", currentPage, itemsPerPage, debouncedSearchQuery];
       queryKey.forEach((_, index) => {
         const partialKey = queryKey.slice(0, index + 1);
         queryClient.invalidateQueries({ queryKey: partialKey });

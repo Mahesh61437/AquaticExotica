@@ -49,7 +49,7 @@ export default function UserManagement() {
 
   // Fetch users with pagination and search
   const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<UserWithoutPassword>>({
-    queryKey: ["/api/admin/users", currentPage, itemsPerPage, searchEmail],
+    queryKey: ["/api/users", currentPage, itemsPerPage, searchEmail],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -65,29 +65,21 @@ export default function UserManagement() {
         params.append('email', email);
       }
       
-      const res = await fetch(`${basePath}?${params.toString()}`, {
-        credentials: "include"
-      });
-      
-      if (!res.ok) throw new Error("Failed to fetch users");
-      return await res.json();
+      return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
 
   // Update user admin status mutation - grant admin
   const grantAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch("/api/admin/make-admin", {
+      return await apiRequest("/api/make-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: id }),
-        credentials: "include"
+        body: JSON.stringify({ userId: id })
       });
-      if (!res.ok) throw new Error("Failed to grant admin privileges");
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Success",
         description: "Admin privileges granted successfully",
@@ -106,17 +98,14 @@ export default function UserManagement() {
   // Update user admin status mutation - revoke admin
   const revokeAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch("/api/admin/revoke-admin", {
+      return await apiRequest("/api/revoke-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: id }),
-        credentials: "include"
+        body: JSON.stringify({ userId: id })
       });
-      if (!res.ok) throw new Error("Failed to revoke admin privileges");
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
       toast({
         title: "Success",
         description: "Admin privileges revoked successfully",

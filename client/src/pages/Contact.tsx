@@ -5,80 +5,63 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { MapPin, Phone, Mail, Loader2 } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiRequest } from "@/lib/queryClient";
+
+const contactSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  subject: z.string().min(5, "Subject must be at least 5 characters"),
+  message: z.string().min(10, "Message must be at least 10 characters"),
+});
+
+type ContactFormValues = z.infer<typeof contactSchema>;
 
 export default function Contact() {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    subject: "",
-    message: ""
+  const [loading, setLoading] = useState(false);
+
+  const form = useForm<ContactFormValues>({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      subject: "",
+      message: "",
+    },
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [id]: value
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
+  const onSubmit = async (data: ContactFormValues) => {
     try {
-      console.log("Submitting form data:", formData);
+      setLoading(true);
       
-      const response = await fetch("/api/contact", {
+      await apiRequest("/api/contact", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(data),
       });
-      
-      // Log response for debugging
-      console.log("Response status:", response.status);
-      
-      let data;
-      try {
-        data = await response.json();
-        console.log("Response data:", data);
-      } catch (jsonError) {
-        console.error("Error parsing JSON response:", jsonError);
-        data = { message: "Failed to parse server response" };
-      }
-      
-      if (response.ok) {
-        toast({
-          title: "Message Sent",
-          description: data.message || "Thank you for your message. We'll get back to you shortly.",
-        });
-        // Reset form
-        setFormData({
-          name: "",
-          email: "",
-          subject: "",
-          message: ""
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: data.message || "There was a problem sending your message. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error sending message:", error);
+
       toast({
-        title: "Error",
-        description: "There was a problem connecting to the server. Please try again later.",
+        title: "Message sent successfully",
+        description: "We'll get back to you as soon as possible.",
+      });
+
+      form.reset();
+    } catch (error: any) {
+      console.error("Contact form error:", error);
+      toast({
+        title: "Failed to send message",
+        description: error.message || "Please try again later.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -134,69 +117,76 @@ export default function Contact() {
             
             <div className="md:w-2/3 p-8">
               <h2 className="text-2xl font-bold mb-6">Send a Message</h2>
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium mb-2">Name</label>
-                    <Input 
-                      id="name" 
-                      placeholder="Your name" 
-                      required 
-                      onChange={handleChange}
-                      value={formData.name}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium mb-2">Email</label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="Your email" 
-                      required 
-                      onChange={handleChange}
-                      value={formData.email}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <label htmlFor="subject" className="block text-sm font-medium mb-2">Subject</label>
-                  <Input 
-                    id="subject" 
-                    placeholder="How can we help?" 
-                    required 
-                    onChange={handleChange}
-                    value={formData.subject}
-                    disabled={isSubmitting}
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Your name" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <div className="mb-6">
-                  <label htmlFor="message" className="block text-sm font-medium mb-2">Message</label>
-                  <Textarea 
-                    id="message" 
-                    placeholder="Tell us more about your inquiry..." 
-                    className="min-h-[150px]"
-                    required
-                    onChange={handleChange}
-                    value={formData.message}
-                    disabled={isSubmitting}
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="your.email@example.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    'Send Message'
-                  )}
-                </Button>
-              </form>
+                  <FormField
+                    control={form.control}
+                    name="subject"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Subject</FormLabel>
+                        <FormControl>
+                          <Input placeholder="What's this about?" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="message"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Message</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Tell us more about your inquiry..."
+                            rows={5}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Message'
+                    )}
+                  </Button>
+                </form>
+              </Form>
             </div>
           </div>
         </div>

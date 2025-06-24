@@ -16,7 +16,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Category, InsertCategory } from "@shared/schema";
 import { Loader2, Plus, Edit, Trash2, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
 
 export default function CategoryManagement() {
@@ -49,7 +49,7 @@ export default function CategoryManagement() {
 
   // Fetch categories with pagination and search
   const { data: categoriesResponse, isLoading } = useQuery({
-    queryKey: ["/api/admin/categories", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/categories", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -65,29 +65,18 @@ export default function CategoryManagement() {
         params.append('query', query);
       }
       
-      const res = await fetch(`${basePath}?${params.toString()}`, {
-        credentials: "include"
-      });
-      
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return await res.json();
+      return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
   
   // Create category mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertCategory) => {
-      const res = await fetch("/api/admin/categories", {
+      return await apiRequest("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include"
+        body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to create category");
-      }
-      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
@@ -111,20 +100,14 @@ export default function CategoryManagement() {
   // Update category mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertCategory> }) => {
-      const res = await fetch(`/api/admin/categories/${id}`, {
+      return await apiRequest(`/api/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include"
+        body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to update category");
-      }
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
         title: "Success",
@@ -145,18 +128,13 @@ export default function CategoryManagement() {
   // Delete category mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/admin/categories/${id}`, {
+      return await apiRequest(`/api/categories/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include"
+        headers: { "Content-Type": "application/json" }
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to delete category");
-      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/categories"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       queryClient.invalidateQueries({ queryKey: ["/api/categories"] });
       toast({
         title: "Success",

@@ -231,39 +231,16 @@ export function CheckoutForm() {
       // Log the order data before submitting (for debugging)
       console.log("Submitting order data:", orderData);
       
-      // Submit order to API using direct fetch instead of apiRequest to bypass error handling
-      let orderResult;
-      
-      try {
-        // Use proper fetch method with response checking
-        const response = await fetch("/api/orders", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          credentials: "include",
-          body: JSON.stringify(orderData)
-        });
-        
-        // Check if the response is OK before proceeding
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || "Order submission failed");
-        }
-        
-        orderResult = await response.json();
-        console.log("Order creation response:", orderResult);
-        
-        if (!orderResult || !orderResult.id) {
-          throw new Error("Invalid order response from server");
-        }
-      } catch (e) {
-        // Proper error handling without fallbacks
-        console.error("Error placing order:", e);
-        throw e; // Re-throw to be caught by the outer catch block
-      }
+      // Submit order to API using apiRequest
+      const response = await apiRequest("/api/orders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
 
-      // Order was created successfully
+      // Clear cart after successful order
       clearCart();
       
       toast({
@@ -272,9 +249,9 @@ export function CheckoutForm() {
         duration: 6000, // Show for longer so user can read message
       });
 
-      // Redirect to confirmation page using the order ID from orderResult
+      // Redirect to confirmation page using the order ID from response
       try {
-        setLocation(`/order-confirmation/${orderResult.id}`);
+        setLocation(`/order-confirmation/${response.id}`);
       } catch (error) {
         console.error("Error during redirect:", error);
         setLocation('/');

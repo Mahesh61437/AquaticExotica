@@ -1,129 +1,129 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2, Bell } from "lucide-react";
-import { Product } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface StockNotificationFormProps {
-  product: Product;
-  onSuccess?: () => void;
+  productId: number;
+  productName: string;
 }
 
-export function StockNotificationForm({ product, onSuccess }: StockNotificationFormProps) {
+export function StockNotificationForm({ productId, productName }: StockNotificationFormProps) {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email) {
+    if (!email.trim()) {
       toast({
-        title: "Error",
+        title: "Email required",
         description: "Please enter your email address",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      });
-      return;
-    }
-    
+
     setIsSubmitting(true);
-    
+
     try {
-      const response = await fetch("/api/stock-notifications/subscribe", {
+      await apiRequest("/api/stock-notifications/subscribe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email,
-          productId: product.id,
-          productName: product.name
-        })
+          productId,
+          email: email.trim(),
+        }),
       });
+
+      setIsSubscribed(true);
+      setEmail("");
       
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "You'll be notified when this product is back in stock.",
-        });
-        
-        setEmail("");
-        
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to subscribe to stock notifications");
-      }
-    } catch (error) {
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to subscribe to stock notifications",
-        variant: "destructive"
+        title: "Successfully subscribed",
+        description: `You'll be notified when ${productName} is back in stock.`,
+      });
+    } catch (error: any) {
+      console.error("Stock notification subscription error:", error);
+      toast({
+        title: "Subscription failed",
+        description: error.message || "Failed to subscribe to stock notifications. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
-  
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Get notified when back in stock</CardTitle>
-        <CardDescription>
-          We'll email you once this item is available.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email address</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="Your email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-            />
+
+  if (isSubscribed) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-green-600" />
+          <div>
+            <h3 className="font-medium text-green-800">Successfully subscribed!</h3>
+            <p className="text-sm text-green-600">
+              You'll receive an email when this product is back in stock.
+            </p>
           </div>
-        </form>
-      </CardContent>
-      <CardFooter>
-        <Button 
-          type="submit" 
-          onClick={handleSubmit} 
-          disabled={isSubmitting}
-          className="w-full"
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Submitting...
-            </>
-          ) : (
-            <>
-              <Bell className="mr-2 h-4 w-4" />
-              Notify Me
-            </>
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div className="flex items-start gap-3">
+        <Bell className="h-5 w-5 text-gray-600 mt-0.5" />
+        <div className="flex-1">
+          <h3 className="font-medium text-gray-900 mb-2">Get notified when back in stock</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            Enter your email address and we'll notify you when this product becomes available again.
+          </p>
+          
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <Label htmlFor="email" className="sr-only">
+                Email address
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSubmitting || !email.trim()}
+              className="w-full"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Subscribing...
+                </>
+              ) : (
+                <>
+                  <Bell className="mr-2 h-4 w-4" />
+                  Notify me
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }

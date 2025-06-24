@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Send } from "lucide-react";
 import { Product } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
 interface StockNotifierProps {
   product: Product;
@@ -20,7 +21,7 @@ export function StockNotifier({ product, onSuccess }: StockNotifierProps) {
     setIsNotifying(true);
     
     try {
-      const response = await fetch("/api/stock-notifications/notify", {
+      await apiRequest("/api/stock-notifications/notify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -28,22 +29,16 @@ export function StockNotifier({ product, onSuccess }: StockNotifierProps) {
         body: JSON.stringify({
           productId: product.id,
           productName: product.name
-        }),
-        credentials: "include"
+        })
       });
       
-      if (response.ok) {
-        toast({
-          title: "Notifications sent",
-          description: "Customers have been notified that this product is back in stock.",
-        });
-        
-        if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to send notifications");
+      toast({
+        title: "Notifications sent",
+        description: "Customers have been notified that this product is back in stock.",
+      });
+      
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       toast({

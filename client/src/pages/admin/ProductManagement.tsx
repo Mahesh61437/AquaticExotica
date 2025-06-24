@@ -77,7 +77,7 @@ export default function ProductManagement() {
 
   // Fetch products with pagination and search
   const { data: productsResponse, isLoading } = useQuery({
-    queryKey: ["/api/admin/products", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/products", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
       const page = queryKey[1] as number;
@@ -93,24 +93,15 @@ export default function ProductManagement() {
         params.append('query', query);
       }
       
-      const res = await fetch(`${basePath}?${params.toString()}`, {
-        credentials: "include"
-      });
-      
-      if (!res.ok) throw new Error("Failed to fetch products");
-      return await res.json();
+      return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
   
   // Fetch categories for dropdown
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
-    queryKey: ["/api/admin/categories"],
+    queryKey: ["/api/categories"],
     queryFn: async () => {
-      const res = await fetch("/api/admin/categories", {
-        credentials: "include"
-      });
-      if (!res.ok) throw new Error("Failed to fetch categories");
-      return await res.json();
+      return await apiRequest("/api/categories");
     },
   });
   
@@ -132,20 +123,14 @@ export default function ProductManagement() {
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: InsertProduct) => {
-      const res = await fetch("/api/admin/products", {
+      return await apiRequest("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include"
+        body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to create product");
-      }
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -166,20 +151,14 @@ export default function ProductManagement() {
   // Update product mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<InsertProduct> }) => {
-      const res = await fetch(`/api/admin/products/${id}`, {
+      return await apiRequest(`/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include"
+        body: JSON.stringify(data)
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to update product");
-      }
-      return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -200,18 +179,13 @@ export default function ProductManagement() {
   // Delete product mutation
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`/api/admin/products/${id}`, {
+      return await apiRequest(`/api/products/${id}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include"
+        headers: { "Content-Type": "application/json" }
       });
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to delete product");
-      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       queryClient.invalidateQueries({ queryKey: ["/api/products"] });
       toast({
         title: "Success",
@@ -707,7 +681,7 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={editingProduct}
                 onSuccess={() => {
-                  queryClient.invalidateQueries({ queryKey: ["/api/admin/products"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/products"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/products"] });
                 }}
               />
