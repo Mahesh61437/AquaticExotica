@@ -29,7 +29,7 @@ export function ProductFilters({
   
   // Fetch categories from API
   const { data: categories = [], isLoading: categoriesLoading } = useQuery<Category[]>({
-    queryKey: ["/api/categories"],
+    queryKey: ["/api/categories/"],
   });
 
   const handleCategoryToggle = (category: string, checked: boolean) => {
