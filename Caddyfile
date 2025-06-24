@@ -1,0 +1,15 @@
+www.aquaticexotica.com {
+    # Serve static files from React build
+    root * dist
+    file_server
+
+    # API routing to Django backend (update host and port if needed)
+    handle_path /api/* {
+        reverse_proxy web-production-b3867.up.railway.app  # Replace 'django' with your backend service name or localhost
+    }
+
+    # Fallback for SPA routing (React Router)
+    handle {
+        try_files {path} /index.html
+    }
+}
