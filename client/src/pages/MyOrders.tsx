@@ -86,6 +86,11 @@ interface NewOrder {
   createdAt: string;
 }
 
+// Define paginated response type
+interface PaginatedResponse<T> {
+  data?: T[];
+}
+
 export default function MyOrders() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -108,8 +113,17 @@ export default function MyOrders() {
         }
 
         setLoading(true);
-        const data = await apiRequest<NewOrder[]>("/api/orders/");
-        setOrders(data);
+        const response = await apiRequest<NewOrder[] | PaginatedResponse<NewOrder>>("/api/orders/");
+        
+        // Handle different response formats
+        let ordersData: NewOrder[] = [];
+        if (response && typeof response === 'object' && 'data' in response) {
+          ordersData = (response as PaginatedResponse<NewOrder>).data || [];
+        } else if (Array.isArray(response)) {
+          ordersData = response;
+        }
+        
+        setOrders(ordersData);
       } catch (error) {
         console.error("Failed to fetch orders:", error);
         toast({

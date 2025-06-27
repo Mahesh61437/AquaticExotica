@@ -26,6 +26,7 @@ import { User } from "@shared/schema";
 import { Loader2, UserCog, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import React from "react";
 
 // Define new user type based on API response
 interface ApiUser {
@@ -39,6 +40,7 @@ interface ApiUser {
   dateJoined: string;
 }
 
+// Define paginated response type
 interface PaginatedResponse<T> {
   data: T[];
   pagination: {
@@ -58,7 +60,7 @@ export default function UserManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch users with pagination and search
-  const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<ApiUser>>({
+  const { data: usersResponse, isLoading } = useQuery<ApiUser[] | PaginatedResponse<ApiUser>>({
     queryKey: ["/api/users/", currentPage, itemsPerPage, searchEmail],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
@@ -78,6 +80,23 @@ export default function UserManagement() {
       return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
+  
+  // Extract users array from response
+  const users: ApiUser[] = React.useMemo(() => {
+    if (!usersResponse) return [];
+    
+    // Check if response is paginated
+    if (usersResponse && typeof usersResponse === 'object' && 'data' in usersResponse) {
+      return (usersResponse as PaginatedResponse<ApiUser>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(usersResponse)) {
+      return usersResponse;
+    }
+    
+    return [];
+  }, [usersResponse]);
 
   // Update user admin status mutation - grant admin
   const grantAdminMutation = useMutation({
@@ -210,7 +229,7 @@ export default function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {usersResponse?.data?.map((user: ApiUser) => (
+              {users.map((user: ApiUser) => (
                 <TableRow key={user.id}>
                   <TableCell>
                     <div>
@@ -250,7 +269,7 @@ export default function UserManagement() {
       )}
 
       {/* Pagination */}
-      {usersResponse && usersResponse.pagination && (
+      {users.length > 0 && (
         <div className="flex items-center justify-between space-x-2 py-4">
           <div className="flex items-center space-x-2">
             <p className="text-sm font-medium">Rows per page</p>
@@ -268,7 +287,7 @@ export default function UserManagement() {
             </Select>
           </div>
           <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {currentPage} of {usersResponse.pagination.totalPages}
+            Page {currentPage} of {(usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1}
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -293,7 +312,7 @@ export default function UserManagement() {
               variant="outline"
               className="h-8 w-8 p-0"
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === usersResponse.pagination.totalPages}
+              disabled={currentPage === ((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
             >
               <span className="sr-only">Go to next page</span>
               <ChevronRight className="h-4 w-4" />
@@ -301,8 +320,8 @@ export default function UserManagement() {
             <Button
               variant="outline"
               className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => handlePageChange(usersResponse.pagination.totalPages)}
-              disabled={currentPage === usersResponse.pagination.totalPages}
+              onClick={() => handlePageChange((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
+              disabled={currentPage === ((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
             >
               <span className="sr-only">Go to last page</span>
               <ChevronsRight className="h-4 w-4" />

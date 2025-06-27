@@ -32,18 +32,28 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         // Get counts for all entities
-        const [products, categories, orders, users] = await Promise.all([
+        const [productsResponse, categoriesResponse, ordersResponse, usersResponse] = await Promise.all([
           apiRequest('/api/products/?limit=1000'),
           apiRequest('/api/categories/?limit=1000'),
           apiRequest('/api/orders/?limit=1000'),
           apiRequest('/api/users/?limit=1000')
         ]);
         
+        // Handle different response formats for each entity
+        const getCount = (response: any): number => {
+          if (Array.isArray(response)) {
+            return response.length;
+          } else if (response && typeof response === 'object' && 'data' in response) {
+            return Array.isArray(response.data) ? response.data.length : 0;
+          }
+          return 0;
+        };
+        
         setStats({
-          products: Array.isArray(products) ? products.length : products.data?.length || 0,
-          categories: Array.isArray(categories) ? categories.length : categories.data?.length || 0,
-          orders: Array.isArray(orders) ? orders.length : orders.data?.length || 0,
-          users: Array.isArray(users) ? users.length : users.data?.length || 0
+          products: getCount(productsResponse),
+          categories: getCount(categoriesResponse),
+          orders: getCount(ordersResponse),
+          users: getCount(usersResponse)
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);

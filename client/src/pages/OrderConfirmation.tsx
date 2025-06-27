@@ -5,6 +5,7 @@ import { CheckCircle, ChevronRight, Truck, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import React from "react";
 
 // Define new order item type based on API response
 interface OrderItem {
@@ -66,14 +67,38 @@ interface NewOrder {
   createdAt: string;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+}
+
 export default function OrderConfirmation() {
   const [, params] = useRoute("/order-confirmation/:id");
   const orderId = params?.id ? parseInt(params.id) : 0;
   
-  const { data: order, isLoading } = useQuery<NewOrder>({
+  const { data: response, isLoading } = useQuery<NewOrder | PaginatedResponse<NewOrder>>({
     queryKey: [`/api/orders/${orderId}`],
     enabled: !!orderId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
   });
+
+  // Handle different response formats
+  const order: NewOrder | null = React.useMemo(() => {
+    if (!response) return null;
+    
+    // Check if response is paginated
+    if (response && typeof response === 'object' && 'data' in response) {
+      const data = (response as PaginatedResponse<NewOrder>).data;
+      return Array.isArray(data) && data.length > 0 ? data[0] : null;
+    }
+    
+    // Check if response is a direct object
+    if (response && typeof response === 'object' && 'id' in response) {
+      return response as NewOrder;
+    }
+    
+    return null;
+  }, [response]);
 
   if (isLoading) {
     return (

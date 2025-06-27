@@ -46,6 +46,10 @@ interface ApiProduct {
   imageUrl: string;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+}
+
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
   const { toast } = useToast();
@@ -60,15 +64,30 @@ export default function ProductDetail() {
   });
   
   // Also fetch related products based on category
-  const { data: relatedProducts = [] } = useQuery<ApiProduct[]>({
+  const { data: relatedProductsResponse } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
     queryKey: ["/api/products/"],
     enabled: !!product,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
     select: (data) => {
-      return data
+      // Handle different response formats
+      let products: ApiProduct[] = [];
+      
+      // Check if response is paginated
+      if (data && typeof data === 'object' && 'data' in data) {
+        products = (data as PaginatedResponse<ApiProduct>).data || [];
+      } else if (Array.isArray(data)) {
+        products = data;
+      }
+      
+      return products
         .filter(p => p.id !== productId && p.category?.name === product?.category?.name)
         .slice(0, 4);
     }
   });
+
+  // Extract the actual products array
+  const relatedProducts: ApiProduct[] = Array.isArray(relatedProductsResponse) ? relatedProductsResponse : [];
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -347,11 +366,11 @@ export default function ProductDetail() {
           <div className="mt-16">
             <h2 className="text-2xl font-heading font-bold mb-8">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {relatedProducts.map((relatedProduct) => (
+              {relatedProducts.map((relatedProduct: ApiProduct) => (
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
                   category: relatedProduct.category?.name || '',
-                  tags: relatedProduct.tags ? relatedProduct.tags.split(',').map(tag => tag.trim()) : []
+                  tags: relatedProduct.tags ? relatedProduct.tags.split(',').map((tag: string) => tag.trim()) : []
                 }} />
               ))}
             </div>

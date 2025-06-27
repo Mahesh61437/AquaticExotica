@@ -78,6 +78,13 @@ interface NewOrder {
   createdAt: string;
 }
 
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export default function OrderDetail() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -104,8 +111,18 @@ export default function OrderDetail() {
 
         setLoading(true);
         const orderId = params.id;
-        const data = await apiRequest<NewOrder>(`/api/orders/${orderId}`);
-        setOrder(data);
+        const response = await apiRequest<NewOrder | PaginatedResponse<NewOrder>>(`/api/orders/${orderId}`);
+        
+        // Handle different response formats
+        let orderData: NewOrder | null = null;
+        if (response && typeof response === 'object' && 'data' in response) {
+          const data = (response as PaginatedResponse<NewOrder>).data;
+          orderData = Array.isArray(data) && data.length > 0 ? data[0] : null;
+        } else if (response && typeof response === 'object' && 'id' in response) {
+          orderData = response as NewOrder;
+        }
+        
+        setOrder(orderData);
       } catch (error: any) {
         console.error("Failed to fetch order details:", error);
         

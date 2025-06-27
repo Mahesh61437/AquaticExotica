@@ -18,6 +18,7 @@ import { Loader2, Plus, Edit, Trash2, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
+import React from "react";
 
 export default function CategoryManagement() {
   const { toast } = useToast();
@@ -68,6 +69,23 @@ export default function CategoryManagement() {
       return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
+  
+  // Extract categories array from response
+  const categories: Category[] = React.useMemo(() => {
+    if (!categoriesResponse) return [];
+    
+    // Check if response is paginated
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
+      return (categoriesResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(categoriesResponse)) {
+      return categoriesResponse;
+    }
+    
+    return [];
+  }, [categoriesResponse]);
   
   // Create category mutation
   const createMutation = useMutation({
@@ -241,9 +259,9 @@ export default function CategoryManagement() {
         </Button>
       </div>
 
-      {categoriesResponse && (
+      {categories && (
         <DataTable 
-          data={categoriesResponse.data || []}
+          data={categories}
           searchField={{
             placeholder: "Search categories...",
             value: searchQuery,
@@ -302,8 +320,8 @@ export default function CategoryManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: categoriesResponse.pagination?.totalCount || 0,
-            totalPages: categoriesResponse.pagination?.totalPages || 1
+            totalCount: (categoriesResponse as any)?.pagination?.totalCount || categories.length,
+            totalPages: (categoriesResponse as any)?.pagination?.totalPages || 1
           }}
           isLoading={isLoading}
           emptyMessage="No categories found. Add your first category to get started."

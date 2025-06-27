@@ -35,6 +35,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import React from "react";
 
 // Define new product type based on API response
 interface ApiProduct {
@@ -132,11 +133,42 @@ export default function ProductManagement() {
     },
   });
   
+  // Extract products array from response
+  const products: ApiProduct[] = React.useMemo(() => {
+    if (!productsResponse) return [];
+    
+    // Check if response is paginated
+    if (productsResponse && typeof productsResponse === 'object' && 'data' in productsResponse) {
+      return (productsResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(productsResponse)) {
+      return productsResponse;
+    }
+    
+    return [];
+  }, [productsResponse]);
+  
   // Extract categories array from response
-  const categories = categoriesResponse?.data || [];
+  const categories: any[] = React.useMemo(() => {
+    if (!categoriesResponse) return [];
+    
+    // Check if response is paginated
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
+      return (categoriesResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(categoriesResponse)) {
+      return categoriesResponse;
+    }
+    
+    return [];
+  }, [categoriesResponse]);
   
   // Get unique tags from existing products for tag suggestions
-  const uniqueTags = productsResponse?.data?.reduce((acc: string[], product: ApiProduct) => {
+  const uniqueTags = products.reduce((acc: string[], product: ApiProduct) => {
     if (product.tags) {
       // Handle tags as string (comma-separated)
       const tags = product.tags.split(',').map((tag: string) => tag.trim());
@@ -148,7 +180,7 @@ export default function ProductManagement() {
       });
     }
     return acc;
-  }, []) || [];
+  }, []);
 
   // Create product mutation
   const createMutation = useMutation({
@@ -347,9 +379,9 @@ export default function ProductManagement() {
         </Button>
       </div>
 
-      {productsResponse && (
+      {products && (
         <DataTable 
-          data={productsResponse.data || []}
+          data={products}
           searchField={{
             placeholder: "Search products...",
             value: searchQuery,
@@ -447,8 +479,8 @@ export default function ProductManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: productsResponse.pagination?.totalCount || 0,
-            totalPages: productsResponse.pagination?.totalPages || 1
+            totalCount: (productsResponse as any)?.pagination?.totalCount || products.length,
+            totalPages: (productsResponse as any)?.pagination?.totalPages || 1
           }}
           isLoading={isLoading}
           emptyMessage="No products found. Add your first product to get started."

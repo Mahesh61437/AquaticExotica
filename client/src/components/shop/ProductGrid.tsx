@@ -1,3 +1,4 @@
+import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "./ProductCard";
 import { Product } from "@shared/schema";
@@ -30,6 +31,15 @@ interface ApiProduct {
   imageUrl: string;
 }
 
+// Define paginated response type
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 interface ProductGridProps {
   category?: string;
   filter?: string;
@@ -52,9 +62,28 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     endpoint = `/api/search?q=${encodeURIComponent(searchQuery)}`;
   }
 
-  const { data: products = [], isLoading } = useQuery<ApiProduct[]>({
+  const { data: response, isLoading, error } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
     queryKey: [endpoint],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
   });
+
+  // Handle different response formats
+  const products: ApiProduct[] = React.useMemo(() => {
+    if (!response) return [];
+    
+    // Check if response is paginated
+    if (response && typeof response === 'object' && 'data' in response) {
+      return (response as PaginatedResponse<ApiProduct>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(response)) {
+      return response;
+    }
+    
+    return [];
+  }, [response]);
 
   if (isLoading) {
     return (
@@ -68,6 +97,17 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
             </div>
           </div>
         ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-10">
+        <h3 className="text-xl font-medium mb-2">Error loading products</h3>
+        <p className="text-gray-500">
+          Failed to load products. Please try again later.
+        </p>
       </div>
     );
   }

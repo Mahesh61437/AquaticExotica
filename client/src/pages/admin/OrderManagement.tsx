@@ -28,6 +28,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Order } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/utils";
+import React from "react";
 
 // Define new order item type based on API response
 interface OrderItem {
@@ -143,6 +145,23 @@ export default function OrderManagement() {
       return await apiRequest(`${basePath}?${params.toString()}`);
     },
   });
+  
+  // Extract orders array from response
+  const orders: NewOrder[] = React.useMemo(() => {
+    if (!ordersResponse) return [];
+    
+    // Check if response is paginated
+    if (ordersResponse && typeof ordersResponse === 'object' && 'data' in ordersResponse) {
+      return (ordersResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(ordersResponse)) {
+      return ordersResponse;
+    }
+    
+    return [];
+  }, [ordersResponse]);
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
@@ -243,9 +262,9 @@ export default function OrderManagement() {
         <h2 className="text-2xl font-bold">Order Management</h2>
       </div>
 
-      {ordersResponse && (
+      {orders && (
         <DataTable 
-          data={ordersResponse.data || []}
+          data={orders}
           searchField={{
             placeholder: "Search orders...",
             value: searchQuery,
@@ -307,8 +326,8 @@ export default function OrderManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: ordersResponse.pagination?.totalCount || 0,
-            totalPages: ordersResponse.pagination?.totalPages || 1
+            totalCount: (ordersResponse as any)?.pagination?.totalCount || orders.length,
+            totalPages: (ordersResponse as any)?.pagination?.totalPages || 1
           }}
           isLoading={isLoading}
           emptyMessage="No orders found."
