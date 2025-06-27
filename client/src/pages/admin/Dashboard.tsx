@@ -40,10 +40,10 @@ export default function AdminDashboard() {
         ]);
         
         setStats({
-          products: products.data?.length || 0,
-          categories: categories.data?.length || 0,
-          orders: orders.data?.length || 0,
-          users: users.data?.length || 0
+          products: Array.isArray(products) ? products.length : products.data?.length || 0,
+          categories: Array.isArray(categories) ? categories.length : categories.data?.length || 0,
+          orders: Array.isArray(orders) ? orders.length : orders.data?.length || 0,
+          users: Array.isArray(users) ? users.length : users.data?.length || 0
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);

@@ -3,6 +3,33 @@ import { ProductCard } from "./ProductCard";
 import { Product } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// Define new product type based on API response
+interface ApiProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice: string;
+  discountPercentage: number;
+  stock: number;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    imageUrl: string;
+  };
+  tags: string;
+  rating: string;
+  isActive: boolean;
+  isNew: boolean;
+  isSale: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  isInStock: boolean;
+  imageUrl: string;
+}
+
 interface ProductGridProps {
   category?: string;
   filter?: string;
@@ -12,7 +39,7 @@ interface ProductGridProps {
 
 export function ProductGrid({ category, filter, searchQuery, activeCategories = [] }: ProductGridProps) {
   // Determine the correct endpoint based on props
-  let endpoint = "/api/products";
+  let endpoint = "/api/products/";
   // Only use category-specific endpoint if we have a category URL param
   // and no active category filters (which means filtering is handled client-side)
   if (category && activeCategories.length <= 1) {
@@ -25,7 +52,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     endpoint = `/api/search?q=${encodeURIComponent(searchQuery)}`;
   }
 
-  const { data: products = [], isLoading } = useQuery<Product[]>({
+  const { data: products = [], isLoading } = useQuery<ApiProduct[]>({
     queryKey: [endpoint],
   });
 
@@ -61,7 +88,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
   // Always apply category filtering if there are active categories
   // This ensures filters work even when on a category page
   const displayProducts = activeCategories.length > 0
-    ? products.filter(product => activeCategories.includes(product.category))
+    ? products.filter(product => activeCategories.includes(product.category?.name || ''))
     : products;
 
   if (displayProducts.length === 0 && activeCategories.length > 0) {
@@ -78,7 +105,11 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {displayProducts.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={{
+          ...product,
+          category: product.category?.name || '',
+          tags: product.tags ? product.tags.split(',').map(tag => tag.trim()) : []
+        }} />
       ))}
     </div>
   );

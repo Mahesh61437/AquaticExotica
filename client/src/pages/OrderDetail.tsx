@@ -18,33 +18,64 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
 
+// Define new order item type based on API response
 interface OrderItem {
   id: number;
-  name: string;
-  price: string;
+  product: {
+    id: number;
+    name: string;
+    description: string;
+    price: string;
+    compareAtPrice: string;
+    discountPercentage: number;
+    stock: number;
+    category: {
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      imageUrl: string;
+    };
+    tags: string;
+    rating: string;
+    isActive: boolean;
+    isNew: boolean;
+    isSale: boolean;
+    isFeatured: boolean;
+    isTrending: boolean;
+    isInStock: boolean;
+    imageUrl: string;
+  };
   quantity: number;
-  imageUrl: string;
+  price: string;
+  totalPrice: number;
 }
 
-interface Address {
-  name: string;
+// Define new shipping address type based on API response
+interface ShippingAddress {
+  id: number;
   addressLine1: string;
-  addressLine2?: string;
+  addressLine2: string;
   city: string;
   state: string;
-  pinCode: string;
-  phone: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientPhone: string;
+  isDefault: boolean;
 }
 
-interface Order {
+// Define new order type based on API response
+interface NewOrder {
   id: number;
-  status: string;
-  total: string;
-  createdAt: string;
-  paymentMethod: string;
-  shippingAddress: Address;
-  billingAddress: Address;
+  user: number;
   items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  totalAmount: string;
+  shippingCost: string;
+  grandTotal: number;
+  status: string;
+  createdAt: string;
 }
 
 export default function OrderDetail() {
@@ -52,7 +83,7 @@ export default function OrderDetail() {
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/orders/:id");
-  const [order, setOrder] = useState<Order | null>(null);
+  const [order, setOrder] = useState<NewOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -73,7 +104,7 @@ export default function OrderDetail() {
 
         setLoading(true);
         const orderId = params.id;
-        const data = await apiRequest<Order>(`/api/orders/${orderId}`);
+        const data = await apiRequest<NewOrder>(`/api/orders/${orderId}`);
         setOrder(data);
       } catch (error: any) {
         console.error("Failed to fetch order details:", error);
@@ -238,13 +269,13 @@ export default function OrderDetail() {
                   <div key={item.id} className="flex gap-4 pb-4 border-b">
                     <div className="w-16 h-16 rounded overflow-hidden bg-gray-100 flex-shrink-0">
                       <img 
-                        src={item.imageUrl} 
-                        alt={item.name} 
+                        src={item.product.imageUrl} 
+                        alt={item.product.name} 
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-grow">
-                      <h4 className="font-medium">{item.name}</h4>
+                      <h4 className="font-medium">{item.product.name}</h4>
                       <div className="text-sm text-gray-500">
                         Quantity: {item.quantity}
                       </div>
@@ -252,7 +283,7 @@ export default function OrderDetail() {
                     <div className="text-right">
                       <div className="font-medium">{formatPrice(item.price)}</div>
                       <div className="text-sm text-gray-500">
-                        {formatPrice(parseFloat(item.price) * item.quantity)}
+                        {formatPrice(item.totalPrice)}
                       </div>
                     </div>
                   </div>
@@ -262,16 +293,16 @@ export default function OrderDetail() {
               <div className="mt-6 space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>
-                  <span>{formatPrice(order.total)}</span>
+                  <span>{formatPrice(Number(order.totalAmount))}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Shipping</span>
-                  <span>Free</span>
+                  <span>{formatPrice(Number(order.shippingCost))}</span>
                 </div>
                 <Separator className="my-2" />
                 <div className="flex justify-between font-medium">
                   <span>Total</span>
-                  <span>{formatPrice(order.total)}</span>
+                  <span>{formatPrice(order.grandTotal)}</span>
                 </div>
               </div>
             </CardContent>
@@ -285,10 +316,6 @@ export default function OrderDetail() {
               <CardTitle className="text-lg">Order Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div>
-                <div className="text-sm text-gray-500">Payment Method</div>
-                <div>{order.paymentMethod}</div>
-              </div>
               <div>
                 <div className="text-sm text-gray-500">Order Status</div>
                 <div>{order.status}</div>
@@ -306,15 +333,16 @@ export default function OrderDetail() {
             </CardHeader>
             <CardContent>
               <div className="space-y-1">
-                <div className="font-medium">{order.shippingAddress.name}</div>
+                <div className="font-medium">{order.shippingAddress.recipientName}</div>
                 <div>{order.shippingAddress.addressLine1}</div>
                 {order.shippingAddress.addressLine2 && (
                   <div>{order.shippingAddress.addressLine2}</div>
                 )}
                 <div>
-                  {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.pinCode}
+                  {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
                 </div>
-                <div>Phone: {order.shippingAddress.phone}</div>
+                <div>{order.shippingAddress.country}</div>
+                <div>Phone: {order.shippingAddress.recipientPhone}</div>
               </div>
             </CardContent>
           </Card>
@@ -327,7 +355,7 @@ export default function OrderDetail() {
               <p className="text-sm text-gray-500 mb-4">
                 If you have any questions about your order, please contact our customer service.
               </p>
-              <Button variant="outline" onClick={() => window.location.href = "mailto:support@example.com"}>
+              <Button variant="outline" onClick={() => window.location.href = "mailto:mahesh@aquaticexotica.com"}>
                 Contact Support
               </Button>
             </CardContent>

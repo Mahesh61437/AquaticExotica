@@ -3,15 +3,74 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { CheckCircle, ChevronRight, Truck, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Order } from "@shared/schema";
 import { formatPrice } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+
+// Define new order item type based on API response
+interface OrderItem {
+  id: number;
+  product: {
+    id: number;
+    name: string;
+    description: string;
+    price: string;
+    compareAtPrice: string;
+    discountPercentage: number;
+    stock: number;
+    category: {
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      imageUrl: string;
+    };
+    tags: string;
+    rating: string;
+    isActive: boolean;
+    isNew: boolean;
+    isSale: boolean;
+    isFeatured: boolean;
+    isTrending: boolean;
+    isInStock: boolean;
+    imageUrl: string;
+  };
+  quantity: number;
+  price: string;
+  totalPrice: number;
+}
+
+// Define new shipping address type based on API response
+interface ShippingAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientPhone: string;
+  isDefault: boolean;
+}
+
+// Define new order type based on API response
+interface NewOrder {
+  id: number;
+  user: number;
+  items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  totalAmount: string;
+  shippingCost: string;
+  grandTotal: number;
+  status: string;
+  createdAt: string;
+}
 
 export default function OrderConfirmation() {
   const [, params] = useRoute("/order-confirmation/:id");
   const orderId = params?.id ? parseInt(params.id) : 0;
   
-  const { data: order, isLoading } = useQuery<Order>({
+  const { data: order, isLoading } = useQuery<NewOrder>({
     queryKey: [`/api/orders/${orderId}`],
     enabled: !!orderId,
   });
@@ -45,20 +104,6 @@ export default function OrderConfirmation() {
       </div>
     );
   }
-
-  // Parse order items from JSON if needed
-  const orderItems = Array.isArray(order.items) ? order.items : [];
-  
-  // Ensure shipping address is properly typed with default values
-  const shippingAddress: {
-    address?: string;
-    city?: string;
-    state?: string;
-    zipCode?: string;
-    country?: string;
-  } = typeof order.shippingAddress === 'object' && order.shippingAddress 
-    ? order.shippingAddress as any 
-    : {};
   
   return (
     <>
@@ -108,9 +153,14 @@ export default function OrderConfirmation() {
                 </div>
               </div>
               <div className="text-sm text-gray-600 ml-7">
-                <p>{shippingAddress.address || 'N/A'}</p>
-                <p>{`${shippingAddress.city || 'N/A'}, ${shippingAddress.state || 'N/A'} ${shippingAddress.zipCode || 'N/A'}`}</p>
-                <p>{shippingAddress.country || 'India'}</p>
+                <p>{order.shippingAddress.recipientName}</p>
+                <p>{order.shippingAddress.addressLine1}</p>
+                {order.shippingAddress.addressLine2 && (
+                  <p>{order.shippingAddress.addressLine2}</p>
+                )}
+                <p>{`${order.shippingAddress.city}, ${order.shippingAddress.state} ${order.shippingAddress.zipCode}`}</p>
+                <p>{order.shippingAddress.country}</p>
+                <p>Phone: {order.shippingAddress.recipientPhone}</p>
               </div>
             </div>
             
@@ -142,20 +192,20 @@ export default function OrderConfirmation() {
             
             <h3 className="font-medium mb-3">Order Items</h3>
             <ul className="divide-y">
-              {orderItems.map((item: any, index: number) => (
+              {order.items.map((item, index: number) => (
                 <li key={index} className="py-3 flex items-center">
                   <div className="h-16 w-16 bg-gray-100 rounded overflow-hidden">
                     <img
-                      src={item.imageUrl}
-                      alt={item.name}
+                      src={item.product.imageUrl}
+                      alt={item.product.name}
                       className="h-full w-full object-cover"
                     />
                   </div>
                   <div className="ml-4 flex-1">
-                    <h4 className="font-medium">{item.name}</h4>
+                    <h4 className="font-medium">{item.product.name}</h4>
                     <div className="flex justify-between mt-1 text-sm">
                       <span className="text-gray-600">Qty: {item.quantity}</span>
-                      <span>{formatPrice(item.price * item.quantity)}</span>
+                      <span>{formatPrice(item.totalPrice)}</span>
                     </div>
                   </div>
                 </li>
@@ -165,15 +215,15 @@ export default function OrderConfirmation() {
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Subtotal</span>
-                <span>{formatPrice(parseFloat(order.total))}</span>
+                <span>{formatPrice(Number(order.totalAmount))}</span>
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Shipping</span>
-                <span>Free</span>
+                <span>{formatPrice(Number(order.shippingCost))}</span>
               </div>
               <div className="flex justify-between py-1 text-lg font-semibold mt-2">
                 <span>Total</span>
-                <span>{formatPrice(parseFloat(order.total))}</span>
+                <span>{formatPrice(order.grandTotal)}</span>
               </div>
             </div>
           </div>

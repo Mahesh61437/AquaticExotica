@@ -29,24 +29,64 @@ import { Order } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
-// Define order item type
+// Define new order item type based on API response
 interface OrderItem {
   id: number;
-  name: string;
-  price: string;
+  product: {
+    id: number;
+    name: string;
+    description: string;
+    price: string;
+    compareAtPrice: string;
+    discountPercentage: number;
+    stock: number;
+    category: {
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      imageUrl: string;
+    };
+    tags: string;
+    rating: string;
+    isActive: boolean;
+    isNew: boolean;
+    isSale: boolean;
+    isFeatured: boolean;
+    isTrending: boolean;
+    isInStock: boolean;
+    imageUrl: string;
+  };
   quantity: number;
-  imageUrl: string;
+  price: string;
+  totalPrice: number;
 }
 
-// Define address type
-interface Address {
-  name: string;
+// Define new shipping address type based on API response
+interface ShippingAddress {
+  id: number;
   addressLine1: string;
-  addressLine2?: string;
+  addressLine2: string;
   city: string;
   state: string;
-  pinCode: string;
-  phone: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientPhone: string;
+  isDefault: boolean;
+}
+
+// Define new order type based on API response
+interface NewOrder {
+  id: number;
+  user: number;
+  items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  totalAmount: string;
+  shippingCost: string;
+  grandTotal: number;
+  status: string;
+  createdAt: string;
 }
 
 const statusColors: Record<string, string> = {
@@ -61,7 +101,7 @@ export default function OrderManagement() {
   const { toast } = useToast();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<NewOrder | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -162,12 +202,12 @@ export default function OrderManagement() {
     }).format(amount);
   };
 
-  const handleViewOrder = (order: Order) => {
+  const handleViewOrder = (order: NewOrder) => {
     setSelectedOrder(order);
     setIsViewOpen(true);
   };
 
-  const handleUpdateStatus = (order: Order) => {
+  const handleUpdateStatus = (order: NewOrder) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
     setIsStatusOpen(true);
@@ -214,34 +254,34 @@ export default function OrderManagement() {
           columns={[
             {
               header: "Order ID",
-              accessor: (order: Order) => (
+              accessor: (order: NewOrder) => (
                 <span className="font-medium">#{order.id}</span>
               )
             },
             {
               header: "Customer",
-              accessor: (order: Order) => (
+              accessor: (order: NewOrder) => (
                 <div>
-                  <p className="font-medium">{order.customerName || "N/A"}</p>
-                  <p className="text-sm text-muted-foreground">{order.customerEmail || "No email"}</p>
+                  <p className="font-medium">{order.shippingAddress?.recipientName || "N/A"}</p>
+                  <p className="text-sm text-muted-foreground">{order.shippingAddress?.recipientPhone || "No phone"}</p>
                 </div>
               )
             },
             {
               header: "Date",
-              accessor: (order: Order) => formatDate(order.createdAt)
+              accessor: (order: NewOrder) => formatDate(order.createdAt)
             },
             {
               header: "Total",
-              accessor: (order: Order) => formatCurrency(Number(order.total) || 0)
+              accessor: (order: NewOrder) => formatCurrency(Number(order.grandTotal) || 0)
             },
             {
               header: "Status",
-              accessor: (order: Order) => getStatusBadge(order.status)
+              accessor: (order: NewOrder) => getStatusBadge(order.status)
             },
             {
               header: "Actions",
-              accessor: (order: Order) => (
+              accessor: (order: NewOrder) => (
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
@@ -267,8 +307,8 @@ export default function OrderManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: ordersResponse.pagination.totalCount,
-            totalPages: ordersResponse.pagination.totalPages
+            totalCount: ordersResponse.pagination?.totalCount || 0,
+            totalPages: ordersResponse.pagination?.totalPages || 1
           }}
           isLoading={isLoading}
           emptyMessage="No orders found."
@@ -296,9 +336,12 @@ export default function OrderManagement() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-1">
-                      <p><span className="font-medium">Name:</span> {selectedOrder.customerName || 'N/A'}</p>
-                      <p><span className="font-medium">Email:</span> {selectedOrder.customerEmail || 'N/A'}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedOrder.customerPhone || 'N/A'}</p>
+                      <p><span className="font-medium">Name:</span> {selectedOrder.shippingAddress?.recipientName || 'N/A'}</p>
+                      <p><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress?.recipientPhone || 'N/A'}</p>
+                      <p><span className="font-medium">Address:</span> {selectedOrder.shippingAddress?.addressLine1 || 'N/A'}</p>
+                      <p><span className="font-medium">City:</span> {selectedOrder.shippingAddress?.city || 'N/A'}</p>
+                      <p><span className="font-medium">State:</span> {selectedOrder.shippingAddress?.state || 'N/A'}</p>
+                      <p><span className="font-medium">ZIP:</span> {selectedOrder.shippingAddress?.zipCode || 'N/A'}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -310,7 +353,9 @@ export default function OrderManagement() {
                   <CardContent>
                     <div className="space-y-1">
                       <p><span className="font-medium">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
-                      <p><span className="font-medium">Total:</span> {formatCurrency(Number(selectedOrder.total) || 0)}</p>
+                      <p><span className="font-medium">Subtotal:</span> {formatCurrency(Number(selectedOrder.totalAmount))}</p>
+                      <p><span className="font-medium">Shipping:</span> {formatCurrency(Number(selectedOrder.shippingCost))}</p>
+                      <p><span className="font-medium">Total:</span> {formatCurrency(Number(selectedOrder.grandTotal))}</p>
                       <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder.createdAt)}</p>
                     </div>
                   </CardContent>
@@ -333,31 +378,31 @@ export default function OrderManagement() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(selectedOrder.items as any[])?.map((item: any, index: number) => (
+                        {selectedOrder.items?.map((item: OrderItem, index: number) => (
                           <tr key={index} className="border-b">
                             <td className="p-2 flex items-center gap-2">
-                              {item.imageUrl && (
+                              {item.product.imageUrl && (
                                 <img 
-                                  src={item.imageUrl} 
-                                  alt={item.name} 
+                                  src={item.product.imageUrl} 
+                                  alt={item.product.name} 
                                   className="w-10 h-10 object-cover rounded" 
                                 />
                               )}
                               <div>
-                                <p className="font-medium">{item.name}</p>
-                                <p className="text-sm text-muted-foreground">ID: {item.id}</p>
+                                <p className="font-medium">{item.product.name}</p>
+                                <p className="text-sm text-muted-foreground">ID: {item.product.id}</p>
                               </div>
                             </td>
                             <td className="p-2 text-right">{formatCurrency(Number(item.price))}</td>
                             <td className="p-2 text-right">{item.quantity}</td>
-                            <td className="p-2 text-right">{formatCurrency(Number(item.price) * item.quantity)}</td>
+                            <td className="p-2 text-right">{formatCurrency(item.totalPrice)}</td>
                           </tr>
                         ))}
                       </tbody>
                       <tfoot>
                         <tr className="font-medium">
                           <td colSpan={3} className="p-2 text-right">Total:</td>
-                          <td className="p-2 text-right">{formatCurrency(Number(selectedOrder.total))}</td>
+                          <td className="p-2 text-right">{formatCurrency(Number(selectedOrder.grandTotal))}</td>
                         </tr>
                       </tfoot>
                     </table>

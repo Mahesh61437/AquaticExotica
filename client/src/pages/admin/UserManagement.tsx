@@ -27,7 +27,17 @@ import { Loader2, UserCog, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRigh
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
-interface UserWithoutPassword extends Omit<User, 'password'> {}
+// Define new user type based on API response
+interface ApiUser {
+  id: number;
+  username: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string | null;
+  isAdmin: boolean;
+  dateJoined: string;
+}
 
 interface PaginatedResponse<T> {
   data: T[];
@@ -42,13 +52,13 @@ interface PaginatedResponse<T> {
 export default function UserManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<UserWithoutPassword | null>(null);
+  const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [searchEmail, setSearchEmail] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Fetch users with pagination and search
-  const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<UserWithoutPassword>>({
+  const { data: usersResponse, isLoading } = useQuery<PaginatedResponse<ApiUser>>({
     queryKey: ["/api/users/", currentPage, itemsPerPage, searchEmail],
     queryFn: async ({ queryKey }) => {
       const basePath = queryKey[0] as string;
@@ -72,7 +82,7 @@ export default function UserManagement() {
   // Update user admin status mutation - grant admin
   const grantAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("/api/make-admin", {
+      return await apiRequest("/api/users/make-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: id })
@@ -98,7 +108,7 @@ export default function UserManagement() {
   // Update user admin status mutation - revoke admin
   const revokeAdminMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest("/api/revoke-admin", {
+      return await apiRequest("/api/users/revoke-admin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: id })
@@ -121,7 +131,7 @@ export default function UserManagement() {
     },
   });
 
-  const handleSelectUser = (user: UserWithoutPassword) => {
+  const handleSelectUser = (user: ApiUser) => {
     setSelectedUser(user);
     setIsOpen(true);
   };
@@ -200,183 +210,159 @@ export default function UserManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {usersResponse && usersResponse.data.length > 0 ? (
-                usersResponse.data.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.fullName}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.username}</TableCell>
-                    <TableCell>{formatDate(user.createdAt)}</TableCell>
-                    <TableCell>
-                      {user.isAdmin ? (
-                        <Badge variant="default">Admin</Badge>
-                      ) : (
-                        <Badge variant="outline">Customer</Badge>
+              {usersResponse?.data?.map((user: ApiUser) => (
+                <TableRow key={user.id}>
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">
+                        {user.firstName && user.lastName 
+                          ? `${user.firstName} ${user.lastName}` 
+                          : user.firstName || user.lastName || user.username}
+                      </p>
+                      {user.phone && (
+                        <p className="text-sm text-muted-foreground">{user.phone}</p>
                       )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleSelectUser(user)}
-                      >
-                        <UserCog className="mr-1 h-4 w-4" /> Manage
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
-                    No users found.
+                    </div>
+                  </TableCell>
+                  <TableCell>{user.email || "No email"}</TableCell>
+                  <TableCell>{user.username}</TableCell>
+                  <TableCell>{formatDate(user.dateJoined)}</TableCell>
+                  <TableCell>
+                    <Badge variant={user.isAdmin ? "default" : "secondary"}>
+                      {user.isAdmin ? "Admin" : "User"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSelectUser(user)}
+                    >
+                      <UserCog className="h-4 w-4 mr-2" />
+                      Manage
+                    </Button>
                   </TableCell>
                 </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
-          
-          {/* Pagination Controls */}
-          {usersResponse && usersResponse.pagination && (
-            <div className="flex items-center justify-between py-4 px-2">
-              <div className="flex items-center gap-2">
-                <Label htmlFor="itemsPerPage">Show</Label>
-                <Select
-                  value={itemsPerPage.toString()}
-                  onValueChange={(value) => setItemsPerPage(Number(value))}
-                >
-                  <SelectTrigger className="w-[80px]">
-                    <SelectValue placeholder={itemsPerPage.toString()} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">
-                  of {usersResponse.pagination.totalCount} entries
-                </span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <span className="mx-2 text-sm">
-                  Page {currentPage} of {usersResponse.pagination.totalPages}
-                </span>
-                
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === usersResponse.pagination.totalPages}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(usersResponse.pagination.totalPages)}
-                  disabled={currentPage === usersResponse.pagination.totalPages}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {usersResponse && usersResponse.pagination && (
+        <div className="flex items-center justify-between space-x-2 py-4">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium">Rows per page</p>
+            <Select value={String(itemsPerPage)} onValueChange={(value) => handleItemsPerPageChange({ target: { value } } as any)}>
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue placeholder={itemsPerPage} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={String(pageSize)}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Page {currentPage} of {usersResponse.pagination.totalPages}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+            >
+              <span className="sr-only">Go to first page</span>
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === usersResponse.pagination.totalPages}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="hidden h-8 w-8 p-0 lg:flex"
+              onClick={() => handlePageChange(usersResponse.pagination.totalPages)}
+              disabled={currentPage === usersResponse.pagination.totalPages}
+            >
+              <span className="sr-only">Go to last page</span>
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
 
       {/* User Management Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>User Management</DialogTitle>
+            <DialogTitle>Manage User</DialogTitle>
             <DialogDescription>
-              Manage user settings and permissions
+              {selectedUser && (
+                <div className="space-y-2">
+                  <p><strong>Name:</strong> {selectedUser.firstName && selectedUser.lastName 
+                    ? `${selectedUser.firstName} ${selectedUser.lastName}` 
+                    : selectedUser.firstName || selectedUser.lastName || selectedUser.username}</p>
+                  <p><strong>Email:</strong> {selectedUser.email || "No email"}</p>
+                  <p><strong>Username:</strong> {selectedUser.username}</p>
+                  <p><strong>Phone:</strong> {selectedUser.phone || "No phone"}</p>
+                  <p><strong>Joined:</strong> {formatDate(selectedUser.dateJoined)}</p>
+                  <p><strong>Current Role:</strong> {selectedUser.isAdmin ? "Admin" : "User"}</p>
+                </div>
+              )}
             </DialogDescription>
           </DialogHeader>
           
-          {selectedUser && (
-            <div className="space-y-4">
-              <div className="border rounded-md p-4 space-y-2">
-                <h3 className="font-medium text-lg">{selectedUser.fullName}</h3>
-                <p className="text-muted-foreground">{selectedUser.email}</p>
-                <p className="text-sm">Username: {selectedUser.username}</p>
-                <p className="text-sm">Joined: {formatDate(selectedUser.createdAt)}</p>
+          <div className="space-y-4">
+            {selectedUser && (
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="admin-status"
+                  checked={selectedUser.isAdmin}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      handleGrantAdmin();
+                    } else {
+                      handleRevokeAdmin();
+                    }
+                  }}
+                  disabled={grantAdminMutation.isPending || revokeAdminMutation.isPending}
+                />
+                <Label htmlFor="admin-status">
+                  {selectedUser.isAdmin ? "Revoke Admin" : "Grant Admin"} privileges
+                </Label>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="adminStatus">Admin Privileges</Label>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <p>{selectedUser.isAdmin ? "Admin Status" : "Grant Administrative Access"}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Admins can manage products, categories, orders, and other users
-                    </p>
-                  </div>
-                  <Switch
-                    id="adminStatus"
-                    checked={selectedUser.isAdmin}
-                    disabled={false}
-                    onCheckedChange={(checked) => checked ? handleGrantAdmin() : handleRevokeAdmin()}
-                  />
-                </div>
-                {selectedUser.isAdmin && (
-                  <p className="text-sm italic text-muted-foreground mt-2">
-                    This user currently has admin privileges.
-                  </p>
-                )}
-              </div>
-              
-              <DialogFooter>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsOpen(false)}
-                >
-                  Close
-                </Button>
-                {!selectedUser.isAdmin ? (
-                  <Button 
-                    onClick={handleGrantAdmin}
-                    disabled={grantAdminMutation.isPending}
-                  >
-                    {grantAdminMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Grant Admin Access
-                  </Button>
-                ) : (
-                  <Button 
-                    onClick={handleRevokeAdmin}
-                    disabled={revokeAdminMutation.isPending}
-                    variant="destructive"
-                  >
-                    {revokeAdminMutation.isPending && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Revoke Admin Access
-                  </Button>
-                )}
-              </DialogFooter>
-            </div>
-          )}
+            )}
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsOpen(false)}
+              disabled={grantAdminMutation.isPending || revokeAdminMutation.isPending}
+            >
+              Close
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

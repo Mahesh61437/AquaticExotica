@@ -36,10 +36,37 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+// Define new product type based on API response
+interface ApiProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice: string;
+  discountPercentage: number;
+  stock: number;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    imageUrl: string;
+  };
+  tags: string;
+  rating: string;
+  isActive: boolean;
+  isNew: boolean;
+  isSale: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  isInStock: boolean;
+  imageUrl: string;
+}
+
 export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingProduct, setEditingProduct] = useState<ApiProduct | null>(null);
   const [formData, setFormData] = useState<Partial<InsertProduct>>({
     name: "",
     description: "",
@@ -109,9 +136,12 @@ export default function ProductManagement() {
   const categories = categoriesResponse?.data || [];
   
   // Get unique tags from existing products for tag suggestions
-  const uniqueTags = productsResponse?.data?.reduce((acc: string[], product: Product) => {
+  const uniqueTags = productsResponse?.data?.reduce((acc: string[], product: ApiProduct) => {
     if (product.tags) {
-      product.tags.forEach((tag: string) => {
+      // Handle tags as string (comma-separated)
+      const tags = product.tags.split(',').map((tag: string) => tag.trim());
+      
+      tags.forEach((tag: string) => {
         if (!acc.includes(tag)) {
           acc.push(tag);
         }
@@ -201,7 +231,7 @@ export default function ProductManagement() {
     },
   });
 
-  const handleEdit = (product: Product) => {
+  const handleEdit = (product: ApiProduct) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -209,8 +239,8 @@ export default function ProductManagement() {
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
-      category: product.category,
-      tags: product.tags,
+      category: product.category?.name || "",
+      tags: product.tags ? product.tags.split(',').map((tag: string) => tag.trim()) : [],
       rating: product.rating,
       stock: product.stock,
       isNew: product.isNew,
@@ -328,7 +358,7 @@ export default function ProductManagement() {
           columns={[
             {
               header: "Image",
-              accessor: (product: Product) => (
+              accessor: (product: ApiProduct) => (
                 product.imageUrl ? (
                   <img 
                     src={product.imageUrl} 
@@ -349,7 +379,7 @@ export default function ProductManagement() {
             },
             {
               header: "Price",
-              accessor: (product: Product) => (
+              accessor: (product: ApiProduct) => (
                 <div className="flex flex-col">
                   <span className="font-medium">{formatPrice(product.price)}</span>
                   {product.compareAtPrice && (
@@ -362,11 +392,11 @@ export default function ProductManagement() {
             },
             {
               header: "Category",
-              accessor: "category"
+              accessor: (product: ApiProduct) => product.category?.name || "N/A"
             },
             {
               header: "Stock",
-              accessor: (product: Product) => (
+              accessor: (product: ApiProduct) => (
                 <Badge
                   variant={
                     getStockStatus(product.stock).status === 'in-stock'
@@ -382,7 +412,7 @@ export default function ProductManagement() {
             },
             {
               header: "Flags",
-              accessor: (product: Product) => (
+              accessor: (product: ApiProduct) => (
                 <div className="flex gap-1 flex-wrap">
                   {product.isNew && <Badge variant="outline">New</Badge>}
                   {product.isSale && <Badge variant="outline">Sale</Badge>}
@@ -393,7 +423,7 @@ export default function ProductManagement() {
             },
             {
               header: "Actions",
-              accessor: (product: Product) => (
+              accessor: (product: ApiProduct) => (
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"
@@ -679,7 +709,11 @@ export default function ProductManagement() {
           {editingProduct && editingProduct.stock > 0 && (
             <div className="mt-6 border-t pt-6">
               <StockNotifier 
-                product={editingProduct}
+                product={{
+                  ...editingProduct,
+                  category: editingProduct.category?.name || "",
+                  tags: editingProduct.tags ? editingProduct.tags.split(',').map(tag => tag.trim()) : []
+                }}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });

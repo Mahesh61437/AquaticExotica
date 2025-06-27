@@ -26,32 +26,71 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight } from "lucide-react";
 
-interface Order {
+// Define new order item type based on API response
+interface OrderItem {
   id: number;
-  status: string;
-  total: string;
-  createdAt: string;
-  shippingAddress: {
-    name: string;
-    addressLine1: string;
-    city: string;
-    state: string;
-    pinCode: string;
-  };
-  items: {
+  product: {
     id: number;
     name: string;
+    description: string;
     price: string;
-    quantity: number;
+    compareAtPrice: string;
+    discountPercentage: number;
+    stock: number;
+    category: {
+      id: number;
+      name: string;
+      slug: string;
+      description: string | null;
+      imageUrl: string;
+    };
+    tags: string;
+    rating: string;
+    isActive: boolean;
+    isNew: boolean;
+    isSale: boolean;
+    isFeatured: boolean;
+    isTrending: boolean;
+    isInStock: boolean;
     imageUrl: string;
-  }[];
+  };
+  quantity: number;
+  price: string;
+  totalPrice: number;
+}
+
+// Define new shipping address type based on API response
+interface ShippingAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientPhone: string;
+  isDefault: boolean;
+}
+
+// Define new order type based on API response
+interface NewOrder {
+  id: number;
+  user: number;
+  items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  totalAmount: string;
+  shippingCost: string;
+  grandTotal: number;
+  status: string;
+  createdAt: string;
 }
 
 export default function MyOrders() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<NewOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -69,7 +108,7 @@ export default function MyOrders() {
         }
 
         setLoading(true);
-        const data = await apiRequest<Order[]>("/api/my-orders");
+        const data = await apiRequest<NewOrder[]>("/api/orders/");
         setOrders(data);
       } catch (error) {
         console.error("Failed to fetch orders:", error);
@@ -163,7 +202,7 @@ export default function MyOrders() {
                   <TableCell className="font-medium">#{order.id}</TableCell>
                   <TableCell>{formatDate(order.createdAt)}</TableCell>
                   <TableCell>{getStatusBadge(order.status)}</TableCell>
-                  <TableCell>{formatPrice(order.total)}</TableCell>
+                  <TableCell>{formatPrice(order.grandTotal)}</TableCell>
                   <TableCell>
                     <Button 
                       variant="ghost" 

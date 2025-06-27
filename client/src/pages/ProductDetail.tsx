@@ -19,6 +19,33 @@ import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
 
+// Define new product type based on API response
+interface ApiProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice: string;
+  discountPercentage: number;
+  stock: number;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    imageUrl: string;
+  };
+  tags: string;
+  rating: string;
+  isActive: boolean;
+  isNew: boolean;
+  isSale: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  isInStock: boolean;
+  imageUrl: string;
+}
+
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:id");
   const { toast } = useToast();
@@ -27,18 +54,18 @@ export default function ProductDetail() {
   
   const productId = params?.id ? parseInt(params.id) : 0;
   
-  const { data: product, isLoading, error } = useQuery<Product>({
+  const { data: product, isLoading, error } = useQuery<ApiProduct>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
   });
   
   // Also fetch related products based on category
-  const { data: relatedProducts = [] } = useQuery<Product[]>({
+  const { data: relatedProducts = [] } = useQuery<ApiProduct[]>({
     queryKey: ["/api/products/"],
     enabled: !!product,
     select: (data) => {
       return data
-        .filter(p => p.id !== productId && p.category === product?.category)
+        .filter(p => p.id !== productId && p.category?.name === product?.category?.name)
         .slice(0, 4);
     }
   });
@@ -126,7 +153,9 @@ export default function ProductDetail() {
           <ChevronRight className="h-4 w-4 mx-2" />
           <a href="/shop" className="hover:text-primary">Shop</a>
           <ChevronRight className="h-4 w-4 mx-2" />
-          <a href={`/shop/${product.category.toLowerCase()}`} className="hover:text-primary">{product.category}</a>
+          <a href={`/shop/${product.category?.slug || product.category?.name?.toLowerCase()}`} className="hover:text-primary">
+            {product.category?.name || 'Category'}
+          </a>
           <ChevronRight className="h-4 w-4 mx-2" />
           <span className="text-gray-700 font-medium">{product.name}</span>
         </div>
@@ -226,7 +255,8 @@ export default function ProductDetail() {
                 ) : (
                   <div className="w-full">
                     <StockNotificationForm 
-                      product={product}
+                      productId={product.id}
+                      productName={product.name}
                     />
                   </div>
                 )}
@@ -255,8 +285,8 @@ export default function ProductDetail() {
                   <div className="space-y-2">
                     <p>{product.description}</p>
                     <ul className="list-disc list-inside space-y-1">
-                      <li>Category: {product.category}</li>
-                      <li>Tags: {product.tags.join(", ")}</li>
+                      <li>Category: {product.category?.name || 'N/A'}</li>
+                      <li>Tags: {product.tags || 'No tags'}</li>
                       {product.isNew && <li>New arrival</li>}
                     </ul>
                   </div>
@@ -318,7 +348,11 @@ export default function ProductDetail() {
             <h2 className="text-2xl font-heading font-bold mb-8">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
-                <ProductCard key={relatedProduct.id} product={relatedProduct} />
+                <ProductCard key={relatedProduct.id} product={{
+                  ...relatedProduct,
+                  category: relatedProduct.category?.name || '',
+                  tags: relatedProduct.tags ? relatedProduct.tags.split(',').map(tag => tag.trim()) : []
+                }} />
               ))}
             </div>
           </div>
