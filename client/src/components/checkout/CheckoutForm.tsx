@@ -38,6 +38,22 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+
+// Define saved address interface
+interface SavedAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientPhone: string;
+  isDefault: boolean;
+}
 
 const formSchema = z.object({
   firstName: z.string().min(2, "First name is required"),
@@ -78,11 +94,10 @@ export function CheckoutForm() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { cart, clearCart } = useCart();
-  const { currentUser, getDefaultAddress } = useAuth();
+  const { currentUser } = useAuth();
   
-  // Track if we should show saved addresses
-  const [showSavedAddresses, setShowSavedAddresses] = useState(false);
-  const [selectedSavedAddress, setSelectedSavedAddress] = useState<string | undefined>(undefined);
+  // Track selected saved address
+  const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<number | null>(null);
 
   // States for dependent dropdown selections
   const [selectedState, setSelectedState] = useState<string>("");
@@ -113,6 +128,16 @@ export function CheckoutForm() {
       notes: "",
     },
   });
+
+  // Fetch saved addresses
+  const { data: savedAddresses = [], isLoading: addressesLoading } = useQuery({
+    queryKey: ["/api/shippingaddress"],
+    queryFn: async () => {
+      return await apiRequest("/api/shippingaddress");
+    },
+    enabled: !!currentUser, // Only fetch if user is authenticated
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
   
   // Update available cities when state changes
   useEffect(() => {
@@ -125,36 +150,53 @@ export function CheckoutForm() {
   
   // Check if user has saved addresses and populate form with default address
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && savedAddresses.length > 0) {
       // Always add the user's email
       if (currentUser.email) {
         form.setValue('email', currentUser.email);
       }
       
-      // Check if user has saved addresses
-      if (currentUser.addresses && currentUser.addresses.length > 0) {
-        setShowSavedAddresses(true);
+      // Get default address
+      const defaultAddress = savedAddresses.find((addr: SavedAddress) => addr.isDefault);
+      if (defaultAddress) {
+        console.log("Default address found:", defaultAddress);
         
-        // Get default address
-        const defaultAddress = getDefaultAddress();
-        if (defaultAddress) {
-          console.log("Default address found:", defaultAddress);
-          
-          // Pre-fill form with default address
-          form.setValue('firstName', defaultAddress.name.split(' ')[0] || '');
-          form.setValue('lastName', defaultAddress.name.split(' ').slice(1).join(' ') || '');
-          form.setValue('address', defaultAddress.addressLine1);
-          form.setValue('city', defaultAddress.city);
-          form.setValue('state', defaultAddress.state);
-          form.setValue('zipCode', defaultAddress.pinCode);
-          form.setValue('phone', defaultAddress.phone);
-          
-          // Set selected state to update city dropdown
-          setSelectedState(defaultAddress.state);
-        }
+        // Pre-fill form with default address
+        const nameParts = defaultAddress.recipientName.split(' ');
+        form.setValue('firstName', nameParts[0] || '');
+        form.setValue('lastName', nameParts.slice(1).join(' ') || '');
+        form.setValue('address', defaultAddress.addressLine1);
+        form.setValue('city', defaultAddress.city);
+        form.setValue('state', defaultAddress.state);
+        form.setValue('zipCode', defaultAddress.zipCode);
+        form.setValue('phone', defaultAddress.recipientPhone);
+        
+        // Set selected state to update city dropdown
+        setSelectedState(defaultAddress.state);
+        
+        // Set as selected address
+        setSelectedSavedAddressId(defaultAddress.id);
       }
     }
-  }, [currentUser, form, getDefaultAddress]);
+  }, [currentUser, savedAddresses, form]);
+
+  // Function to handle saved address selection
+  const handleSavedAddressSelect = (address: SavedAddress) => {
+    setSelectedSavedAddressId(address.id);
+    
+    // Fill in the form with this address
+    const nameParts = address.recipientName.split(' ');
+    form.setValue('firstName', nameParts[0] || '');
+    form.setValue('lastName', nameParts.slice(1).join(' ') || '');
+    form.setValue('address', address.addressLine1);
+    form.setValue('city', address.city);
+    form.setValue('state', address.state);
+    form.setValue('zipCode', address.zipCode);
+    form.setValue('phone', address.recipientPhone);
+    
+    // Update the state to populate cities dropdown
+    setSelectedState(address.state);
+  };
 
   const onSubmit = async (data: FormValues) => {
     if (cart.items.length === 0) {
@@ -169,64 +211,40 @@ export function CheckoutForm() {
     setIsProcessing(true);
 
     try {
-      // Prepare shipping address (either same as billing or different)
-      const shippingAddress = data.sameAsBilling
-        ? {
-            address: data.address,
-            city: data.city,
-            state: data.state,
-            zipCode: data.zipCode,
-            country: data.country,
-          }
-        : {
-            address: data.shippingAddress || "",
-            city: data.shippingCity || "",
-            state: data.shippingState || "",
-            zipCode: data.shippingZipCode || "",
-            country: data.shippingCountry || "",
-          };
+      // Prepare cart items in the new format
+      const items = cart.items.map(item => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price.toFixed(2)
+      }));
 
-      // Parse cart.total to ensure it's a number before adding shipping
-      const cartTotal = parseFloat(typeof cart.total === 'string' ? cart.total : cart.total.toString());
       const shippingCost = 150; // Shipping cost
-      const totalWithShipping = cartTotal + shippingCost;
 
-      // Create order data formatted according to schema requirements
-      const orderData = {
-        status: "pending",
-        total: totalWithShipping.toFixed(2), // Format as string with 2 decimal places
-        totalAmount: totalWithShipping.toFixed(2), // Add totalAmount field to match schema
-        items: JSON.stringify(cart.items),
-        shippingAddress: JSON.stringify({
-          firstName: data.sameAsBilling ? data.firstName : (data.shippingFirstName || data.firstName),
-          lastName: data.sameAsBilling ? data.lastName : (data.shippingLastName || data.lastName),
-          email: data.email,
-          phone: data.phone,
-          address: data.sameAsBilling ? data.address : (data.shippingAddress || ""),
-          city: data.sameAsBilling ? data.city : (data.shippingCity || ""),
-          state: data.sameAsBilling ? data.state : (data.shippingState || ""),
-          zipCode: data.sameAsBilling ? data.zipCode : (data.shippingZipCode || ""),
-          country: data.sameAsBilling ? data.country : (data.shippingCountry || "IN"),
-        }),
-        billingAddress: JSON.stringify({
-          firstName: data.firstName,
-          lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
+      // Create order data based on whether a saved address is selected
+      let orderData;
+      
+      if (selectedSavedAddressId) {
+        // Use saved address
+        orderData = {
+          items,
+          shipping_address_id: selectedSavedAddressId,
+          shipping_cost: shippingCost.toFixed(2)
+        };
+      } else {
+        // Use form data for new address
+        orderData = {
+          items,
+          shipping_cost: shippingCost.toFixed(2),
+          address_line_1: data.address,
           city: data.city,
           state: data.state,
-          zipCode: data.zipCode,
+          zip_code: data.zipCode,
           country: data.country,
-        }),
-        paymentMethod: "pending", // Set default payment status
-        createdAt: new Date().toISOString(),
-        // Add customer information fields explicitly
-        customerName: `${data.firstName} ${data.lastName}`,
-        customerEmail: data.email,
-        customerPhone: data.phone,
-        userId: currentUser?.id || null // Link order to user if authenticated
-      };
+          recipient_name: `${data.firstName} ${data.lastName}`,
+          recipient_phone: data.phone,
+          is_default: data.saveInfo // Save as default if user checked the option
+        };
+      }
 
       // Log the order data before submitting (for debugging)
       console.log("Submitting order data:", orderData);
@@ -280,43 +298,53 @@ export function CheckoutForm() {
               <h2 className="text-2xl font-heading font-bold">Billing Information</h2>
               
               {/* Saved addresses section */}
-              {showSavedAddresses && currentUser?.addresses && currentUser.addresses.length > 0 && (
+              {currentUser && savedAddresses.length > 0 && (
                 <div className="mb-6 p-4 border rounded-md bg-gray-50">
                   <h3 className="text-lg font-medium mb-2">Your Saved Addresses</h3>
-                  <div className="grid grid-cols-1 gap-3">
-                    {currentUser.addresses.map((address) => (
-                      <div 
-                        key={address.id} 
-                        className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${
-                          selectedSavedAddress === address.id ? 'border-primary bg-primary/5' : 'border-gray-200'
-                        }`}
-                        onClick={() => {
-                          // Set the selected address
-                          setSelectedSavedAddress(address.id);
-                          
-                          // Fill in the form with this address
-                          const nameParts = address.name.split(' ');
-                          form.setValue('firstName', nameParts[0] || '');
-                          form.setValue('lastName', nameParts.slice(1).join(' ') || '');
-                          form.setValue('address', address.addressLine1);
-                          form.setValue('city', address.city);
-                          form.setValue('state', address.state);
-                          form.setValue('zipCode', address.pinCode);
-                          form.setValue('phone', address.phone);
-                          
-                          // Update the state to populate cities dropdown
-                          setSelectedState(address.state);
-                        }}
-                      >
-                        <div className="flex justify-between">
-                          <span className="font-medium">{address.name}</span>
-                          {address.isDefault && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Default</span>}
+                  {addressesLoading ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Loading addresses...
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {savedAddresses.map((address: SavedAddress) => (
+                        <div 
+                          key={address.id} 
+                          className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${
+                            selectedSavedAddressId === address.id ? 'border-primary bg-primary/5' : 'border-gray-200'
+                          }`}
+                          onClick={() => handleSavedAddressSelect(address)}
+                        >
+                          <div className="flex justify-between">
+                            <span className="font-medium">{address.recipientName}</span>
+                            {address.isDefault && <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Default</span>}
+                          </div>
+                          <p className="text-sm text-gray-600">{address.addressLine1}</p>
+                          {address.addressLine2 && (
+                            <p className="text-sm text-gray-600">{address.addressLine2}</p>
+                          )}
+                          <p className="text-sm text-gray-600">{address.city}, {address.state} {address.zipCode}</p>
+                          <p className="text-sm text-gray-600">Phone: {address.recipientPhone}</p>
                         </div>
-                        <p className="text-sm text-gray-600">{address.addressLine1}</p>
-                        <p className="text-sm text-gray-600">{address.city}, {address.state} {address.pinCode}</p>
-                        <p className="text-sm text-gray-600">Phone: {address.phone}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Option to use new address */}
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedSavedAddressId(null);
+                        form.reset();
+                        setSelectedState("");
+                      }}
+                    >
+                      Use New Address
+                    </Button>
                   </div>
                 </div>
               )}
@@ -506,18 +534,14 @@ export function CheckoutForm() {
                   )}
                 />
               </div>
-            </div>
 
-            {/* Shipping Information */}
-            <div className="space-y-6">
-              <div className="flex flex-col space-y-2">
-                <h2 className="text-2xl font-heading font-bold">Shipping Information</h2>
-                
+              {/* Save address option - only show if no saved address is selected */}
+              {!selectedSavedAddressId && (
                 <FormField
                   control={form.control}
-                  name="sameAsBilling"
+                  name="saveInfo"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 py-2">
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                       <FormControl>
                         <Checkbox
                           checked={field.value}
@@ -526,16 +550,22 @@ export function CheckoutForm() {
                       </FormControl>
                       <div className="space-y-1 leading-none">
                         <FormLabel>
-                          Shipping address is the same as billing
+                          Save this address for future orders
                         </FormLabel>
+                        <FormDescription>
+                          This address will be saved to your account for quick checkout
+                        </FormDescription>
                       </div>
                     </FormItem>
                   )}
                 />
-              </div>
+              )}
 
+              {/* Shipping Address Section - Only show if different from billing */}
               {!sameAsBilling && (
                 <div className="space-y-4">
+                  <h3 className="text-xl font-heading font-semibold">Shipping Information</h3>
+                  
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -550,7 +580,7 @@ export function CheckoutForm() {
                         </FormItem>
                       )}
                     />
-                    
+
                     <FormField
                       control={form.control}
                       name="shippingLastName"
@@ -616,7 +646,7 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>City</FormLabel>
                           <FormControl>
-                            <Input placeholder="Mumbai" {...field} />
+                            <Input placeholder="City" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -634,9 +664,6 @@ export function CheckoutForm() {
                           <FormControl>
                             <Input placeholder="600001" maxLength={6} {...field} />
                           </FormControl>
-                          <FormDescription>
-                            Enter a 6-digit Indian PIN code
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -650,7 +677,7 @@ export function CheckoutForm() {
                           <FormLabel>Country</FormLabel>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue="IN"
+                            defaultValue={field.value}
                             disabled={true}
                           >
                             <FormControl>
@@ -669,46 +696,11 @@ export function CheckoutForm() {
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* Payment information removed as requested */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-heading font-bold">Order Information</h2>
-              
-              <div className="p-4 bg-blue-50 rounded-md text-blue-700">
-                <p className="text-sm font-medium mb-2">Order & Payment Process</p>
-                <p className="text-xs">
-                  After submitting your order, we will check stock availability and contact you 
-                  via WhatsApp with payment options and delivery details.
-                </p>
-              </div>
-            </div>
-
-            {/* Additional Information */}
-            <div className="space-y-6">
-              <h2 className="text-2xl font-heading font-bold">Additional Information</h2>
-              
+              {/* Same as billing checkbox */}
               <FormField
                 control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Order Notes (optional)</FormLabel>
-                    <FormControl>
-                      <textarea
-                        className="flex min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        placeholder="Special instructions for delivery or additional information"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="saveInfo"
+                name="sameAsBilling"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl>
@@ -719,22 +711,45 @@ export function CheckoutForm() {
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>
-                        Save my information for faster checkout next time
+                        Shipping address same as billing address
                       </FormLabel>
                     </div>
                   </FormItem>
                 )}
               />
+
+              {/* Order Notes */}
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Order Notes (Optional)</FormLabel>
+                    <FormControl>
+                      <textarea
+                        className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Any special instructions for your order..."
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isProcessing}>
-              {isProcessing ? "Processing..." : "Place Order"}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isProcessing}
+            >
+              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Place Order
             </Button>
           </form>
         </Form>
       </div>
 
-      {/* Order Summary */}
       <div>
         <Card className="sticky top-20">
           <CardHeader>
@@ -780,11 +795,6 @@ export function CheckoutForm() {
               </div>
             </div>
           </CardContent>
-          <CardFooter>
-            <p className="text-sm text-gray-500">
-              Flat rate shipping of ₹150 applies to all orders in India.
-            </p>
-          </CardFooter>
         </Card>
       </div>
     </div>

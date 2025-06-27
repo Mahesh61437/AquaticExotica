@@ -18,6 +18,9 @@ import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
+import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
+import React from "react";
 
 // Define new product type based on API response
 interface ApiProduct {
@@ -35,7 +38,7 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: string;
+  tags: number[];
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -46,6 +49,14 @@ interface ApiProduct {
   imageUrl: string;
 }
 
+// Define tag type
+interface ApiTag {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+// Define paginated response type
 interface PaginatedResponse<T> {
   data: T[];
 }
@@ -61,33 +72,63 @@ export default function ProductDetail() {
   const { data: product, isLoading, error } = useQuery<ApiProduct>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  // Also fetch related products based on category
-  const { data: relatedProductsResponse } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
-    queryKey: ["/api/products/"],
-    enabled: !!product,
+  // Fetch tags for conversion
+  const { data: tagsResponse } = useQuery<ApiTag[] | PaginatedResponse<ApiTag>>({
+    queryKey: ["/api/tags/"],
     staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-    select: (data) => {
-      // Handle different response formats
-      let products: ApiProduct[] = [];
-      
-      // Check if response is paginated
-      if (data && typeof data === 'object' && 'data' in data) {
-        products = (data as PaginatedResponse<ApiProduct>).data || [];
-      } else if (Array.isArray(data)) {
-        products = data;
-      }
-      
-      return products
-        .filter(p => p.id !== productId && p.category?.name === product?.category?.name)
-        .slice(0, 4);
-    }
   });
 
-  // Extract the actual products array
-  const relatedProducts: ApiProduct[] = Array.isArray(relatedProductsResponse) ? relatedProductsResponse : [];
+  // Extract tags array from response
+  const tags: ApiTag[] = React.useMemo(() => {
+    if (!tagsResponse) return [];
+    
+    // Check if response is paginated
+    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
+      return (tagsResponse as PaginatedResponse<ApiTag>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(tagsResponse)) {
+      return tagsResponse;
+    }
+    
+    return [];
+  }, [tagsResponse]);
+
+  // Helper function to convert tag IDs to tag names
+  const convertTagIdsToNames = (tagIds: number[]): string[] => {
+    return tagIds.map(tagId => {
+      const tag = tags.find(t => t.id === tagId);
+      return tag ? tag.name : '';
+    }).filter(name => name !== '');
+  };
+
+  // Fetch related products
+  const { data: relatedProductsResponse } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
+    queryKey: [`/api/products/${productId}/related`],
+    enabled: !!product,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Extract related products array from response
+  const relatedProducts: ApiProduct[] = React.useMemo(() => {
+    if (!relatedProductsResponse) return [];
+    
+    // Check if response is paginated
+    if (relatedProductsResponse && typeof relatedProductsResponse === 'object' && 'data' in relatedProductsResponse) {
+      return (relatedProductsResponse as PaginatedResponse<ApiProduct>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(relatedProductsResponse)) {
+      return relatedProductsResponse;
+    }
+    
+    return [];
+  }, [relatedProductsResponse]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -305,7 +346,7 @@ export default function ProductDetail() {
                     <p>{product.description}</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Category: {product.category?.name || 'N/A'}</li>
-                      <li>Tags: {product.tags || 'No tags'}</li>
+                      <li>Tags: {convertTagIdsToNames(product.tags).join(', ')}</li>
                       {product.isNew && <li>New arrival</li>}
                     </ul>
                   </div>
@@ -370,7 +411,7 @@ export default function ProductDetail() {
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
                   category: relatedProduct.category?.name || '',
-                  tags: relatedProduct.tags ? relatedProduct.tags.split(',').map((tag: string) => tag.trim()) : []
+                  tags: convertTagIdsToNames(relatedProduct.tags)
                 }} />
               ))}
             </div>

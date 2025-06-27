@@ -9,8 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OptimizedImage } from "@/components/ui/optimized-image";
 
+// Custom interface for display purposes that allows string[] tags
+interface DisplayProduct extends Omit<Product, 'tags'> {
+  tags: string[];
+}
+
 interface ProductCardProps {
-  product: Product;
+  product: DisplayProduct;
 }
 
 export function ProductCard({ product }: ProductCardProps) {

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "./ProductCard";
 import { Product } from "@shared/schema";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiRequest } from "@/lib/queryClient";
 
 // Define new product type based on API response
 interface ApiProduct {
@@ -20,7 +21,7 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: string;
+  tags: number[];
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -29,6 +30,13 @@ interface ApiProduct {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
+}
+
+// Define tag type
+interface ApiTag {
+  id: number;
+  name: string;
+  createdAt: string;
 }
 
 // Define paginated response type
@@ -67,6 +75,37 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });
+
+  // Fetch tags for conversion
+  const { data: tagsResponse } = useQuery<ApiTag[] | PaginatedResponse<ApiTag>>({
+    queryKey: ["/api/tags/"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Extract tags array from response
+  const tags: ApiTag[] = React.useMemo(() => {
+    if (!tagsResponse) return [];
+    
+    // Check if response is paginated
+    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
+      return (tagsResponse as PaginatedResponse<ApiTag>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(tagsResponse)) {
+      return tagsResponse;
+    }
+    
+    return [];
+  }, [tagsResponse]);
+
+  // Helper function to convert tag IDs to tag names
+  const convertTagIdsToNames = (tagIds: number[]): string[] => {
+    return tagIds.map(tagId => {
+      const tag = tags.find(t => t.id === tagId);
+      return tag ? tag.name : '';
+    }).filter(name => name !== '');
+  };
 
   // Handle different response formats
   const products: ApiProduct[] = React.useMemo(() => {
@@ -148,7 +187,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
         <ProductCard key={product.id} product={{
           ...product,
           category: product.category?.name || '',
-          tags: product.tags ? product.tags.split(',').map(tag => tag.trim()) : []
+          tags: convertTagIdsToNames(product.tags)
         }} />
       ))}
     </div>

@@ -64,6 +64,11 @@ interface ApiProduct {
   imageUrl: string;
 }
 
+// Custom interface for API calls with tag IDs
+interface ProductWithTagIds extends Omit<InsertProduct, 'tags'> {
+  tags: number[];
+}
+
 export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
@@ -84,6 +89,7 @@ export default function ProductManagement() {
     isTrending: false,
   });
   const [tagInput, setTagInput] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -133,6 +139,14 @@ export default function ProductManagement() {
     },
   });
   
+  // Fetch tags for dropdown and suggestions
+  const { data: tagsResponse, isLoading: tagsLoading } = useQuery({
+    queryKey: ["/api/tags/"],
+    queryFn: async () => {
+      return await apiRequest("/api/tags/");
+    },
+  });
+  
   // Extract products array from response
   const products: ApiProduct[] = React.useMemo(() => {
     if (!productsResponse) return [];
@@ -167,7 +181,24 @@ export default function ProductManagement() {
     return [];
   }, [categoriesResponse]);
   
-  // Get unique tags from existing products for tag suggestions
+  // Extract tags array from response
+  const tags: any[] = React.useMemo(() => {
+    if (!tagsResponse) return [];
+    
+    // Check if response is paginated
+    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
+      return (tagsResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(tagsResponse)) {
+      return tagsResponse;
+    }
+    
+    return [];
+  }, [tagsResponse]);
+  
+  // Get unique tags from existing products for tag suggestions (fallback)
   const uniqueTags = products.reduce((acc: string[], product: ApiProduct) => {
     if (product.tags) {
       // Handle tags as string (comma-separated)
@@ -184,7 +215,7 @@ export default function ProductManagement() {
 
   // Create product mutation
   const createMutation = useMutation({
-    mutationFn: async (data: InsertProduct) => {
+    mutationFn: async (data: ProductWithTagIds) => {
       return await apiRequest("/api/products/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -193,7 +224,7 @@ export default function ProductManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Product created successfully",
@@ -212,7 +243,7 @@ export default function ProductManagement() {
 
   // Update product mutation
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: Partial<InsertProduct> }) => {
+    mutationFn: async ({ id, data }: { id: number; data: Partial<ProductWithTagIds> }) => {
       return await apiRequest(`/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -221,7 +252,7 @@ export default function ProductManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Product updated successfully",
@@ -248,7 +279,7 @@ export default function ProductManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Product deleted successfully",
@@ -272,7 +303,7 @@ export default function ProductManagement() {
       compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
       category: product.category?.name || "",
-      tags: product.tags ? product.tags.split(',').map((tag: string) => tag.trim()) : [],
+      tags: [],
       rating: product.rating,
       stock: product.stock,
       isNew: product.isNew,
@@ -280,6 +311,13 @@ export default function ProductManagement() {
       isFeatured: product.isFeatured,
       isTrending: product.isTrending,
     });
+    
+    // Extract tag IDs from product tags string and match with available tags
+    const productTagNames = product.tags ? product.tags.split(',').map((tag: string) => tag.trim()) : [];
+    const tagIds = tags
+      .filter((tag: { id: number; name: string }) => productTagNames.includes(tag.name))
+      .map((tag: { id: number; name: string }) => tag.id);
+    setSelectedTagIds(tagIds);
     
     // Image will only be Firebase Storage URLs
     
@@ -310,10 +348,16 @@ export default function ProductManagement() {
       formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
     }
 
+    // Prepare data with tag IDs for API
+    const submitData = {
+      ...formData,
+      tags: selectedTagIds
+    };
+
     if (editingProduct) {
-      updateMutation.mutate({ id: editingProduct.id, data: formData });
+      updateMutation.mutate({ id: editingProduct.id, data: submitData as ProductWithTagIds });
     } else {
-      createMutation.mutate(formData as InsertProduct);
+      createMutation.mutate(submitData as ProductWithTagIds);
     }
   };
 
@@ -335,23 +379,29 @@ export default function ProductManagement() {
     });
     setEditingProduct(null);
     setTagInput("");
+    setSelectedTagIds([]);
   };
 
   const handleAddTag = () => {
-    if (tagInput.trim() && !formData.tags?.includes(tagInput.trim())) {
-      setFormData({
-        ...formData,
-        tags: [...(formData.tags || []), tagInput.trim()],
-      });
-      setTagInput("");
+    if (tagInput.trim()) {
+      // Find the tag by name and add its ID
+      const tag = tags.find((t: { id: number; name: string }) => t.name.toLowerCase() === tagInput.trim().toLowerCase());
+      if (tag && !selectedTagIds.includes(tag.id)) {
+        setSelectedTagIds([...selectedTagIds, tag.id]);
+        setTagInput("");
+      } else if (!tag) {
+        // If tag doesn't exist, show error
+        toast({
+          title: "Error",
+          description: "Tag not found. Please select from available tags or create it first.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleRemoveTag = (tag: string) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags?.filter((t: string) => t !== tag) || [],
-    });
+  const handleRemoveTag = (tagId: number) => {
+    setSelectedTagIds(selectedTagIds.filter((id: number) => id !== tagId));
   };
 
   const handlePageChange = (page: number) => {
@@ -634,9 +684,31 @@ export default function ProductManagement() {
                   </Button>
                 </div>
                 
-                {uniqueTags.length > 0 && (
+                {tags.length > 0 && (
                   <div className="mt-2">
-                    <p className="text-xs text-muted-foreground mb-1">Suggested tags (click to add):</p>
+                    <p className="text-xs text-muted-foreground mb-1">Available tags (click to add):</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {tags.map((tag: { id: number; name: string }) => (
+                        <Badge 
+                          key={tag.id} 
+                          variant="outline" 
+                          className="cursor-pointer hover:bg-secondary"
+                          onClick={() => {
+                            if (!selectedTagIds.includes(tag.id)) {
+                              setSelectedTagIds([...selectedTagIds, tag.id]);
+                            }
+                          }}
+                        >
+                          {tag.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {uniqueTags.length > 0 && tags.length === 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Suggested tags from products (click to add):</p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {uniqueTags.map((tag: string) => (
                         <Badge 
@@ -644,11 +716,10 @@ export default function ProductManagement() {
                           variant="outline" 
                           className="cursor-pointer hover:bg-secondary"
                           onClick={() => {
-                            if (!formData.tags?.includes(tag)) {
-                              setFormData({
-                                ...formData,
-                                tags: [...(formData.tags || []), tag]
-                              });
+                            // Find tag by name and add its ID
+                            const foundTag = tags.find((t: { id: number; name: string }) => t.name === tag);
+                            if (foundTag && !selectedTagIds.includes(foundTag.id)) {
+                              setSelectedTagIds([...selectedTagIds, foundTag.id]);
                             }
                           }}
                         >
@@ -660,18 +731,21 @@ export default function ProductManagement() {
                 )}
                 
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {formData.tags?.map((tag: string) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <button 
-                        type="button" 
-                        onClick={() => handleRemoveTag(tag)}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        &times;
-                      </button>
-                    </Badge>
-                  ))}
+                  {selectedTagIds.map((tagId: number) => {
+                    const tag = tags.find((t: { id: number; name: string }) => t.id === tagId);
+                    return tag ? (
+                      <Badge key={tagId} variant="secondary" className="gap-1">
+                        {tag.name}
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveTag(tagId)}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          &times;
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
               </div>
             </div>
@@ -744,11 +818,14 @@ export default function ProductManagement() {
                 product={{
                   ...editingProduct,
                   category: editingProduct.category?.name || "",
-                  tags: editingProduct.tags ? editingProduct.tags.split(',').map(tag => tag.trim()) : []
+                  tags: selectedTagIds.map(tagId => {
+                    const tag = tags.find((t: { id: number; name: string }) => t.id === tagId);
+                    return tag ? tag.name : '';
+                  }).filter(name => name !== '')
                 }}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
-                  queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
+                  queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
                 }}
               />
             </div>

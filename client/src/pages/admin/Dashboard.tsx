@@ -5,6 +5,7 @@ import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
+import TagManagement from "./TagManagement";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   LayoutDashboard,
@@ -13,6 +14,7 @@ import {
   ListOrdered,
   Users,
   Loader2,
+  Hash,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { apiRequest } from "@/lib/queryClient";
@@ -24,7 +26,8 @@ export default function AdminDashboard() {
     products: 0,
     categories: 0,
     orders: 0,
-    users: 0
+    users: 0,
+    tags: 0
   });
 
   // Fetch stats for the overview page
@@ -32,11 +35,12 @@ export default function AdminDashboard() {
     const fetchStats = async () => {
       try {
         // Get counts for all entities
-        const [productsResponse, categoriesResponse, ordersResponse, usersResponse] = await Promise.all([
+        const [productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse] = await Promise.all([
           apiRequest('/api/products/?limit=1000'),
           apiRequest('/api/categories/?limit=1000'),
           apiRequest('/api/orders/?limit=1000'),
-          apiRequest('/api/users/?limit=1000')
+          apiRequest('/api/users/?limit=1000'),
+          apiRequest('/api/tags/?limit=1000')
         ]);
         
         // Handle different response formats for each entity
@@ -53,7 +57,8 @@ export default function AdminDashboard() {
           products: getCount(productsResponse),
           categories: getCount(categoriesResponse),
           orders: getCount(ordersResponse),
-          users: getCount(usersResponse)
+          users: getCount(usersResponse),
+          tags: getCount(tagsResponse)
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -84,12 +89,12 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage products, categories, orders, and users.
+            Manage products, categories, tags, orders, and users.
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-5 gap-2">
+          <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-6 gap-2">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden md:inline">Overview</span>
@@ -102,6 +107,10 @@ export default function AdminDashboard() {
               <Tags className="h-4 w-4" />
               <span className="hidden md:inline">Categories</span>
             </TabsTrigger>
+            <TabsTrigger value="tags" className="flex items-center gap-2">
+              <Hash className="h-4 w-4" />
+              <span className="hidden md:inline">Tags</span>
+            </TabsTrigger>
             <TabsTrigger value="orders" className="flex items-center gap-2">
               <ListOrdered className="h-4 w-4" />
               <span className="hidden md:inline">Orders</span>
@@ -113,7 +122,7 @@ export default function AdminDashboard() {
           </TabsList>
 
           <TabsContent value="overview">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Products</CardTitle>
@@ -136,6 +145,19 @@ export default function AdminDashboard() {
                   <div className="text-2xl font-bold">{stats.categories}</div>
                   <p className="text-xs text-muted-foreground">
                     Organize your products
+                  </p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Tags</CardTitle>
+                  <Hash className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.tags}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Label your products
                   </p>
                 </CardContent>
               </Card>
@@ -185,6 +207,9 @@ export default function AdminDashboard() {
                       <strong>Categories</strong>: Organize your products into categories
                     </li>
                     <li>
+                      <strong>Tags</strong>: Create and manage product tags for better organization
+                    </li>
+                    <li>
                       <strong>Orders</strong>: View and manage customer orders
                     </li>
                     <li>
@@ -202,6 +227,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="categories">
             <CategoryManagement />
+          </TabsContent>
+
+          <TabsContent value="tags">
+            <TagManagement />
           </TabsContent>
 
           <TabsContent value="orders">

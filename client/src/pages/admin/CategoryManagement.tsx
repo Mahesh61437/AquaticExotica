@@ -98,6 +98,7 @@ export default function CategoryManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Category created successfully",
@@ -125,7 +126,7 @@ export default function CategoryManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Category updated successfully",
@@ -152,7 +153,7 @@ export default function CategoryManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/categories/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
       toast({
         title: "Success",
         description: "Category deleted successfully",
