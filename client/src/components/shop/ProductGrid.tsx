@@ -72,7 +72,10 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
   }
 
   const { data: response, isLoading, error } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
-    queryKey: [endpoint],
+    queryKey: [endpoint, category, filter, searchQuery, activeCategories],
+    queryFn: async () => {
+      return await apiRequest(endpoint);
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });

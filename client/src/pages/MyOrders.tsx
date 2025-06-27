@@ -113,7 +113,7 @@ export default function MyOrders() {
         }
 
         setLoading(true);
-        const response = await apiRequest<NewOrder[] | PaginatedResponse<NewOrder>>("/api/myorders/");
+        const response = await apiRequest<NewOrder[] | PaginatedResponse<NewOrder>>("/api/orders/myorders/");
         
         // Handle different response formats
         let ordersData: NewOrder[] = [];

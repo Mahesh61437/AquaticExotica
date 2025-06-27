@@ -11,10 +11,11 @@ export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
   const [location] = useLocation();
   
-  // Extract URL parameters
-  const urlParams = new URLSearchParams(window.location.search);
+  // Extract URL parameters using wouter's location
+  const urlParams = new URLSearchParams(location.search);
   const searchQuery = urlParams.get("search") || "";
   const filterParam = urlParams.get("filter") || "";
+  const categoryParam = urlParams.get("category") || "";
 
   // State for filters
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
@@ -28,6 +29,9 @@ export default function Shop() {
     categorySlug = params.category;
     // Capitalize first letter
     pageTitle = params.category.charAt(0).toUpperCase() + params.category.slice(1);
+  } else if (categoryParam) {
+    // Handle category from query parameter
+    pageTitle = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
   } else if (searchQuery) {
     pageTitle = `Search: ${searchQuery}`;
   } else if (filterParam === "new") {
@@ -44,15 +48,19 @@ export default function Shop() {
     };
   }, []);
 
-  // Set active category if coming from category route, but only on initial render
+  // Set active category if coming from category route or query parameter, but only on initial render
   // This prevents resetting activeCategories when user manually changes filters
   useEffect(() => {
     if (params?.category && activeCategories.length === 0) {
       // Convert slug to proper category name
       const category = params.category.charAt(0).toUpperCase() + params.category.slice(1);
       setActiveCategories([category]);
+    } else if (categoryParam && activeCategories.length === 0) {
+      // Handle category from query parameter
+      const category = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+      setActiveCategories([category]);
     }
-  }, [params?.category, activeCategories.length]);
+  }, [params?.category, categoryParam, activeCategories.length]);
 
   return (
     <>
