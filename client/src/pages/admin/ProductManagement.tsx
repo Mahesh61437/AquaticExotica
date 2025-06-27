@@ -53,7 +53,7 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: string;
+  tags: TagItem[];
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -62,6 +62,13 @@ interface ApiProduct {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
+}
+
+// Define tag interface
+interface TagItem {
+  id: number;
+  name: string;
+  createdAt?: string;
 }
 
 // Custom interface for API calls with tag IDs
@@ -140,7 +147,7 @@ export default function ProductManagement() {
   });
   
   // Fetch tags for dropdown and suggestions
-  const { data: tagsResponse, isLoading: tagsLoading } = useQuery({
+  const { data: tagsResponse, isLoading: tagsLoading, error: tagsError } = useQuery({
     queryKey: ["/api/tags/"],
     queryFn: async () => {
       return await apiRequest("/api/tags/");
@@ -181,8 +188,8 @@ export default function ProductManagement() {
     return [];
   }, [categoriesResponse]);
   
-  // Extract tags array from response
-  const tags: any[] = React.useMemo(() => {
+  // Extract tags array from response with proper error handling
+  const tags: TagItem[] = React.useMemo(() => {
     if (!tagsResponse) return [];
     
     // Check if response is paginated
@@ -199,19 +206,23 @@ export default function ProductManagement() {
   }, [tagsResponse]);
   
   // Get unique tags from existing products for tag suggestions (fallback)
-  const uniqueTags = products.reduce((acc: string[], product: ApiProduct) => {
-    if (product.tags) {
-      // Handle tags as string (comma-separated)
-      const tags = product.tags.split(',').map((tag: string) => tag.trim());
-      
-      tags.forEach((tag: string) => {
-        if (!acc.includes(tag)) {
-          acc.push(tag);
+  const uniqueTags = React.useMemo(() => {
+    return products.reduce((acc: string[], product: ApiProduct) => {
+      if (product.tags && Array.isArray(product.tags) && product.tags.length > 0) {
+        try {
+          // Handle tags as array of tag objects
+          product.tags.forEach((tag: TagItem) => {
+            if (tag.name && !acc.includes(tag.name)) {
+              acc.push(tag.name);
+            }
+          });
+        } catch (error) {
+          console.warn('Error parsing product tags:', error);
         }
-      });
-    }
-    return acc;
-  }, []);
+      }
+      return acc;
+    }, []);
+  }, [products]);
 
   // Create product mutation
   const createMutation = useMutation({
@@ -312,14 +323,20 @@ export default function ProductManagement() {
       isTrending: product.isTrending,
     });
     
-    // Extract tag IDs from product tags string and match with available tags
-    const productTagNames = product.tags ? product.tags.split(',').map((tag: string) => tag.trim()) : [];
-    const tagIds = tags
-      .filter((tag: { id: number; name: string }) => productTagNames.includes(tag.name))
-      .map((tag: { id: number; name: string }) => tag.id);
+    // Extract tag IDs from product tags array
+    let tagIds: number[] = [];
+    if (product.tags && Array.isArray(product.tags) && product.tags.length > 0) {
+      try {
+        // Extract tag IDs directly from the tag objects
+        tagIds = product.tags
+          .filter((tag: TagItem) => tag.id && tag.name)
+          .map((tag: TagItem) => tag.id);
+      } catch (error) {
+        console.warn('Error extracting tag IDs from product:', error);
+        tagIds = [];
+      }
+    }
     setSelectedTagIds(tagIds);
-    
-    // Image will only be Firebase Storage URLs
     
     setIsOpen(true);
   };
@@ -351,7 +368,7 @@ export default function ProductManagement() {
     // Prepare data with tag IDs for API
     const submitData = {
       ...formData,
-      tags: selectedTagIds
+      tags: selectedTagIds || []
     };
 
     if (editingProduct) {
@@ -385,7 +402,7 @@ export default function ProductManagement() {
   const handleAddTag = () => {
     if (tagInput.trim()) {
       // Find the tag by name and add its ID
-      const tag = tags.find((t: { id: number; name: string }) => t.name.toLowerCase() === tagInput.trim().toLowerCase());
+      const tag = tags.find((t: TagItem) => t.name.toLowerCase() === tagInput.trim().toLowerCase());
       if (tag && !selectedTagIds.includes(tag.id)) {
         setSelectedTagIds([...selectedTagIds, tag.id]);
         setTagInput("");
@@ -684,11 +701,12 @@ export default function ProductManagement() {
                   </Button>
                 </div>
                 
+                {/* Show available tags if they exist */}
                 {tags.length > 0 && (
                   <div className="mt-2">
                     <p className="text-xs text-muted-foreground mb-1">Available tags (click to add):</p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {tags.map((tag: { id: number; name: string }) => (
+                      {tags.map((tag: TagItem) => (
                         <Badge 
                           key={tag.id} 
                           variant="outline" 
@@ -706,7 +724,8 @@ export default function ProductManagement() {
                   </div>
                 )}
                 
-                {uniqueTags.length > 0 && tags.length === 0 && (
+                {/* Show suggested tags from products if no tags are available */}
+                {uniqueTags.length > 0 && tags.length === 0 && !tagsLoading && !tagsError && (
                   <div className="mt-2">
                     <p className="text-xs text-muted-foreground mb-1">Suggested tags from products (click to add):</p>
                     <div className="flex flex-wrap gap-1 mt-1">
@@ -717,7 +736,7 @@ export default function ProductManagement() {
                           className="cursor-pointer hover:bg-secondary"
                           onClick={() => {
                             // Find tag by name and add its ID
-                            const foundTag = tags.find((t: { id: number; name: string }) => t.name === tag);
+                            const foundTag = tags.find((t: TagItem) => t.name === tag);
                             if (foundTag && !selectedTagIds.includes(foundTag.id)) {
                               setSelectedTagIds([...selectedTagIds, foundTag.id]);
                             }
@@ -730,23 +749,57 @@ export default function ProductManagement() {
                   </div>
                 )}
                 
-                <div className="flex flex-wrap gap-1 mt-2">
-                  {selectedTagIds.map((tagId: number) => {
-                    const tag = tags.find((t: { id: number; name: string }) => t.id === tagId);
-                    return tag ? (
-                      <Badge key={tagId} variant="secondary" className="gap-1">
-                        {tag.name}
-                        <button 
-                          type="button" 
-                          onClick={() => handleRemoveTag(tagId)}
-                          className="text-muted-foreground hover:text-foreground"
-                        >
-                          &times;
-                        </button>
-                      </Badge>
-                    ) : null;
-                  })}
-                </div>
+                {/* Show loading state for tags */}
+                {tagsLoading && (
+                  <div className="mt-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Loading tags...
+                    </div>
+                  </div>
+                )}
+                
+                {/* Show error state for tags */}
+                {tagsError && (
+                  <div className="mt-2">
+                    <p className="text-xs text-red-500">Failed to load tags. You can still add tags manually.</p>
+                  </div>
+                )}
+                
+                {/* Show selected tags */}
+                {selectedTagIds.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs text-muted-foreground mb-1">Selected tags:</p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedTagIds.map((tagId: number) => {
+                        const tag = tags.find((t: TagItem) => t.id === tagId);
+                        return tag ? (
+                          <Badge key={tagId} variant="secondary" className="gap-1">
+                            {tag.name}
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveTag(tagId)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              &times;
+                            </button>
+                          </Badge>
+                        ) : (
+                          <Badge key={tagId} variant="secondary" className="gap-1">
+                            Unknown Tag (ID: {tagId})
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveTag(tagId)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              &times;
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -819,7 +872,7 @@ export default function ProductManagement() {
                   ...editingProduct,
                   category: editingProduct.category?.name || "",
                   tags: selectedTagIds.map(tagId => {
-                    const tag = tags.find((t: { id: number; name: string }) => t.id === tagId);
+                    const tag = tags.find((t: TagItem) => t.id === tagId);
                     return tag ? tag.name : '';
                   }).filter(name => name !== '')
                 }}

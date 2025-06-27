@@ -21,7 +21,7 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: number[];
+  tags: ApiTag[];
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -99,12 +99,9 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     return [];
   }, [tagsResponse]);
 
-  // Helper function to convert tag IDs to tag names
-  const convertTagIdsToNames = (tagIds: number[]): string[] => {
-    return tagIds.map(tagId => {
-      const tag = tags.find(t => t.id === tagId);
-      return tag ? tag.name : '';
-    }).filter(name => name !== '');
+  // Helper function to convert tag objects to tag names
+  const convertTagsToNames = (tags: ApiTag[]): string[] => {
+    return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
   // Handle different response formats
@@ -187,7 +184,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
         <ProductCard key={product.id} product={{
           ...product,
           category: product.category?.name || '',
-          tags: convertTagIdsToNames(product.tags)
+          tags: convertTagsToNames(product.tags)
         }} />
       ))}
     </div>

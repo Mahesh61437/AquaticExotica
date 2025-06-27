@@ -38,7 +38,7 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: number[];
+  tags: ApiTag[];
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -98,12 +98,9 @@ export default function ProductDetail() {
     return [];
   }, [tagsResponse]);
 
-  // Helper function to convert tag IDs to tag names
-  const convertTagIdsToNames = (tagIds: number[]): string[] => {
-    return tagIds.map(tagId => {
-      const tag = tags.find(t => t.id === tagId);
-      return tag ? tag.name : '';
-    }).filter(name => name !== '');
+  // Helper function to convert tag objects to tag names
+  const convertTagsToNames = (tags: ApiTag[]): string[] => {
+    return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
   // Fetch related products
@@ -346,7 +343,7 @@ export default function ProductDetail() {
                     <p>{product.description}</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Category: {product.category?.name || 'N/A'}</li>
-                      <li>Tags: {convertTagIdsToNames(product.tags).join(', ')}</li>
+                      <li>Tags: {convertTagsToNames(product.tags).join(', ')}</li>
                       {product.isNew && <li>New arrival</li>}
                     </ul>
                   </div>
@@ -411,7 +408,7 @@ export default function ProductDetail() {
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
                   category: relatedProduct.category?.name || '',
-                  tags: convertTagIdsToNames(relatedProduct.tags)
+                  tags: convertTagsToNames(relatedProduct.tags)
                 }} />
               ))}
             </div>
