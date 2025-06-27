@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/use-toast";
@@ -93,73 +93,73 @@ export default function OrderDetail() {
   const [order, setOrder] = useState<NewOrder | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchOrderDetails = async () => {
-      if (!match || !params?.id) return;
+  const fetchOrderDetails = useCallback(async () => {
+    if (!match || !params?.id) return;
 
-      try {
-        // If not authenticated, redirect to login
-        if (!currentUser) {
-          toast({
-            title: "Authentication required",
-            description: "Please sign in to view order details",
-            variant: "destructive",
-          });
-          navigate("/login");
-          return;
-        }
-
-        setLoading(true);
-        const orderId = params.id;
-        const response = await apiRequest<NewOrder | PaginatedResponse<NewOrder>>(`/api/orders/${orderId}`);
-        
-        // Handle different response formats
-        let orderData: NewOrder | null = null;
-        if (response && typeof response === 'object' && 'data' in response) {
-          const data = (response as PaginatedResponse<NewOrder>).data;
-          orderData = Array.isArray(data) && data.length > 0 ? data[0] : null;
-        } else if (response && typeof response === 'object' && 'id' in response) {
-          orderData = response as NewOrder;
-        }
-        
-        setOrder(orderData);
-      } catch (error: any) {
-        console.error("Failed to fetch order details:", error);
-        
-        // Handle 403 Forbidden (not the user's order)
-        if (error.response?.status === 403) {
-          toast({
-            title: "Access denied",
-            description: "You don't have permission to view this order",
-            variant: "destructive",
-          });
-          navigate("/my-orders");
-          return;
-        }
-        
-        // Handle 404 Not Found
-        if (error.response?.status === 404) {
-          toast({
-            title: "Order not found",
-            description: "The requested order does not exist",
-            variant: "destructive",
-          });
-          navigate("/my-orders");
-          return;
-        }
-        
+    try {
+      // If not authenticated, redirect to login
+      if (!currentUser) {
         toast({
-          title: "Error",
-          description: "Failed to load order details. Please try again.",
+          title: "Authentication required",
+          description: "Please sign in to view order details",
           variant: "destructive",
         });
-      } finally {
-        setLoading(false);
+        navigate("/login");
+        return;
       }
-    };
 
+      setLoading(true);
+      const orderId = params.id;
+      const response = await apiRequest<NewOrder | PaginatedResponse<NewOrder>>(`/api/orders/${orderId}`);
+      
+      // Handle different response formats
+      let orderData: NewOrder | null = null;
+      if (response && typeof response === 'object' && 'data' in response) {
+        const data = (response as PaginatedResponse<NewOrder>).data;
+        orderData = Array.isArray(data) && data.length > 0 ? data[0] : null;
+      } else if (response && typeof response === 'object' && 'id' in response) {
+        orderData = response as NewOrder;
+      }
+      
+      setOrder(orderData);
+    } catch (error: any) {
+      console.error("Failed to fetch order details:", error);
+      
+      // Handle 403 Forbidden (not the user's order)
+      if (error.response?.status === 403) {
+        toast({
+          title: "Access denied",
+          description: "You don't have permission to view this order",
+          variant: "destructive",
+        });
+        navigate("/my-orders");
+        return;
+      }
+      
+      // Handle 404 Not Found
+      if (error.response?.status === 404) {
+        toast({
+          title: "Order not found",
+          description: "The requested order does not exist",
+          variant: "destructive",
+        });
+        navigate("/my-orders");
+        return;
+      }
+      
+      toast({
+        title: "Error",
+        description: "Failed to load order details. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, match, params?.id]);
+
+  useEffect(() => {
     fetchOrderDetails();
-  }, [currentUser, match, params, navigate, toast]);
+  }, [fetchOrderDetails]);
 
   // Format date to a more readable format
   const formatDate = (dateString: string) => {

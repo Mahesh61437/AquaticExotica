@@ -21,7 +21,8 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: ApiTag[];
+  tags: number[]; // Tag IDs for API operations
+  tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -67,7 +68,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
   } else if (filter === "sale") {
     endpoint = "/api/products/sale";
   } else if (searchQuery) {
-    endpoint = `/api/search?q=${encodeURIComponent(searchQuery)}`;
+    endpoint = `/api/products/search?q=${encodeURIComponent(searchQuery)}`;
   }
 
   const { data: response, isLoading, error } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
@@ -184,7 +185,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
         <ProductCard key={product.id} product={{
           ...product,
           category: product.category?.name || '',
-          tags: convertTagsToNames(product.tags)
+          tags: convertTagsToNames(product.tagDetails)
         }} />
       ))}
     </div>

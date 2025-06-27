@@ -38,7 +38,8 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: ApiTag[];
+  tags: number[]; // Tag IDs for API operations
+  tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -343,7 +344,7 @@ export default function ProductDetail() {
                     <p>{product.description}</p>
                     <ul className="list-disc list-inside space-y-1">
                       <li>Category: {product.category?.name || 'N/A'}</li>
-                      <li>Tags: {convertTagsToNames(product.tags).join(', ')}</li>
+                      <li>Tags: {convertTagsToNames(product.tagDetails).join(', ')}</li>
                       {product.isNew && <li>New arrival</li>}
                     </ul>
                   </div>
@@ -408,7 +409,7 @@ export default function ProductDetail() {
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
                   category: relatedProduct.category?.name || '',
-                  tags: convertTagsToNames(relatedProduct.tags)
+                  tags: convertTagsToNames(relatedProduct.tagDetails)
                 }} />
               ))}
             </div>

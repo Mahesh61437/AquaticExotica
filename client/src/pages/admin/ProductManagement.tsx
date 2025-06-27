@@ -53,7 +53,8 @@ interface ApiProduct {
     description: string | null;
     imageUrl: string;
   };
-  tags: TagItem[];
+  tags: number[]; // Tag IDs for API operations
+  tagDetails: TagItem[]; // Tag objects for display
   rating: string;
   isActive: boolean;
   isNew: boolean;
@@ -208,10 +209,10 @@ export default function ProductManagement() {
   // Get unique tags from existing products for tag suggestions (fallback)
   const uniqueTags = React.useMemo(() => {
     return products.reduce((acc: string[], product: ApiProduct) => {
-      if (product.tags && Array.isArray(product.tags) && product.tags.length > 0) {
+      if (product.tagDetails && Array.isArray(product.tagDetails) && product.tagDetails.length > 0) {
         try {
-          // Handle tags as array of tag objects
-          product.tags.forEach((tag: TagItem) => {
+          // Handle tags as array of tag objects from tagDetails
+          product.tagDetails.forEach((tag: TagItem) => {
             if (tag.name && !acc.includes(tag.name)) {
               acc.push(tag.name);
             }
@@ -323,14 +324,12 @@ export default function ProductManagement() {
       isTrending: product.isTrending,
     });
     
-    // Extract tag IDs from product tags array
+    // Use the tags array (tag IDs) for editing - this is what we send to the API
     let tagIds: number[] = [];
     if (product.tags && Array.isArray(product.tags) && product.tags.length > 0) {
       try {
-        // Extract tag IDs directly from the tag objects
-        tagIds = product.tags
-          .filter((tag: TagItem) => tag.id && tag.name)
-          .map((tag: TagItem) => tag.id);
+        // Use the tag IDs directly from the tags array
+        tagIds = product.tags.filter((tagId: number) => tagId);
       } catch (error) {
         console.warn('Error extracting tag IDs from product:', error);
         tagIds = [];
@@ -871,10 +870,7 @@ export default function ProductManagement() {
                 product={{
                   ...editingProduct,
                   category: editingProduct.category?.name || "",
-                  tags: selectedTagIds.map(tagId => {
-                    const tag = tags.find((t: TagItem) => t.id === tagId);
-                    return tag ? tag.name : '';
-                  }).filter(name => name !== '')
+                  tags: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => tag.name) : []
                 }}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
