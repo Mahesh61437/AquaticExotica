@@ -419,6 +419,8 @@ export function CheckoutForm() {
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedState(value);
+                          // Reset city when state changes
+                          form.setValue('city', '');
                         }}
                         defaultValue={field.value}
                       >
@@ -588,7 +590,11 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>State</FormLabel>
                           <Select 
-                            onValueChange={field.onChange}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Reset shipping city when shipping state changes
+                              form.setValue('shippingCity', '');
+                            }}
                             defaultValue={field.value}
                           >
                             <FormControl>
@@ -598,7 +604,7 @@ export function CheckoutForm() {
                             </FormControl>
                             <SelectContent>
                               {getAllStates().map((state: { code: string; name: string }) => (
-                                <SelectItem key={state.code} value={state.code}>
+                                <SelectItem key={state.code} value={state.name}>
                                   {state.name}
                                 </SelectItem>
                               ))}
@@ -617,9 +623,9 @@ export function CheckoutForm() {
                           <FormLabel>City</FormLabel>
                           <FormControl>
                             <CityAutocomplete
-                              value={field.value}
+                              value={field.value || ""}
                               onValueChange={field.onChange}
-                              stateName={form.watch("shippingState")}
+                              stateName={form.watch("shippingState") || ""}
                               placeholder="Select city"
                               disabled={!form.watch("shippingState")}
                             />

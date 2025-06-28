@@ -360,6 +360,8 @@ function AddressForm() {
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedState(value);
+                          // Reset city when state changes
+                          form.setValue('city', '');
                         }}
                         defaultValue={field.value}
                       >
@@ -389,9 +391,9 @@ function AddressForm() {
                       <FormLabel>City</FormLabel>
                       <FormControl>
                         <CityAutocomplete
-                          value={field.value}
+                          value={field.value || ""}
                           onValueChange={field.onChange}
-                          stateName={selectedState}
+                          stateName={selectedState || ""}
                           placeholder="Select city"
                           disabled={!selectedState}
                         />

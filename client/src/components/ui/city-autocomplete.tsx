@@ -6,18 +6,18 @@ import { cn } from "@/lib/utils";
 import { autocompleteCity } from "@/lib/india-states-cities";
 
 interface CityAutocompleteProps {
-  value: string;
+  value: string | undefined;
   onValueChange: (value: string) => void;
-  stateName: string;
+  stateName: string | undefined;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
 }
 
 export function CityAutocomplete({
-  value,
+  value = "",
   onValueChange,
-  stateName,
+  stateName = "",
   placeholder = "Select city...",
   disabled = false,
   className,
@@ -28,6 +28,11 @@ export function CityAutocomplete({
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Reset input value when state changes
+  useEffect(() => {
+    setInputValue(value || "");
+  }, [value, stateName]);
 
   // Get cities for the selected state
   useEffect(() => {
