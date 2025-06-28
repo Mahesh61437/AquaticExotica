@@ -372,6 +372,12 @@ export default function OrderDetail() {
               <p className="text-sm text-gray-500 mb-4">
                 If you have any questions about your order, please contact our customer service.
               </p>
+              <div className="text-sm text-gray-600 mb-4">
+                <div><strong>SREENIVASULU MAHESH BABU</strong></div>
+                <div>Balaji Nagar, Greamspet</div>
+                <div>Chittoor, Andhra Pradesh - 517002</div>
+                <div>Phone: +91 8074751370</div>
+              </div>
               <Button variant="outline" onClick={() => window.location.href = "mailto:mahesh@aquaticexotica.com"}>
                 Contact Support
               </Button>

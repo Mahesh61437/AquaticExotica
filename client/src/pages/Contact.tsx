@@ -89,8 +89,9 @@ export default function Contact() {
                   <div>
                     <h3 className="font-semibold">Our Location</h3>
                     <address className="not-italic">
-                      Hagadur, Whitefield<br />
-                      Bangalore, India
+                      Balaji Nagar, Greamspet<br />
+                      Chittoor, Andhra Pradesh<br />
+                      Pincode: 517002
                     </address>
                   </div>
                 </div>

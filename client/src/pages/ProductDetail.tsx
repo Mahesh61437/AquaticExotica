@@ -390,7 +390,7 @@ export default function ProductDetail() {
                       <ul className="text-sm text-gray-600 space-y-2 mt-2">
                         <li><span className="font-medium">Email:</span> mahesh@aquaticexotica.com</li>
                         <li><span className="font-medium">Phone:</span> 8074751370</li>
-                        <li><span className="font-medium">Address:</span> Hagadur, Whitefield, Bangalore</li>
+                        <li><span className="font-medium">Address:</span> Balaji Nagar, Greamspet, Chittoor, Andhra Pradesh - 517002</li>
                       </ul>
                     </div>
                   </div>

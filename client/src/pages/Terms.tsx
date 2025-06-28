@@ -143,8 +143,9 @@ export default function Terms() {
               If you have any questions about these terms and conditions, please contact us at:
             </p>
             <p>
-              AquaticExotica<br />
-              Hagadur, Whitefield, Bangalore, India<br />
+              <strong>SREENIVASULU MAHESH BABU</strong><br />
+              Balaji Nagar, Greamspet<br />
+              Chittoor, Andhra Pradesh - 517002<br />
               Email: mahesh@aquaticexotica.com<br />
               Phone: +91 8074751370
             </p>
