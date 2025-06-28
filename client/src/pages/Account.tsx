@@ -357,13 +357,13 @@ function AddressForm() {
                     <FormItem>
                       <FormLabel>State</FormLabel>
                       <Select 
+                        value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedState(value);
                           // Reset city when state changes
                           form.setValue('city', '');
                         }}
-                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>

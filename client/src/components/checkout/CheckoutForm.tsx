@@ -416,13 +416,13 @@ export function CheckoutForm() {
                     <FormItem>
                       <FormLabel>State</FormLabel>
                       <Select 
+                        value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
                           setSelectedState(value);
                           // Reset city when state changes
                           form.setValue('city', '');
                         }}
-                        defaultValue={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -590,12 +590,12 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>State</FormLabel>
                           <Select 
+                            value={field.value}
                             onValueChange={(value) => {
                               field.onChange(value);
                               // Reset shipping city when shipping state changes
                               form.setValue('shippingCity', '');
                             }}
-                            defaultValue={field.value}
                           >
                             <FormControl>
                               <SelectTrigger>

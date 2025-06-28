@@ -65,12 +65,25 @@ export function CityAutocomplete({
     setSelectedIndex(-1);
   };
 
+  // Handle dropdown toggle
+  const handleDropdownToggle = () => {
+    if (!open && stateName) {
+      setOpen(true);
+      // When opening, show all cities for the state
+      const allCities = autocompleteCity(stateName, "");
+      setFilteredCities(allCities);
+    } else {
+      setOpen(false);
+      setSelectedIndex(-1);
+    }
+  };
+
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "Enter") {
         e.preventDefault();
-        setOpen(true);
+        handleDropdownToggle();
       }
       return;
     }
@@ -135,7 +148,14 @@ export function CityAutocomplete({
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            if (stateName) {
+              setOpen(true);
+              // Show all cities when focusing
+              const allCities = autocompleteCity(stateName, "");
+              setFilteredCities(allCities);
+            }
+          }}
           placeholder={stateName ? placeholder : "Select state first"}
           disabled={disabled || !stateName}
           className="pr-10"
@@ -145,7 +165,7 @@ export function CityAutocomplete({
           variant="ghost"
           size="sm"
           className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-          onClick={() => setOpen(!open)}
+          onClick={handleDropdownToggle}
           disabled={disabled || !stateName}
         >
           <ChevronsUpDown className="h-4 w-4 opacity-50" />
