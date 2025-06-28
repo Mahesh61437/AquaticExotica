@@ -13,7 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatPrice } from "@/lib/utils";
-import { indianStates, getCitiesByState, validatePinCode, validateIndianPhone } from "@/lib/india-states";
+import { getAllStates, getCitiesByState, autocompleteCity } from "@/lib/india-states-cities";
+import { validatePinCode, validateIndianPhone } from "@/lib/india-states";
 import {
   Card,
   CardContent,
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/form";
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 
 // Define saved address interface
 interface SavedAddress {
@@ -426,8 +428,8 @@ export function CheckoutForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {indianStates.map((state) => (
-                            <SelectItem key={state.code} value={state.code}>
+                          {getAllStates().map((state: { code: string; name: string }) => (
+                            <SelectItem key={state.code} value={state.name}>
                               {state.name}
                             </SelectItem>
                           ))}
@@ -444,30 +446,15 @@ export function CheckoutForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>City</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={!selectedState}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableCities.length > 0 ? (
-                            availableCities.map((city) => (
-                              <SelectItem key={city.name} value={city.name}>
-                                {city.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="none">
-                              No cities available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <CityAutocomplete
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          stateName={selectedState}
+                          placeholder="Select city"
+                          disabled={!selectedState}
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -610,7 +597,7 @@ export function CheckoutForm() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {indianStates.map((state) => (
+                              {getAllStates().map((state: { code: string; name: string }) => (
                                 <SelectItem key={state.code} value={state.code}>
                                   {state.name}
                                 </SelectItem>
@@ -629,7 +616,13 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>City</FormLabel>
                           <FormControl>
-                            <Input placeholder="City" {...field} />
+                            <CityAutocomplete
+                              value={field.value}
+                              onValueChange={field.onChange}
+                              stateName={form.watch("shippingState")}
+                              placeholder="Select city"
+                              disabled={!form.watch("shippingState")}
+                            />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

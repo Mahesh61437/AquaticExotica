@@ -13,13 +13,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { indianStates, getCitiesByState, validatePinCode } from "@/lib/india-states";
+import { getAllStates, getCitiesByState, autocompleteCity } from "@/lib/india-states-cities";
+import { validatePinCode } from "@/lib/india-states";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice } from "@/lib/utils";
 import { Loader2, Package, MapPin, Edit, Trash2 } from "lucide-react";
 import React from "react";
+import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 
 // Address form schema
 const addressFormSchema = z.object({
@@ -114,15 +116,15 @@ function AddressForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data)
         });
-        toast({
-          title: "Address added",
-          description: "Your new address has been saved successfully.",
-        });
+    toast({
+      title: "Address added",
+      description: "Your new address has been saved successfully.",
+    });
       }
-      
-      // Close the dialog and reset the form
-      setIsOpen(false);
-      form.reset();
+    
+    // Close the dialog and reset the form
+    setIsOpen(false);
+    form.reset();
       setEditingAddress(null);
       
       // Invalidate addresses query to refresh the list
@@ -367,7 +369,7 @@ function AddressForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {indianStates.map((state) => (
+                          {getAllStates().map((state: { code: string; name: string }) => (
                             <SelectItem key={state.code} value={state.name}>
                               {state.name}
                             </SelectItem>
@@ -386,7 +388,13 @@ function AddressForm() {
                     <FormItem>
                       <FormLabel>City</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter city name" {...field} />
+                        <CityAutocomplete
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          stateName={selectedState}
+                          placeholder="Select city"
+                          disabled={!selectedState}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -674,7 +682,7 @@ export default function Account() {
                         </Button>
                       </div>
                     )}
-                  </div>
+                </div>
                 )}
               </CardContent>
             </Card>
