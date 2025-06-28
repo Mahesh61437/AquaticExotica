@@ -14,6 +14,12 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { indianStates, getCitiesByState, validatePinCode } from "@/lib/india-states";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/lib/utils";
+import { Loader2, Package, MapPin, Edit, Trash2 } from "lucide-react";
+import React from "react";
 
 // Address form schema
 const addressFormSchema = z.object({
@@ -34,10 +40,19 @@ type AddressFormValues = z.infer<typeof addressFormSchema>;
 // Address component
 function AddressForm() {
   const [isOpen, setIsOpen] = useState(false);
-  const [addresses, setAddresses] = useState<AddressFormValues[]>([]);
   const [selectedState, setSelectedState] = useState<string>("");
   const [availableCities, setAvailableCities] = useState<{ name: string; state: string }[]>([]);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { addAddress, updateAddress, deleteAddress } = useAuth();
+
+  // Fetch addresses from API
+  const { data: addresses = [], isLoading: addressesLoading, error: addressesError } = useQuery({
+    queryKey: ["/api/addresses/"],
+    queryFn: async () => {
+      return await apiRequest("/api/addresses/");
+    },
+  });
 
   // Update available cities when state changes
   useEffect(() => {
@@ -62,25 +77,79 @@ function AddressForm() {
     },
   });
 
-  const onSubmit = (data: AddressFormValues) => {
-    // Add the new address to the addresses list
-    setAddresses([...addresses, data]);
-    
-    // Display success toast
-    toast({
-      title: "Address added",
-      description: "Your new address has been saved successfully.",
-    });
-    
-    // Close the dialog and reset the form
-    setIsOpen(false);
-    form.reset();
+  const onSubmit = async (data: AddressFormValues) => {
+    try {
+      await addAddress(data);
+      
+      // Display success toast
+      toast({
+        title: "Address added",
+        description: "Your new address has been saved successfully.",
+      });
+      
+      // Close the dialog and reset the form
+      setIsOpen(false);
+      form.reset();
+      
+      // Invalidate addresses query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add address",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (window.confirm("Are you sure you want to delete this address?")) {
+      try {
+        await deleteAddress(addressId);
+        toast({
+          title: "Address deleted",
+          description: "Address has been removed successfully.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] });
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to delete address",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  if (addressesLoading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-6 w-6 animate-spin" />
+        <span className="ml-2">Loading addresses...</span>
+      </div>
+    );
+  }
+
+  if (addressesError) {
+    return (
+      <div className="bg-red-50 dark:bg-red-900/20 p-8 rounded-lg text-center">
+        <p className="text-red-600 dark:text-red-400">Failed to load addresses. Please try again.</p>
+        <Button 
+          className="mt-4" 
+          variant="outline"
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] })}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <>
       {addresses.length === 0 ? (
         <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg text-center">
+          <MapPin className="h-12 w-12 mx-auto text-gray-400 mb-4" />
           <p className="text-muted-foreground">You don't have any saved addresses.</p>
           <Button 
             className="mt-4" 
@@ -92,8 +161,8 @@ function AddressForm() {
         </div>
       ) : (
         <div className="space-y-4">
-          {addresses.map((address, index) => (
-            <div key={index} className="border rounded-lg p-4">
+          {addresses.map((address: any, index: number) => (
+            <div key={address.id || index} className="border rounded-lg p-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-semibold">{address.name}</h3>
@@ -103,11 +172,20 @@ function AddressForm() {
                     {address.city}, {indianStates.find(s => s.code === address.state)?.name}, {address.pinCode}
                   </p>
                   <p className="text-sm">Phone: {address.phone}</p>
-                  {address.isDefault && <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded mt-2 inline-block">Default</span>}
+                  {address.isDefault && <Badge variant="secondary" className="mt-2">Default</Badge>}
                 </div>
                 <div className="space-x-2">
-                  <Button variant="ghost" size="sm">Edit</Button>
-                  <Button variant="ghost" size="sm" className="text-destructive">Delete</Button>
+                  <Button variant="ghost" size="sm">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-destructive"
+                    onClick={() => handleDeleteAddress(address.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>
@@ -310,6 +388,32 @@ export default function Account() {
   const [, setLocation] = useLocation();
   const { currentUser, signOut } = useAuth();
 
+  // Fetch user orders
+  const { data: ordersResponse, isLoading: ordersLoading, error: ordersError } = useQuery({
+    queryKey: ["/api/orders/"],
+    queryFn: async () => {
+      return await apiRequest("/api/orders/");
+    },
+    enabled: !!currentUser, // Only fetch if user is logged in
+  });
+
+  // Extract orders from response
+  const orders = React.useMemo(() => {
+    if (!ordersResponse) return [];
+    
+    // Check if response is paginated
+    if (ordersResponse && typeof ordersResponse === 'object' && 'data' in ordersResponse) {
+      return (ordersResponse as any).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(ordersResponse)) {
+      return ordersResponse;
+    }
+    
+    return [];
+  }, [ordersResponse]);
+
   useEffect(() => {
     // If user is not logged in, redirect to login page
     if (!currentUser) {
@@ -327,6 +431,32 @@ export default function Account() {
     return null;
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    }).format(date);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusColors: Record<string, string> = {
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-300",
+      processing: "bg-blue-100 text-blue-800 border-blue-300",
+      shipped: "bg-green-100 text-green-800 border-green-300",
+      delivered: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      cancelled: "bg-red-100 text-red-800 border-red-300",
+    };
+    
+    const colorClass = statusColors[status.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-300";
+    return (
+      <Badge variant="outline" className={colorClass}>
+        {status.charAt(0).toUpperCase() + status.slice(1)}
+      </Badge>
+    );
+  };
+
   return (
     <div className="container py-12">
       <div className="max-w-4xl mx-auto">
@@ -337,12 +467,12 @@ export default function Account() {
           <Card className="md:col-span-1">
             <CardHeader className="text-center">
               <Avatar className="w-24 h-24 mx-auto">
-                <AvatarImage src="" alt={currentUser.fullName || "User"} />
+                <AvatarImage src="" alt={currentUser.fullName || currentUser.username || "User"} />
                 <AvatarFallback className="text-xl">
-                  {currentUser.fullName ? currentUser.fullName.charAt(0).toUpperCase() : "U"}
+                  {(currentUser.fullName || currentUser.username || "U").charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <CardTitle className="mt-4">{currentUser.fullName || "User"}</CardTitle>
+              <CardTitle className="mt-4">{currentUser.fullName || currentUser.username || "User"}</CardTitle>
               <CardDescription>
                 {currentUser.email || "No email provided"}
               </CardDescription>
@@ -356,6 +486,16 @@ export default function Account() {
                 <div className="text-sm">
                   <span className="font-medium">Username: </span>
                   {currentUser.username || "Not provided"}
+                </div>
+                {currentUser.fullName && (
+                  <div className="text-sm">
+                    <span className="font-medium">Full Name: </span>
+                    {currentUser.fullName}
+                  </div>
+                )}
+                <div className="text-sm">
+                  <span className="font-medium">Account Type: </span>
+                  {currentUser.isAdmin ? "Administrator" : "Customer"}
                 </div>
               </div>
             </CardContent>
@@ -374,17 +514,64 @@ export default function Account() {
                 <CardDescription>View your order history and track deliveries</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg text-center">
-                  <p className="text-muted-foreground mb-4">View and track all your recent orders</p>
-                  <div className="flex justify-center gap-4">
-                    <Button onClick={() => setLocation("/my-orders")}>
-                      View My Orders
-                    </Button>
-                    <Button variant="outline" onClick={() => setLocation("/shop")}>
-                      Continue Shopping
+                {ordersLoading ? (
+                  <div className="flex items-center justify-center p-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="ml-2">Loading orders...</span>
+                  </div>
+                ) : ordersError ? (
+                  <div className="bg-red-50 dark:bg-red-900/20 p-8 rounded-lg text-center">
+                    <p className="text-red-600 dark:text-red-400">Failed to load orders. Please try again.</p>
+                    <Button 
+                      className="mt-4" 
+                      variant="outline"
+                      onClick={() => window.location.reload()}
+                    >
+                      Retry
                     </Button>
                   </div>
-                </div>
+                ) : orders.length === 0 ? (
+                  <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg text-center">
+                    <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                    <p className="text-muted-foreground mb-4">You haven't placed any orders yet</p>
+                    <div className="flex justify-center gap-4">
+                      <Button onClick={() => setLocation("/shop")}>
+                        Start Shopping
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {orders.slice(0, 3).map((order: any) => (
+                      <div key={order.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">Order #{order.id}</h3>
+                            <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                            <p className="text-sm">Total: {formatPrice(order.grandTotal)}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(order.status)}
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => setLocation(`/orders/${order.id}`)}
+                            >
+                              View Details
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {orders.length > 3 && (
+                      <div className="text-center">
+                        <Button variant="outline" onClick={() => setLocation("/my-orders")}>
+                          View All Orders ({orders.length})
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

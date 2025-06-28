@@ -85,6 +85,16 @@ export default function Contact() {
               
               <div className="space-y-6">
                 <div className="flex items-start">
+                  <div className="mr-4 mt-1 w-5 h-5 flex items-center justify-center bg-white bg-opacity-20 rounded-full">
+                    <span className="text-xs font-bold">S</span>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Contact Person</h3>
+                    <p className="text-sm">SREENIVASULU MAHESH BABU</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
                   <MapPin className="mr-4 mt-1" size={20} />
                   <div>
                     <h3 className="font-semibold">Our Location</h3>
