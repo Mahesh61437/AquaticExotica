@@ -23,34 +23,49 @@ import React from "react";
 
 // Address form schema
 const addressFormSchema = z.object({
-  name: z.string().min(2, "Name is required"),
   addressLine1: z.string().min(5, "Address is required"),
   addressLine2: z.string().optional(),
-  state: z.string().min(2, "State is required"),
   city: z.string().min(2, "City is required"),
-  pinCode: z.string().refine(validatePinCode, {
-    message: "Please enter a valid 6-digit Indian PIN code",
-  }),
-  phone: z.string().min(10, "Valid phone number is required").max(10, "Phone number should be 10 digits"),
+  state: z.string().min(2, "State is required"),
+  zipCode: z.string().min(6, "Valid ZIP code is required"),
+  country: z.string().min(2, "Country is required"),
+  recipientName: z.string().min(2, "Recipient name is required"),
+  recipientEmail: z.string().email("Valid email is required"),
+  recipientPhone: z.string().min(10, "Valid phone number is required"),
   isDefault: z.boolean().default(false),
 });
 
 type AddressFormValues = z.infer<typeof addressFormSchema>;
 
+// Address interface based on API response
+interface ShippingAddress {
+  id: number;
+  addressLine1: string;
+  addressLine2?: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  isDefault: boolean;
+}
+
 // Address component
 function AddressForm() {
   const [isOpen, setIsOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<ShippingAddress | null>(null);
   const [selectedState, setSelectedState] = useState<string>("");
   const [availableCities, setAvailableCities] = useState<{ name: string; state: string }[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { addAddress, updateAddress, deleteAddress } = useAuth();
 
   // Fetch addresses from API
   const { data: addresses = [], isLoading: addressesLoading, error: addressesError } = useQuery({
-    queryKey: ["/api/addresses/"],
+    queryKey: ["/api/shippingaddress"],
     queryFn: async () => {
-      return await apiRequest("/api/addresses/");
+      return await apiRequest("/api/shippingaddress");
     },
   });
 
@@ -66,51 +81,90 @@ function AddressForm() {
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressFormSchema),
     defaultValues: {
-      name: "",
       addressLine1: "",
       addressLine2: "",
-      state: "",
       city: "",
-      pinCode: "",
-      phone: "",
+      state: "",
+      zipCode: "",
+      country: "India",
+      recipientName: "",
+      recipientEmail: "",
+      recipientPhone: "",
       isDefault: false,
     },
   });
 
   const onSubmit = async (data: AddressFormValues) => {
     try {
-      await addAddress(data);
-      
-      // Display success toast
-      toast({
-        title: "Address added",
-        description: "Your new address has been saved successfully.",
-      });
+      if (editingAddress) {
+        // Update existing address
+        await apiRequest(`/api/shippingaddress/${editingAddress.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        toast({
+          title: "Address updated",
+          description: "Your address has been updated successfully.",
+        });
+      } else {
+        // Create new address
+        await apiRequest("/api/shippingaddress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+        toast({
+          title: "Address added",
+          description: "Your new address has been saved successfully.",
+        });
+      }
       
       // Close the dialog and reset the form
       setIsOpen(false);
       form.reset();
+      setEditingAddress(null);
       
       // Invalidate addresses query to refresh the list
-      queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shippingaddress"] });
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add address",
+        description: error.message || "Failed to save address",
         variant: "destructive",
       });
     }
   };
 
-  const handleDeleteAddress = async (addressId: string) => {
+  const handleEditAddress = (address: ShippingAddress) => {
+    setEditingAddress(address);
+    form.reset({
+      addressLine1: address.addressLine1,
+      addressLine2: address.addressLine2 || "",
+      city: address.city,
+      state: address.state,
+      zipCode: address.zipCode,
+      country: address.country,
+      recipientName: address.recipientName,
+      recipientEmail: address.recipientEmail,
+      recipientPhone: address.recipientPhone,
+      isDefault: address.isDefault,
+    });
+    setSelectedState(address.state);
+    setIsOpen(true);
+  };
+
+  const handleDeleteAddress = async (addressId: number) => {
     if (window.confirm("Are you sure you want to delete this address?")) {
       try {
-        await deleteAddress(addressId);
+        await apiRequest(`/api/shippingaddress/${addressId}`, {
+          method: "DELETE",
+        });
         toast({
           title: "Address deleted",
           description: "Address has been removed successfully.",
         });
-        queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/shippingaddress"] });
       } catch (error: any) {
         toast({
           title: "Error",
@@ -118,6 +172,27 @@ function AddressForm() {
           variant: "destructive",
         });
       }
+    }
+  };
+
+  const handleSetDefault = async (addressId: number) => {
+    try {
+      await apiRequest(`/api/shippingaddress/${addressId}/default`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isDefault: true })
+      });
+      toast({
+        title: "Default address updated",
+        description: "Your default address has been updated successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/shippingaddress"] });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update default address",
+        variant: "destructive",
+      });
     }
   };
 
@@ -137,7 +212,7 @@ function AddressForm() {
         <Button 
           className="mt-4" 
           variant="outline"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/addresses/"] })}
+          onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/shippingaddress"] })}
         >
           Retry
         </Button>
@@ -161,21 +236,37 @@ function AddressForm() {
         </div>
       ) : (
         <div className="space-y-4">
-          {addresses.map((address: any, index: number) => (
-            <div key={address.id || index} className="border rounded-lg p-4">
+          {addresses.map((address: ShippingAddress) => (
+            <div key={address.id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="font-semibold">{address.name}</h3>
+                <div className="flex-1">
+                  <h3 className="font-semibold">{address.recipientName}</h3>
                   <p className="text-sm">{address.addressLine1}</p>
                   {address.addressLine2 && <p className="text-sm">{address.addressLine2}</p>}
                   <p className="text-sm">
-                    {address.city}, {indianStates.find(s => s.code === address.state)?.name}, {address.pinCode}
+                    {address.city}, {address.state}, {address.zipCode}
                   </p>
-                  <p className="text-sm">Phone: {address.phone}</p>
-                  {address.isDefault && <Badge variant="secondary" className="mt-2">Default</Badge>}
+                  <p className="text-sm">{address.country}</p>
+                  <p className="text-sm">Phone: {address.recipientPhone}</p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {address.isDefault && <Badge variant="secondary">Default</Badge>}
+                    {!address.isDefault && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => handleSetDefault(address.id)}
+                      >
+                        Set as Default
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <div className="space-x-2">
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleEditAddress(address)}
+                  >
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button 
@@ -193,7 +284,11 @@ function AddressForm() {
           <Button 
             variant="outline" 
             className="w-full"
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              setEditingAddress(null);
+              form.reset();
+              setIsOpen(true);
+            }}
           >
             Add Another Address
           </Button>
@@ -203,21 +298,21 @@ function AddressForm() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Add New Address</DialogTitle>
+            <DialogTitle>{editingAddress ? "Edit Address" : "Add New Address"}</DialogTitle>
             <div className="text-sm text-muted-foreground">
-              Add a new delivery address to your account
+              {editingAddress ? "Update your delivery address" : "Add a new delivery address to your account"}
             </div>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="name"
+                name="recipientName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>Recipient Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter your full name" {...field} />
+                      <Input placeholder="Enter recipient's full name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -273,7 +368,7 @@ function AddressForm() {
                         </FormControl>
                         <SelectContent>
                           {indianStates.map((state) => (
-                            <SelectItem key={state.code} value={state.code}>
+                            <SelectItem key={state.code} value={state.name}>
                               {state.name}
                             </SelectItem>
                           ))}
@@ -290,30 +385,9 @@ function AddressForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>City</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        disabled={!selectedState}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder={selectedState ? "Select city" : "Select state first"} />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {availableCities.length > 0 ? (
-                            availableCities.map((city) => (
-                              <SelectItem key={city.name} value={city.name}>
-                                {city.name}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <SelectItem disabled value="none">
-                              No cities available
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <FormControl>
+                        <Input placeholder="Enter city name" {...field} />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -323,12 +397,12 @@ function AddressForm() {
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="pinCode"
+                  name="zipCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>PIN Code</FormLabel>
+                      <FormLabel>ZIP Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="6-digit PIN code" maxLength={6} {...field} />
+                        <Input placeholder="ZIP code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -337,18 +411,46 @@ function AddressForm() {
                 
                 <FormField
                   control={form.control}
-                  name="phone"
+                  name="country"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
+                      <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder="10-digit phone number" maxLength={10} {...field} />
+                        <Input placeholder="Country" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="recipientEmail"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Enter recipient's email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="recipientPhone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl>
+                      <Input placeholder="10-digit phone number" maxLength={10} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -374,7 +476,9 @@ function AddressForm() {
               />
               
               <DialogFooter className="pt-4">
-                <Button type="submit">Save Address</Button>
+                <Button type="submit">
+                  {editingAddress ? "Update Address" : "Save Address"}
+                </Button>
               </DialogFooter>
             </form>
           </Form>

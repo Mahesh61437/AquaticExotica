@@ -51,13 +51,13 @@ interface SavedAddress {
   zipCode: string;
   country: string;
   recipientName: string;
+  recipientEmail: string;
   recipientPhone: string;
   isDefault: boolean;
 }
 
 const formSchema = z.object({
-  firstName: z.string().min(2, "First name is required"),
-  lastName: z.string().min(2, "Last name is required"),
+  fullName: z.string().min(2, "Full name is required"),
   email: z.string().email("Invalid email address"),
   phone: z.string().refine(validateIndianPhone, {
     message: "Please enter a valid 10-digit Indian mobile number (starting with 6-9)",
@@ -70,8 +70,8 @@ const formSchema = z.object({
   }),
   country: z.string().min(2, "Country is required"),
   sameAsBilling: z.boolean().default(true),
-  shippingFirstName: z.string().optional(),
-  shippingLastName: z.string().optional(),
+  shippingFullName: z.string().optional(),
+  shippingEmail: z.string().optional(),
   shippingAddress: z.string().optional(),
   shippingCity: z.string().optional(),
   shippingState: z.string().optional(),
@@ -106,8 +106,7 @@ export function CheckoutForm() {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: "",
-      lastName: "",
+      fullName: "",
       email: "",
       phone: "",
       address: "",
@@ -116,8 +115,8 @@ export function CheckoutForm() {
       zipCode: "",
       country: "IN", // India as default country
       sameAsBilling: true,
-      shippingFirstName: "",
-      shippingLastName: "",
+      shippingFullName: "",
+      shippingEmail: "",
       shippingAddress: "",
       shippingCity: "",
       shippingState: "",
@@ -162,9 +161,8 @@ export function CheckoutForm() {
         console.log("Default address found:", defaultAddress);
         
         // Pre-fill form with default address
-        const nameParts = defaultAddress.recipientName.split(' ');
-        form.setValue('firstName', nameParts[0] || '');
-        form.setValue('lastName', nameParts.slice(1).join(' ') || '');
+        form.setValue('fullName', defaultAddress.recipientName);
+        form.setValue('email', defaultAddress.recipientEmail || (currentUser?.email || ''));
         form.setValue('address', defaultAddress.addressLine1);
         form.setValue('city', defaultAddress.city);
         form.setValue('state', defaultAddress.state);
@@ -185,9 +183,8 @@ export function CheckoutForm() {
     setSelectedSavedAddressId(address.id);
     
     // Fill in the form with this address
-    const nameParts = address.recipientName.split(' ');
-    form.setValue('firstName', nameParts[0] || '');
-    form.setValue('lastName', nameParts.slice(1).join(' ') || '');
+    form.setValue('fullName', address.recipientName);
+    form.setValue('email', address.recipientEmail || (currentUser?.email || ''));
     form.setValue('address', address.addressLine1);
     form.setValue('city', address.city);
     form.setValue('state', address.state);
@@ -240,7 +237,7 @@ export function CheckoutForm() {
           state: data.state,
           zip_code: data.zipCode,
           country: data.country,
-          recipient_name: `${data.firstName} ${data.lastName}`,
+          recipient_name: data.fullName,
           recipient_phone: data.phone,
           is_default: data.saveInfo // Save as default if user checked the option
         };
@@ -352,26 +349,12 @@ export function CheckoutForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="fullName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>First Name</FormLabel>
+                      <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Last Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Doe" {...field} />
+                        <Input placeholder="John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -569,32 +552,32 @@ export function CheckoutForm() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="shippingFirstName"
+                      name="shippingFullName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>First Name</FormLabel>
+                          <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="shippingLastName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Last Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Doe" {...field} />
+                            <Input placeholder="John Doe" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="shippingEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder="john.doe@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

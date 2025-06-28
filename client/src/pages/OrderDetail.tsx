@@ -61,6 +61,7 @@ interface ShippingAddress {
   zipCode: string;
   country: string;
   recipientName: string;
+  recipientEmail: string;
   recipientPhone: string;
   isDefault: boolean;
 }
