@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";

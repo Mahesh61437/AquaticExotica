@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
-import { Category } from "@shared/schema";
+import { Category } from "@/types";
 import { apiCache } from "@/lib/api-cache";
 
 export default function FeaturedCategories() {

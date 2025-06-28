@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createContext, useEffect, useState, ReactNode } from "react";
-import { CartItem, Cart } from "@shared/schema";
+import { CartItem, Cart } from "@/types";
 
 interface CartContextType {
   cart: Cart;

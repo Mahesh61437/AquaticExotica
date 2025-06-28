@@ -4,25 +4,12 @@ import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
 
 // Define our user interface - updated for Django JWT response
-interface Address {
-  id?: string;
-  name: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  pinCode: string;
-  phone: string;
-  isDefault: boolean;
-}
-
 interface User {
   id: number;
   username: string;
   email: string;
   fullName?: string; // Optional since Django might not send this
   isAdmin: boolean;
-  addresses?: Address[];
 }
 
 // Django JWT response interface
@@ -41,10 +28,6 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<User | null>;
   signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
-  addAddress: (address: Omit<Address, "id">) => Promise<void>;
-  updateAddress: (address: Address) => Promise<void>;
-  deleteAddress: (addressId: string) => Promise<void>;
-  getDefaultAddress: () => Address | undefined;
   getAccessToken: () => string | null;
 }
 
@@ -178,7 +161,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: response.email,
         fullName: response.username, // Use username as fullName if not provided
         isAdmin: response.isAdmin,
-        addresses: []
       };
       
       console.log('👤 Created user object:', user);
@@ -234,210 +216,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return getStoredToken();
   };
 
-  // Address management functions
-  const addAddress = async (address: Omit<Address, "id">): Promise<void> => {
-    if (!currentUser) {
-      toast({
-        title: "Authentication required",
-        description: "You must be logged in to manage addresses",
-        variant: "destructive",
-      });
-      throw new Error("User not authenticated");
-    }
-
-    try {
-      // Generate a unique ID for the address
-      const newAddress: Address = {
-        ...address,
-        id: crypto.randomUUID(), // Generate a unique ID
-      };
-      
-      // If this is the first address or set as default, reset all others
-      let updatedAddresses: Address[] = [...(currentUser.addresses || [])];
-      
-      if (newAddress.isDefault) {
-        updatedAddresses = updatedAddresses.map(addr => ({
-          ...addr,
-          isDefault: false
-        }));
-      }
-      
-      // Add the new address
-      updatedAddresses.push(newAddress);
-      
-      // If this is the first address, make it default
-      if (updatedAddresses.length === 1) {
-        updatedAddresses[0].isDefault = true;
-      }
-      
-      // Update user in state
-      setCurrentUser({
-        ...currentUser,
-        addresses: updatedAddresses
-      });
-      
-      // Update user on server
-      await apiRequest('/api/auth/update-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          addresses: updatedAddresses
-        })
-      });
-      
-      toast({
-        title: "Address added",
-        description: "Your new address has been saved",
-      });
-    } catch (error: any) {
-      console.error("Add address error:", error);
-      toast({
-        title: "Failed to add address",
-        description: error.message || "An error occurred while saving your address",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-  
-  const updateAddress = async (address: Address): Promise<void> => {
-    if (!currentUser) {
-      toast({
-        title: "Authentication required",
-        description: "You must be logged in to manage addresses",
-        variant: "destructive",
-      });
-      throw new Error("User not authenticated");
-    }
-    
-    try {
-      // Find the address index
-      const addresses = [...(currentUser.addresses || [])];
-      const addressIndex = addresses.findIndex(a => a.id === address.id);
-      
-      if (addressIndex === -1) {
-        throw new Error("Address not found");
-      }
-      
-      // If setting as default, update all others
-      if (address.isDefault) {
-        for (let i = 0; i < addresses.length; i++) {
-          if (i !== addressIndex) {
-            addresses[i].isDefault = false;
-          }
-        }
-      }
-      
-      // Update the address
-      addresses[addressIndex] = address;
-      
-      // Update user in state
-      setCurrentUser({
-        ...currentUser,
-        addresses
-      });
-      
-      // Update user on server
-      await apiRequest('/api/auth/update-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          addresses
-        })
-      });
-      
-      toast({
-        title: "Address updated",
-        description: "Your address has been updated successfully",
-      });
-    } catch (error: any) {
-      console.error("Update address error:", error);
-      toast({
-        title: "Failed to update address",
-        description: error.message || "An error occurred while updating your address",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-  
-  const deleteAddress = async (addressId: string): Promise<void> => {
-    if (!currentUser) {
-      toast({
-        title: "Authentication required",
-        description: "You must be logged in to manage addresses",
-        variant: "destructive",
-      });
-      throw new Error("User not authenticated");
-    }
-    
-    try {
-      const addresses = [...(currentUser.addresses || [])];
-      const addressIndex = addresses.findIndex(a => a.id === addressId);
-      
-      if (addressIndex === -1) {
-        throw new Error("Address not found");
-      }
-      
-      // Remove the address
-      addresses.splice(addressIndex, 1);
-      
-      // If we removed the default address and there are other addresses, make the first one default
-      if (addresses.length > 0 && !addresses.some(addr => addr.isDefault)) {
-        addresses[0].isDefault = true;
-      }
-      
-      // Update user in state
-      setCurrentUser({
-        ...currentUser,
-        addresses
-      });
-      
-      // Update user on server
-      await apiRequest('/api/auth/update-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          addresses
-        })
-      });
-      
-      toast({
-        title: "Address deleted",
-        description: "Your address has been removed successfully",
-      });
-    } catch (error: any) {
-      console.error("Delete address error:", error);
-      toast({
-        title: "Failed to delete address",
-        description: error.message || "An error occurred while deleting your address",
-        variant: "destructive",
-      });
-      throw error;
-    }
-  };
-
-  const getDefaultAddress = (): Address | undefined => {
-    if (!currentUser?.addresses) return undefined;
-    return currentUser.addresses.find(addr => addr.isDefault);
-  };
-
   const value: AuthContextType = {
     currentUser,
     loading,
     signUp,
     signIn,
     signOut,
-    addAddress,
-    updateAddress,
-    deleteAddress,
-    getDefaultAddress,
     getAccessToken
   };
 

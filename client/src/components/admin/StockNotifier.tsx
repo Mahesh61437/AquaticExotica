@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Send } from "lucide-react";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 
 interface StockNotifierProps {

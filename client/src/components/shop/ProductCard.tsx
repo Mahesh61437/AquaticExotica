@@ -3,7 +3,7 @@ import { useCart } from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
 import { Check, Package, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";

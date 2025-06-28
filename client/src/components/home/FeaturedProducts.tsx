@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/shop/ProductCard";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { Link } from "wouter";
 import { apiCache } from "@/lib/api-cache";
 

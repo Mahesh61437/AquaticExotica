@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, PenLine } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Order } from "@shared/schema";
+import { Order } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatPrice } from "@/lib/utils";

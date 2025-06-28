@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/accordion";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
-import { Category } from "@shared/schema";
+import { Category } from "@/types";
 
 interface ProductFiltersProps {
   onCategoryChange: (category: string[]) => void;

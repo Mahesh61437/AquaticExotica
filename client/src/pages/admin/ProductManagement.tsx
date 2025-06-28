@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Product, InsertProduct } from "@shared/schema";
+import { Product, InsertProduct } from "@/types";
 import { Loader2, Plus, Edit, Trash2, Tag, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -85,9 +85,9 @@ export default function ProductManagement() {
     name: "",
     description: "",
     price: "",
-    compareAtPrice: null,
+    compareAtPrice: "",
     imageUrl: "",
-    category: "",
+    categoryId: 0,
     tags: [],
     rating: "0",
     stock: 0,
@@ -314,7 +314,7 @@ export default function ProductManagement() {
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
-      category: product.category?.name || "",
+      categoryId: product.category?.id || 0,
       tags: [],
       rating: product.rating,
       stock: product.stock,
@@ -350,7 +350,7 @@ export default function ProductManagement() {
     e.preventDefault();
     
     // Validate form data - image is now optional
-    if (!formData.name || !formData.description || !formData.price || !formData.category) {
+    if (!formData.name || !formData.description || !formData.price || !formData.categoryId) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -382,9 +382,9 @@ export default function ProductManagement() {
       name: "",
       description: "",
       price: "",
-      compareAtPrice: null,
+      compareAtPrice: "",
       imageUrl: "",
-      category: "",
+      categoryId: 0,
       tags: [],
       rating: "0",
       stock: 0,
@@ -582,8 +582,8 @@ export default function ProductManagement() {
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
                 <Select
-                  value={formData.category || ""}
-                  onValueChange={(value) => setFormData({ ...formData, category: value })}
+                  value={formData.categoryId?.toString() || ""}
+                  onValueChange={(value) => setFormData({ ...formData, categoryId: parseInt(value) })}
                   required
                 >
                   <SelectTrigger id="category">
@@ -596,7 +596,7 @@ export default function ProductManagement() {
                       </div>
                     ) : categories && categories.length > 0 ? (
                       categories.map((category: { id: number; name: string }) => (
-                        <SelectItem key={category.id} value={category.name}>
+                        <SelectItem key={category.id} value={category.id.toString()}>
                           {category.name}
                         </SelectItem>
                       ))
@@ -637,7 +637,7 @@ export default function ProductManagement() {
                 <Input
                   id="compareAtPrice"
                   value={formData.compareAtPrice || ""}
-                  onChange={(e) => setFormData({ ...formData, compareAtPrice: e.target.value || null })}
+                  onChange={(e) => setFormData({ ...formData, compareAtPrice: e.target.value || undefined })}
                   placeholder="Original price (if discounted)"
                 />
               </div>
@@ -869,7 +869,16 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={{
                   ...editingProduct,
-                  category: editingProduct.category?.name || "",
+                  category: {
+                    id: editingProduct.category.id,
+                    name: editingProduct.category.name,
+                    slug: editingProduct.category.slug,
+                    description: editingProduct.category.description,
+                    imageUrl: editingProduct.category.imageUrl,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  },
                   tags: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => tag.name) : []
                 }}
                 onSuccess={() => {

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { Link } from "wouter";
 import { formatPrice, generateStarRating } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";

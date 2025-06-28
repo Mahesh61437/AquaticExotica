@@ -1,7 +1,7 @@
 import React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ProductCard } from "./ProductCard";
-import { Product } from "@shared/schema";
+import { Product } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/queryClient";
 
