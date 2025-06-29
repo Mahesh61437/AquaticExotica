@@ -1,11 +1,11 @@
 import React from 'react';
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AuthCartIntegration } from "@/components/auth/AuthCartIntegration";
 import { ThemeProvider } from "next-themes";
 import { Header } from "@/components/layout/Header";
@@ -40,6 +40,49 @@ import DebugLogin from "./components/DebugLogin";
 // Performance optimization
 import { useEffect } from "react";
 import { prefetchHomepageData } from "@/lib/api-cache";
+
+// Protected Route Component
+function ProtectedRoute({ children, requireAuth = false, requireAdmin = false }: { 
+  children: React.ReactNode; 
+  requireAuth?: boolean; 
+  requireAdmin?: boolean; 
+}) {
+  const { currentUser } = useAuth();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (requireAuth && !currentUser) {
+      setLocation('/login');
+      return;
+    }
+    
+    if (requireAdmin && (!currentUser || !currentUser.isAdmin)) {
+      setLocation('/login');
+      return;
+    }
+  }, [currentUser, requireAuth, requireAdmin, setLocation]);
+
+  if (requireAuth && !currentUser) {
+    return null;
+  }
+  
+  if (requireAdmin && (!currentUser || !currentUser.isAdmin)) {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+// Home Redirect Component
+function HomeRedirect() {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation('/home');
+  }, [setLocation]);
+  
+  return null;
+}
 
 function Router() {
   // Prefetch all homepage data as soon as the app loads
@@ -80,22 +123,38 @@ function Router() {
         <AuthCartIntegration />
         <Switch>
           <Route path="/home" component={Home} />
-          <Route path="/" component={() => {
-            // Redirect to /home
-            window.location.href = '/home';
-            return null;
-          }} />
+          <Route path="/" component={HomeRedirect} />
           <Route path="/shop" component={Shop} />
           <Route path="/shop/:category" component={Shop} />
           <Route path="/product/:id" component={ProductDetail} />
-          <Route path="/checkout" component={Checkout} />
+          <Route path="/checkout" component={() => (
+            <ProtectedRoute requireAuth={true}>
+              <Checkout />
+            </ProtectedRoute>
+          )} />
           <Route path="/order-confirmation/:id" component={OrderConfirmation} />
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
-          <Route path="/account" component={Account} />
-          <Route path="/my-orders" component={MyOrders} />
-          <Route path="/orders/:id" component={OrderDetail} />
-          <Route path="/admin" component={AdminDashboard} />
+          <Route path="/account" component={() => (
+            <ProtectedRoute requireAuth={true}>
+              <Account />
+            </ProtectedRoute>
+          )} />
+          <Route path="/my-orders" component={() => (
+            <ProtectedRoute requireAuth={true}>
+              <MyOrders />
+            </ProtectedRoute>
+          )} />
+          <Route path="/orders/:id" component={() => (
+            <ProtectedRoute requireAuth={true}>
+              <OrderDetail />
+            </ProtectedRoute>
+          )} />
+          <Route path="/admin" component={() => (
+            <ProtectedRoute requireAuth={true} requireAdmin={true}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          )} />
           <Route path="/admin-setup" component={AdminSetup} />
           <Route path="/contact" component={Contact} />
           <Route path="/shipping" component={Shipping} />

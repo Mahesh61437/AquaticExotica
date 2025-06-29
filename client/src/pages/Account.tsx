@@ -231,7 +231,23 @@ function AddressForm() {
           <Button 
             className="mt-4" 
             variant="outline"
-            onClick={() => setIsOpen(true)}
+            onClick={() => {
+              setEditingAddress(null);
+              form.reset({
+                addressLine1: "",
+                addressLine2: "",
+                city: "",
+                state: "",
+                zipCode: "",
+                country: "India",
+                recipientName: "",
+                recipientEmail: "",
+                recipientPhone: "",
+                isDefault: false,
+              });
+              setSelectedState("");
+              setIsOpen(true);
+            }}
           >
             Add New Address
           </Button>
@@ -288,7 +304,19 @@ function AddressForm() {
             className="w-full"
             onClick={() => {
               setEditingAddress(null);
-              form.reset();
+              form.reset({
+                addressLine1: "",
+                addressLine2: "",
+                city: "",
+                state: "",
+                zipCode: "",
+                country: "India",
+                recipientName: "",
+                recipientEmail: "",
+                recipientPhone: "",
+                isDefault: false,
+              });
+              setSelectedState("");
               setIsOpen(true);
             }}
           >
@@ -528,19 +556,12 @@ export default function Account() {
     return [];
   }, [ordersResponse]);
 
-  useEffect(() => {
-    // If user is not logged in, redirect to login page
-    if (!currentUser) {
-      setLocation("/login");
-    }
-  }, [currentUser, setLocation]);
-
   const handleSignOut = async () => {
     await signOut();
     setLocation("/login");
   };
 
-  // Return early if user is not logged in
+  // Add null check for currentUser
   if (!currentUser) {
     return null;
   }
