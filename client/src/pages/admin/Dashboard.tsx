@@ -1,50 +1,74 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
-import { Redirect } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductManagement from "./ProductManagement";
 import CategoryManagement from "./CategoryManagement";
+import TagManagement from "./TagManagement";
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
-import TagManagement from "./TagManagement";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  LayoutDashboard,
-  ShoppingBag,
-  Tags,
-  ListOrdered,
-  Users,
-  Loader2,
-  Hash,
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { apiRequest } from "@/lib/queryClient";
+
+interface AdminStats {
+  products: number;
+  categories: number;
+  orders: number;
+  users: number;
+  tags: number;
+}
 
 export default function AdminDashboard() {
-  const { currentUser, loading } = useAuth();
+  const [, setLocation] = useLocation();
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<AdminStats>({
     products: 0,
     categories: 0,
     orders: 0,
     users: 0,
-    tags: 0
+    tags: 0,
   });
 
-  // Fetch stats for the overview page
+  // Fetch admin stats
+  const { data: productsResponse } = useQuery({
+    queryKey: ["/api/products/"],
+    queryFn: async () => await apiRequest("/api/products/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const { data: categoriesResponse } = useQuery({
+    queryKey: ["/api/categories/"],
+    queryFn: async () => await apiRequest("/api/categories/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const { data: ordersResponse } = useQuery({
+    queryKey: ["/api/orders/"],
+    queryFn: async () => await apiRequest("/api/orders/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const { data: usersResponse } = useQuery({
+    queryKey: ["/api/users/"],
+    queryFn: async () => await apiRequest("/api/users/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const { data: tagsResponse } = useQuery({
+    queryKey: ["/api/tags/"],
+    queryFn: async () => await apiRequest("/api/tags/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  // Update stats when data changes
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get counts for all entities
-        const [productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse] = await Promise.all([
-          apiRequest('/api/products/?limit=1000'),
-          apiRequest('/api/categories/?limit=1000'),
-          apiRequest('/api/orders/?limit=1000'),
-          apiRequest('/api/users/?limit=1000'),
-          apiRequest('/api/tags/?limit=1000')
-        ]);
-        
-        // Handle different response formats for each entity
         const getCount = (response: any): number => {
+          if (!response) return 0;
           if (Array.isArray(response)) {
             return response.length;
           } else if (response && typeof response === 'object' && 'data' in response) {
@@ -68,19 +92,11 @@ export default function AdminDashboard() {
     if (currentUser?.isAdmin) {
       fetchStats();
     }
-  }, [currentUser]);
+  }, [currentUser, productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse]);
 
-  // Redirect non-admin users
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  // ProtectedRoute ensures currentUser is not null and isAdmin, but TypeScript doesn't know that
   if (!currentUser || !currentUser.isAdmin) {
-    return <Redirect to="/" />;
+    return null;
   }
 
   return (

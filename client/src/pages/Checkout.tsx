@@ -33,7 +33,7 @@ export default function Checkout() {
     );
   }
 
-  // Add null check for currentUser
+  // ProtectedRoute ensures currentUser is not null, but TypeScript doesn't know that
   if (!currentUser) {
     return null;
   }

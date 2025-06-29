@@ -42,6 +42,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { ClearableInput } from "@/components/ui/clearable-input";
 
 // Define saved address interface
 interface SavedAddress {
@@ -356,7 +357,7 @@ export function CheckoutForm() {
                     <FormItem>
                       <FormLabel>Full Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <ClearableInput placeholder="John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -372,7 +373,7 @@ export function CheckoutForm() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="john.doe@example.com" {...field} />
+                        <ClearableInput type="email" placeholder="john.doe@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -386,7 +387,7 @@ export function CheckoutForm() {
                     <FormItem>
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
-                        <Input placeholder="(123) 456-7890" {...field} />
+                        <ClearableInput placeholder="(123) 456-7890" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -401,7 +402,7 @@ export function CheckoutForm() {
                   <FormItem>
                     <FormLabel>Street Address</FormLabel>
                     <FormControl>
-                      <Input placeholder="123 Main St" {...field} />
+                      <ClearableInput placeholder="123 Main St" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -471,7 +472,7 @@ export function CheckoutForm() {
                     <FormItem>
                       <FormLabel>PIN Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="600001" maxLength={6} {...field} />
+                        <ClearableInput placeholder="600001" maxLength={6} {...field} />
                       </FormControl>
                       <FormDescription>
                         Enter a 6-digit Indian PIN code
@@ -546,7 +547,7 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>Full Name</FormLabel>
                           <FormControl>
-                            <Input placeholder="John Doe" {...field} />
+                            <ClearableInput placeholder="John Doe" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -561,7 +562,7 @@ export function CheckoutForm() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="john.doe@example.com" {...field} />
+                          <ClearableInput type="email" placeholder="john.doe@example.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -575,7 +576,7 @@ export function CheckoutForm() {
                       <FormItem>
                         <FormLabel>Street Address</FormLabel>
                         <FormControl>
-                          <Input placeholder="123 Main St" {...field} />
+                          <ClearableInput placeholder="123 Main St" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -644,7 +645,7 @@ export function CheckoutForm() {
                         <FormItem>
                           <FormLabel>PIN Code</FormLabel>
                           <FormControl>
-                            <Input placeholder="600001" maxLength={6} {...field} />
+                            <ClearableInput placeholder="600001" maxLength={6} {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>

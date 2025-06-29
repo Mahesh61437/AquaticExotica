@@ -47,21 +47,37 @@ function ProtectedRoute({ children, requireAuth = false, requireAdmin = false }:
   requireAuth?: boolean; 
   requireAdmin?: boolean; 
 }) {
-  const { currentUser } = useAuth();
+  const { currentUser, loading } = useAuth();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (requireAuth && !currentUser) {
-      setLocation('/login');
-      return;
+    // Only redirect after auth state has been fully loaded
+    if (!loading) {
+      if (requireAuth && !currentUser) {
+        setLocation('/login');
+        return;
+      }
+      
+      if (requireAdmin && (!currentUser || !currentUser.isAdmin)) {
+        setLocation('/login');
+        return;
+      }
     }
-    
-    if (requireAdmin && (!currentUser || !currentUser.isAdmin)) {
-      setLocation('/login');
-      return;
-    }
-  }, [currentUser, requireAuth, requireAdmin, setLocation]);
+  }, [currentUser, loading, requireAuth, requireAdmin, setLocation]);
 
+  // Show loading state while auth is being restored
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          <span className="text-sm text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if user is not authenticated (will redirect)
   if (requireAuth && !currentUser) {
     return null;
   }

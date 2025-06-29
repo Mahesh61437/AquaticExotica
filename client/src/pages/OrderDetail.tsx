@@ -98,17 +98,6 @@ export default function OrderDetail() {
     if (!match || !params?.id) return;
 
     try {
-      // If not authenticated, redirect to login
-      if (!currentUser) {
-        toast({
-          title: "Authentication required",
-          description: "Please sign in to view order details",
-          variant: "destructive",
-        });
-        navigate("/login");
-        return;
-      }
-
       setLoading(true);
       const orderId = params.id;
       const response = await apiRequest<NewOrder | PaginatedResponse<NewOrder>>(`/api/orders/${orderId}`);
@@ -156,7 +145,7 @@ export default function OrderDetail() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, match, params?.id]);
+  }, [match, params?.id, navigate, toast]);
 
   useEffect(() => {
     fetchOrderDetails();

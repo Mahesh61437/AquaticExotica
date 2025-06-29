@@ -102,17 +102,6 @@ export default function MyOrders() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        // If not authenticated, redirect to login
-        if (!currentUser) {
-          toast({
-            title: "Authentication required",
-            description: "Please sign in to view your orders",
-            variant: "destructive",
-          });
-          navigate("/login");
-          return;
-        }
-
         setLoading(true);
         const response = await apiRequest<NewOrder[] | PaginatedResponse<NewOrder>>("/api/orders/myorders/");
         
@@ -138,7 +127,7 @@ export default function MyOrders() {
     };
 
     fetchOrders();
-  }, [currentUser, navigate, toast]);
+  }, [toast]);
 
   // Format date to a more readable format
   const formatDate = (dateString: string) => {

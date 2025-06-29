@@ -22,6 +22,7 @@ import { formatPrice } from "@/lib/utils";
 import { Loader2, Package, MapPin, Edit, Trash2 } from "lucide-react";
 import React from "react";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
+import { ClearableInput } from "@/components/ui/clearable-input";
 
 // Address form schema
 const addressFormSchema = z.object({
@@ -342,7 +343,7 @@ function AddressForm() {
                   <FormItem>
                     <FormLabel>Recipient Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter recipient's full name" {...field} />
+                      <ClearableInput placeholder="Enter recipient's full name" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -356,7 +357,7 @@ function AddressForm() {
                   <FormItem>
                     <FormLabel>Address Line 1</FormLabel>
                     <FormControl>
-                      <Input placeholder="Street address, House No." {...field} />
+                      <ClearableInput placeholder="Street address, House No." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -370,7 +371,7 @@ function AddressForm() {
                   <FormItem>
                     <FormLabel>Address Line 2 (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Apartment, suite, unit, etc." {...field} />
+                      <ClearableInput placeholder="Apartment, suite, unit, etc." {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -440,7 +441,7 @@ function AddressForm() {
                     <FormItem>
                       <FormLabel>ZIP Code</FormLabel>
                       <FormControl>
-                        <Input placeholder="ZIP code" {...field} />
+                        <ClearableInput placeholder="ZIP code" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -454,7 +455,7 @@ function AddressForm() {
                     <FormItem>
                       <FormLabel>Country</FormLabel>
                       <FormControl>
-                        <Input placeholder="Country" {...field} />
+                        <ClearableInput placeholder="Country" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -469,7 +470,7 @@ function AddressForm() {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="Enter recipient's email" {...field} />
+                      <ClearableInput placeholder="Enter recipient's email" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -483,7 +484,7 @@ function AddressForm() {
                   <FormItem>
                     <FormLabel>Phone Number</FormLabel>
                     <FormControl>
-                      <Input placeholder="10-digit phone number" maxLength={10} {...field} />
+                      <ClearableInput placeholder="10-digit phone number" maxLength={10} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -561,7 +562,7 @@ export default function Account() {
     setLocation("/login");
   };
 
-  // Add null check for currentUser
+  // ProtectedRoute ensures currentUser is not null, but TypeScript doesn't know that
   if (!currentUser) {
     return null;
   }
