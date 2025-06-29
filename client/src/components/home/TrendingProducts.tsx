@@ -13,8 +13,8 @@ export function TrendingProducts() {
   const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
   
   // Use React Query for cache invalidation
-  const { data: trendingProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products/trending"],
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: ["/api/products/"],
     staleTime: 60 * 1000, // 1 minute
   });
   
@@ -23,12 +23,15 @@ export function TrendingProducts() {
     const loadData = async () => {
       try {
         setIsClientLoading(true);
-        const productsData = await apiCache.get<Product[]>('/api/products/trending');
-        setLocalProducts(productsData);
+        const productsData = await apiCache.get<Product[]>('/api/products/');
+        
+        // Filter trending products
+        const trendingData = productsData.filter(product => product.isTrending);
+        setLocalProducts(trendingData);
         
         // Initialize image loading states
         const initialLoadedState: Record<number, boolean> = {};
-        productsData.forEach(product => {
+        trendingData.forEach(product => {
           initialLoadedState[product.id] = false;
         });
         setLoadedImages(initialLoadedState);
@@ -44,10 +47,19 @@ export function TrendingProducts() {
   
   // Update local state when React Query data changes
   useEffect(() => {
-    if (trendingProducts.length > 0) {
-      setLocalProducts(trendingProducts);
+    if (allProducts.length > 0) {
+      // Filter trending products
+      const trendingData = allProducts.filter(product => product.isTrending);
+      setLocalProducts(trendingData);
+      
+      // Initialize image loading states
+      const initialLoadedState: Record<number, boolean> = {};
+      trendingData.forEach(product => {
+        initialLoadedState[product.id] = false;
+      });
+      setLoadedImages(initialLoadedState);
     }
-  }, [trendingProducts]);
+  }, [allProducts]);
   
   // Intersection Observer for lazy loading images
   useEffect(() => {

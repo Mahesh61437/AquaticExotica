@@ -40,17 +40,17 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/shop?sort=popular" className="text-gray-400 hover:text-white transition">
+                <Link href="/shop?filter=trending" className="text-gray-400 hover:text-white transition">
                   Bestsellers
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=plants" className="text-gray-400 hover:text-white transition">
+                <Link href="/shop/plants" className="text-gray-400 hover:text-white transition">
                   Aquatic Plants
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=equipment" className="text-gray-400 hover:text-white transition">
+                <Link href="/shop/equipment" className="text-gray-400 hover:text-white transition">
                   Aquarium Equipment
                 </Link>
               </li>

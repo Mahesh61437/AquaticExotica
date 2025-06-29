@@ -21,21 +21,9 @@ export default function FeaturedProducts() {
     best: []
   });
   
-  // Still use React Query for cache invalidation and refetching
-  const { data: featuredProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products/featured"],
-    staleTime: 60 * 1000, // 1 minute
-  });
-  
-  const { data: newProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products/new"],
-    enabled: activeCategory === "new",
-    staleTime: 60 * 1000, // 1 minute
-  });
-  
-  const { data: saleProducts = [] } = useQuery<Product[]>({
-    queryKey: ["/api/products/sale"],
-    enabled: activeCategory === "sale",
+  // Use the main products endpoint and filter client-side
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: ["/api/products/"],
     staleTime: 60 * 1000, // 1 minute
   });
 
@@ -46,12 +34,13 @@ export default function FeaturedProducts() {
       try {
         setIsClientLoading(true);
         
-        // Parallel data fetching
-        const [featuredData, newData, saleData] = await Promise.all([
-          apiCache.get<Product[]>('/api/products/featured'),
-          apiCache.get<Product[]>('/api/products/new'),
-          apiCache.get<Product[]>('/api/products/sale')
-        ]);
+        // Get all products from the main endpoint
+        const productsData = await apiCache.get<Product[]>('/api/products/');
+        
+        // Filter products based on flags
+        const featuredData = productsData.filter(product => product.isFeatured);
+        const newData = productsData.filter(product => product.isNew);
+        const saleData = productsData.filter(product => product.isSale);
         
         // Calculate best sellers (sort by rating)
         const bestData = [...featuredData].sort((a, b) => {
@@ -78,36 +67,27 @@ export default function FeaturedProducts() {
   
   // Update local state when React Query data changes
   useEffect(() => {
-    if (featuredProducts.length > 0) {
-      setLocalProducts(prev => ({
-        ...prev,
-        featured: featuredProducts,
-        best: [...featuredProducts].sort((a, b) => {
-          const ratingA = typeof a.rating === 'string' ? parseFloat(a.rating) : a.rating;
-          const ratingB = typeof b.rating === 'string' ? parseFloat(b.rating) : b.rating;
-          return ratingB - ratingA;
-        })
-      }));
+    if (allProducts.length > 0) {
+      // Filter products based on flags
+      const featuredData = allProducts.filter(product => product.isFeatured);
+      const newData = allProducts.filter(product => product.isNew);
+      const saleData = allProducts.filter(product => product.isSale);
+      
+      // Calculate best sellers (sort by rating)
+      const bestData = [...featuredData].sort((a, b) => {
+        const ratingA = typeof a.rating === 'string' ? parseFloat(a.rating) : a.rating;
+        const ratingB = typeof b.rating === 'string' ? parseFloat(b.rating) : b.rating;
+        return ratingB - ratingA;
+      });
+      
+      setLocalProducts({
+        featured: featuredData,
+        new: newData,
+        sale: saleData,
+        best: bestData
+      });
     }
-  }, [featuredProducts]);
-  
-  useEffect(() => {
-    if (newProducts.length > 0) {
-      setLocalProducts(prev => ({
-        ...prev,
-        new: newProducts
-      }));
-    }
-  }, [newProducts]);
-  
-  useEffect(() => {
-    if (saleProducts.length > 0) {
-      setLocalProducts(prev => ({
-        ...prev,
-        sale: saleProducts
-      }));
-    }
-  }, [saleProducts]);
+  }, [allProducts]);
 
   // Determine which products to show based on active category
   let displayProducts: Product[] = [];

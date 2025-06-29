@@ -20,6 +20,9 @@ interface ApiProduct {
     slug: string;
     description: string | null;
     imageUrl: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
   };
   tags: number[]; // Tag IDs for API operations
   tagDetails: ApiTag[]; // Tag objects for display
@@ -57,16 +60,13 @@ interface ProductGridProps {
 }
 
 export function ProductGrid({ category, filter, searchQuery, activeCategories = [] }: ProductGridProps) {
-  // Determine the correct endpoint based on props
+  // Always use the main products endpoint and filter client-side
   let endpoint = "/api/products/";
+  
   // Only use category-specific endpoint if we have a category URL param
   // and no active category filters (which means filtering is handled client-side)
   if (category && activeCategories.length <= 1) {
     endpoint = `/api/products/category/${category}`;
-  } else if (filter === "new") {
-    endpoint = "/api/products/new";
-  } else if (filter === "sale") {
-    endpoint = "/api/products/sale";
   } else if (searchQuery) {
     endpoint = `/api/products/search?q=${encodeURIComponent(searchQuery)}`;
   }
@@ -125,6 +125,28 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     return [];
   }, [response]);
 
+  // Apply client-side filtering based on filter parameter
+  const filteredProducts = React.useMemo(() => {
+    if (!filter) return products;
+    
+    switch (filter) {
+      case "new":
+        return products.filter(product => product.isNew);
+      case "sale":
+        return products.filter(product => product.isSale);
+      case "trending":
+        return products.filter(product => product.isTrending);
+      default:
+        return products;
+    }
+  }, [products, filter]);
+
+  // Always apply category filtering if there are active categories
+  // This ensures filters work even when on a category page
+  const displayProducts = activeCategories.length > 0
+    ? filteredProducts.filter(product => activeCategories.includes(product.category?.name || ''))
+    : filteredProducts;
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -152,7 +174,7 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     );
   }
 
-  if (products.length === 0) {
+  if (displayProducts.length === 0) {
     return (
       <div className="text-center py-10">
         <h3 className="text-xl font-medium mb-2">No products found</h3>
@@ -165,30 +187,38 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     );
   }
 
-  // Always apply category filtering if there are active categories
-  // This ensures filters work even when on a category page
-  const displayProducts = activeCategories.length > 0
-    ? products.filter(product => activeCategories.includes(product.category?.name || ''))
-    : products;
-
-  if (displayProducts.length === 0 && activeCategories.length > 0) {
-    return (
-      <div className="text-center py-10">
-        <h3 className="text-xl font-medium mb-2">No products found</h3>
-        <p className="text-gray-500">
-          No products match the selected categories. Try different filters.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {displayProducts.map((product) => (
         <ProductCard key={product.id} product={{
-          ...product,
-          category: product.category?.name || '',
-          tags: convertTagsToNames(product.tagDetails)
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          price: product.price,
+          compareAtPrice: product.compareAtPrice,
+          discountPercentage: product.discountPercentage,
+          stock: product.stock,
+          category: product.category || { 
+            id: 0, 
+            name: '', 
+            slug: '', 
+            description: null, 
+            imageUrl: '', 
+            isActive: true, 
+            createdAt: '', 
+            updatedAt: '' 
+          },
+          tags: convertTagsToNames(product.tagDetails),
+          rating: product.rating,
+          isActive: product.isActive,
+          isNew: product.isNew,
+          isSale: product.isSale,
+          isFeatured: product.isFeatured,
+          isTrending: product.isTrending,
+          isInStock: product.isInStock,
+          imageUrl: product.imageUrl,
+          createdAt: '',
+          updatedAt: ''
         }} />
       ))}
     </div>
