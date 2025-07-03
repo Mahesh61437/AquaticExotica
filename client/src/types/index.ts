@@ -18,6 +18,7 @@ export interface Product {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
+  thumbnailUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -38,6 +39,7 @@ export interface InsertProduct {
   isFeatured: boolean;
   isTrending: boolean;
   imageUrl: string;
+  thumbnailUrl?: string;
 }
 
 // Category types

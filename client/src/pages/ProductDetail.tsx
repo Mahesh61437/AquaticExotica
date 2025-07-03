@@ -48,6 +48,7 @@ interface ApiProduct {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
+  thumbnailUrl?: string;
 }
 
 // Define tag type
@@ -260,7 +261,10 @@ export default function ProductDetail() {
               )}
             </div>
             
-            <p className="mt-6 text-gray-700">{product.description}</p>
+            <div 
+              className="mt-6 text-gray-700 prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: product.description }}
+            />
             
             <div className="mt-8 border-t border-b py-4">
               <div className="flex items-center mb-4">
@@ -341,7 +345,10 @@ export default function ProductDetail() {
                 <AccordionTrigger className="text-base font-medium py-4">Product Details</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2">
-                    <p>{product.description}</p>
+                    <div 
+                      className="prose prose-sm max-w-none"
+                      dangerouslySetInnerHTML={{ __html: product.description }}
+                    />
                     <ul className="list-disc list-inside space-y-1">
                       <li>Category: {product.category?.name || 'N/A'}</li>
                       <li>Tags: {convertTagsToNames(product.tagDetails).join(', ')}</li>
@@ -408,8 +415,27 @@ export default function ProductDetail() {
               {relatedProducts.map((relatedProduct: ApiProduct) => (
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
-                  category: relatedProduct.category?.name || '',
-                  tags: convertTagsToNames(relatedProduct.tagDetails)
+                  category: {
+                    id: relatedProduct.category.id,
+                    name: relatedProduct.category.name,
+                    slug: relatedProduct.category.slug,
+                    description: relatedProduct.category.description,
+                    imageUrl: relatedProduct.category.imageUrl,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  },
+                  tags: convertTagsToNames(relatedProduct.tagDetails),
+                  tagDetails: relatedProduct.tagDetails.map(tag => ({
+                    id: tag.id,
+                    name: tag.name,
+                    slug: tag.name.toLowerCase().replace(/\s+/g, '-'),
+                    isActive: true,
+                    createdAt: tag.createdAt,
+                    updatedAt: new Date().toISOString()
+                  })),
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
                 }} />
               ))}
             </div>

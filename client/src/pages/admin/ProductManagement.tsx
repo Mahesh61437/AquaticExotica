@@ -36,6 +36,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import React from "react";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 // Define new product type based on API response
 interface ApiProduct {
@@ -63,6 +64,7 @@ interface ApiProduct {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
+  thumbnailUrl?: string;
 }
 
 // Define tag interface
@@ -87,6 +89,7 @@ export default function ProductManagement() {
     price: "",
     compareAtPrice: "",
     imageUrl: "",
+    thumbnailUrl: "",
     categoryId: 0,
     tags: [],
     rating: "0",
@@ -314,6 +317,7 @@ export default function ProductManagement() {
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
+      thumbnailUrl: product.thumbnailUrl,
       categoryId: product.category?.id || 0,
       tags: [],
       rating: product.rating,
@@ -384,6 +388,7 @@ export default function ProductManagement() {
       price: "",
       compareAtPrice: "",
       imageUrl: "",
+      thumbnailUrl: "",
       categoryId: 0,
       tags: [],
       rating: "0",
@@ -610,13 +615,10 @@ export default function ProductManagement() {
             
             <div className="space-y-2">
               <Label htmlFor="description">Description *</Label>
-              <Textarea
-                id="description"
+              <RichTextEditor
                 value={formData.description || ""}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Detailed product description"
-                rows={3}
-                required
+                onChange={(value) => setFormData({ ...formData, description: value })}
+                placeholder="Enter product description..."
               />
             </div>
             
@@ -655,6 +657,19 @@ export default function ProductManagement() {
                 </div>
               </div>
               
+              <div className="space-y-2">
+                <Label htmlFor="thumbnailOptions">Product Thumbnail</Label>
+                <div className="space-y-4">
+                  <FirebaseImageSelector
+                    initialImage={formData.thumbnailUrl}
+                    onImageSelected={(url) => setFormData({ ...formData, thumbnailUrl: url })}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="stock">Stock *</Label>
                 <Input
@@ -879,7 +894,17 @@ export default function ProductManagement() {
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
                   },
-                  tags: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => tag.name) : []
+                  tags: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => tag.name) : [],
+                  tagDetails: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => ({
+                    id: tag.id,
+                    name: tag.name,
+                    slug: tag.name.toLowerCase().replace(/\s+/g, '-'),
+                    isActive: true,
+                    createdAt: tag.createdAt || new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  })) : [],
+                  createdAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
                 }}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });

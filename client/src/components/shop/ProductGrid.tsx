@@ -164,11 +164,17 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
   }
 
   if (error) {
+    // Instead of showing an error, show empty products to allow filtering to work
+    console.warn('API Error loading products:', error);
     return (
       <div className="text-center py-10">
-        <h3 className="text-xl font-medium mb-2">Error loading products</h3>
+        <h3 className="text-xl font-medium mb-2">No products available</h3>
         <p className="text-gray-500">
-          Failed to load products. Please try again later.
+          {searchQuery 
+            ? `No results for "${searchQuery}". Try different keywords.` 
+            : filter 
+            ? `No ${filter} products available at the moment.` 
+            : "No products available at the moment. Please check back later."}
         </p>
       </div>
     );

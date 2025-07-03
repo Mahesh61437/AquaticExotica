@@ -11,8 +11,8 @@ export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
   const [location] = useLocation();
   
-  // Extract URL parameters using wouter's location
-  const urlParams = new URLSearchParams(location.search);
+  // Extract URL parameters using window.location.search
+  const urlParams = new URLSearchParams(window.location.search);
   const searchQuery = urlParams.get("search") || "";
   const filterParam = urlParams.get("filter") || "";
   const categoryParam = urlParams.get("category") || "";
@@ -38,6 +38,8 @@ export default function Shop() {
     pageTitle = "New Arrivals";
   } else if (filterParam === "sale") {
     pageTitle = "On Sale";
+  } else if (filterParam === "trending") {
+    pageTitle = "Bestsellers";
   }
   
   // Clear filters when leaving the shop page

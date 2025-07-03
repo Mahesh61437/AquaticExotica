@@ -12,6 +12,7 @@ import { OptimizedImage } from "@/components/ui/optimized-image";
 // Custom interface for display purposes that allows string[] tags
 interface DisplayProduct extends Omit<Product, 'tags'> {
   tags: string[];
+  thumbnailUrl?: string;
 }
 
 interface ProductCardProps {
@@ -22,6 +23,9 @@ export function ProductCard({ product }: ProductCardProps) {
   const { addItem } = useCart();
   const [isAdded, setIsAdded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+
+  // Use thumbnail if available, otherwise fall back to main image
+  const displayImage = product.thumbnailUrl || product.imageUrl;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,7 +57,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <div className="product-image relative overflow-hidden">
         {/* Using OptimizedImage component instead of manually handling lazy loading */}
         <OptimizedImage 
-          src={product.imageUrl}
+          src={displayImage}
           alt={product.name}
           className="w-full h-full aspect-[3/4]"
           size="medium"
