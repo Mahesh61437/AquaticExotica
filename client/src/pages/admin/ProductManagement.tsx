@@ -672,7 +672,6 @@ export default function ProductManagement() {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="" disabled>Select a category</SelectItem>
                     {categoriesLoading ? (
                       <div className="flex items-center justify-center p-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -684,7 +683,7 @@ export default function ProductManagement() {
                         </SelectItem>
                       ))
                     ) : (
-                      <SelectItem value="default" disabled>No categories found</SelectItem>
+                      <SelectItem value="no-categories" disabled>No categories found</SelectItem>
                     )}
                   </SelectContent>
                 </Select>
