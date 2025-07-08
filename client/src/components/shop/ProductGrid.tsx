@@ -20,10 +20,7 @@ interface ApiProduct {
     slug: string;
     description: string | null;
     imageUrl: string;
-    isActive: boolean;
-    createdAt: string;
-    updatedAt: string;
-  };
+  } | null;
   tags: number[]; // Tag IDs for API operations
   tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
@@ -56,24 +53,55 @@ interface ProductGridProps {
   category?: string;
   filter?: string;
   searchQuery?: string;
-  activeCategories?: string[];
+  activeCategoryIds?: number[];
+  activePriceRange?: [number, number];
+  activeInStock?: boolean;
 }
 
-export function ProductGrid({ category, filter, searchQuery, activeCategories = [] }: ProductGridProps) {
-  // Always use the main products endpoint and filter client-side
+export function ProductGrid({ 
+  category, 
+  filter, 
+  searchQuery, 
+  activeCategoryIds = [], 
+  activePriceRange = [0, 10000],
+  activeInStock = false
+}: ProductGridProps) {
+  // Build the API endpoint with query parameters
   let endpoint = "/api/products/";
+  const queryParams = new URLSearchParams();
   
-  // Only use category-specific endpoint if we have a category URL param
-  // and no active category filters (which means filtering is handled client-side)
-  if (category && activeCategories.length <= 1) {
+  // Add category IDs if any are selected
+  if (activeCategoryIds.length > 0) {
+    queryParams.append('category_id', activeCategoryIds.join(','));
+  }
+  
+  // Add price range if it's not the default
+  if (activePriceRange[0] > 0 || activePriceRange[1] < 10000) {
+    queryParams.append('price_min', activePriceRange[0].toString());
+    queryParams.append('price_max', activePriceRange[1].toString());
+  }
+  
+  // Add in stock filter if active
+  if (activeInStock) {
+    queryParams.append('in_stock', 'true');
+  }
+  
+  // Add search query if present
+  if (searchQuery) {
+    queryParams.append('q', searchQuery);
+  }
+  
+  // Use category-specific endpoint if we have a category URL param and no active filters
+  if (category && activeCategoryIds.length === 0 && activePriceRange[0] === 0 && activePriceRange[1] === 10000 && !activeInStock && !searchQuery) {
     endpoint = `/api/products/category/${category}`;
-  } else if (searchQuery) {
-    endpoint = `/api/products/search?q=${encodeURIComponent(searchQuery)}`;
+  } else if (queryParams.toString()) {
+    endpoint = `/api/products/?${queryParams.toString()}`;
   }
 
   const { data: response, isLoading, error } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
-    queryKey: [endpoint, category, filter, searchQuery, activeCategories],
+    queryKey: [endpoint, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock],
     queryFn: async () => {
+      console.log('🛍️ ProductGrid API call:', endpoint);
       return await apiRequest(endpoint);
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -141,11 +169,8 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
     }
   }, [products, filter]);
 
-  // Always apply category filtering if there are active categories
-  // This ensures filters work even when on a category page
-  const displayProducts = activeCategories.length > 0
-    ? filteredProducts.filter(product => activeCategories.includes(product.category?.name || ''))
-    : filteredProducts;
+  // No need for additional client-side category filtering since we're using API filtering
+  const displayProducts = filteredProducts;
 
   if (isLoading) {
     return (
@@ -204,15 +229,24 @@ export function ProductGrid({ category, filter, searchQuery, activeCategories = 
           compareAtPrice: product.compareAtPrice,
           discountPercentage: product.discountPercentage,
           stock: product.stock,
-          category: product.category || { 
-            id: 0, 
-            name: '', 
-            slug: '', 
-            description: null, 
-            imageUrl: '', 
-            isActive: true, 
-            createdAt: '', 
-            updatedAt: '' 
+          category: product.category ? {
+            id: product.category.id,
+            name: product.category.name,
+            slug: product.category.slug,
+            description: product.category.description,
+            imageUrl: product.category.imageUrl,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          } : {
+            id: 0,
+            name: 'Uncategorized',
+            slug: 'uncategorized',
+            description: null,
+            imageUrl: '',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
           },
           tags: convertTagsToNames(product.tagDetails),
           rating: product.rating,

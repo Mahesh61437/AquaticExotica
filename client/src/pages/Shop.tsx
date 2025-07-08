@@ -18,7 +18,9 @@ export default function Shop() {
   const categoryParam = urlParams.get("category") || "";
 
   // State for filters
-  const [activeCategories, setActiveCategories] = useState<string[]>([]);
+  const [activeCategoryIds, setActiveCategoryIds] = useState<number[]>([]);
+  const [activePriceRange, setActivePriceRange] = useState<[number, number]>([0, 10000]);
+  const [activeInStock, setActiveInStock] = useState<boolean>(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
   // Determine page title
@@ -46,23 +48,24 @@ export default function Shop() {
   useEffect(() => {
     return () => {
       // This cleanup function runs when the component unmounts (user leaves the page)
-      setActiveCategories([]); // Reset filters
+      setActiveCategoryIds([]); // Reset filters
+      setActivePriceRange([0, 10000]);
+      setActiveInStock(false);
     };
   }, []);
 
   // Set active category if coming from category route or query parameter, but only on initial render
   // This prevents resetting activeCategories when user manually changes filters
   useEffect(() => {
-    if (params?.category && activeCategories.length === 0) {
-      // Convert slug to proper category name
-      const category = params.category.charAt(0).toUpperCase() + params.category.slice(1);
-      setActiveCategories([category]);
-    } else if (categoryParam && activeCategories.length === 0) {
+    if (params?.category && activeCategoryIds.length === 0) {
+      // For now, we'll handle category pages differently - they'll use the category-specific API
+      // and we won't set activeCategoryIds to avoid conflicts
+    } else if (categoryParam && activeCategoryIds.length === 0) {
       // Handle category from query parameter
-      const category = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
-      setActiveCategories([category]);
+      // This would need to be converted from category name to ID
+      // For now, we'll handle this in the ProductGrid component
     }
-  }, [params?.category, categoryParam, activeCategories.length]);
+  }, [params?.category, categoryParam, activeCategoryIds.length]);
 
   return (
     <>
@@ -90,15 +93,29 @@ export default function Shop() {
                 variant="outline" 
                 className="mt-4 md:mt-0 md:hidden"
               >
-                <Filter className="h-4 w-4 mr-2" /> Filters
+                <Filter className="h-4 w-4 mr-2" /> 
+                Filters
+                {(activeCategoryIds.length > 0 || activePriceRange[0] > 0 || activePriceRange[1] < 10000 || activeInStock) && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                    {[
+                      activeCategoryIds.length,
+                      (activePriceRange[0] > 0 || activePriceRange[1] < 10000) ? 1 : 0,
+                      activeInStock ? 1 : 0
+                    ].reduce((a, b) => a + b, 0)}
+                  </span>
+                )}
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[90vw] sm:max-w-md">
               <div className="p-4">
                 <h2 className="text-xl font-heading font-bold mb-6">Filters</h2>
                 <ProductFilters
-                  onCategoryChange={setActiveCategories}
-                  activeCategories={activeCategories}
+                  onCategoryChange={setActiveCategoryIds}
+                  activeCategoryIds={activeCategoryIds}
+                  onPriceChange={setActivePriceRange}
+                  activePriceRange={activePriceRange}
+                  onInStockChange={setActiveInStock}
+                  activeInStock={activeInStock}
                 />
               </div>
             </SheetContent>
@@ -109,8 +126,12 @@ export default function Shop() {
           {/* Desktop Filters */}
           <div className="hidden md:block">
             <ProductFilters
-              onCategoryChange={setActiveCategories}
-              activeCategories={activeCategories}
+              onCategoryChange={setActiveCategoryIds}
+              activeCategoryIds={activeCategoryIds}
+              onPriceChange={setActivePriceRange}
+              activePriceRange={activePriceRange}
+              onInStockChange={setActiveInStock}
+              activeInStock={activeInStock}
             />
           </div>
           
@@ -120,7 +141,9 @@ export default function Shop() {
               category={params?.category} 
               filter={filterParam} 
               searchQuery={searchQuery}
-              activeCategories={activeCategories}
+              activeCategoryIds={activeCategoryIds}
+              activePriceRange={activePriceRange}
+              activeInStock={activeInStock}
             />
           </div>
         </div>
