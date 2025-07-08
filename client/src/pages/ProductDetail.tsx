@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
-import { ShoppingCart, Package, ChevronRight, Truck, RotateCcw, Shield } from "lucide-react";
+import { ShoppingCart, Package, ChevronRight, Truck, RotateCcw, Shield, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -18,9 +18,18 @@ import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
+import { ProductImageCarousel } from "@/components/product/ProductImageCarousel";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import React from "react";
+
+// Define image type
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  order: number;
+  createdAt: string;
+}
 
 // Define new product type based on API response
 interface ApiProduct {
@@ -37,7 +46,7 @@ interface ApiProduct {
     slug: string;
     description: string | null;
     imageUrl: string;
-  };
+  } | null;
   tags: number[]; // Tag IDs for API operations
   tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
@@ -49,6 +58,7 @@ interface ApiProduct {
   isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  images?: ProductImage[]; // Array of product images for carousel
 }
 
 // Define tag type
@@ -211,24 +221,25 @@ export default function ProductDetail() {
           <a href="/home" className="hover:text-primary">Home</a>
           <ChevronRight className="h-4 w-4 mx-2" />
           <a href="/shop" className="hover:text-primary">Shop</a>
-          <ChevronRight className="h-4 w-4 mx-2" />
-          <a href={`/shop/${product.category?.slug || product.category?.name?.toLowerCase()}`} className="hover:text-primary">
-            {product.category?.name || 'Category'}
-          </a>
+          {product.category && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-2" />
+              <a href={`/shop/${product.category.slug || product.category.name?.toLowerCase()}`} className="hover:text-primary">
+                {product.category.name || 'Category'}
+              </a>
+            </>
+          )}
           <ChevronRight className="h-4 w-4 mx-2" />
           <span className="text-gray-700 font-medium">{product.name}</span>
         </div>
 
         {/* Product Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          {/* Product Image */}
-          <div className="aspect-[3/4] overflow-hidden rounded-lg">
-            <img 
-              src={product.imageUrl} 
-              alt={product.name} 
-              className="w-full h-full object-cover"
-            />
-          </div>
+          {/* Product Image Carousel */}
+          <ProductImageCarousel 
+            images={product.images || []}
+            fallbackImage={product.imageUrl}
+          />
 
           {/* Product Info */}
           <div>
@@ -466,12 +477,21 @@ export default function ProductDetail() {
               {relatedProducts.map((relatedProduct: ApiProduct) => (
                 <ProductCard key={relatedProduct.id} product={{
                   ...relatedProduct,
-                  category: {
+                  category: relatedProduct.category ? {
                     id: relatedProduct.category.id,
                     name: relatedProduct.category.name,
                     slug: relatedProduct.category.slug,
                     description: relatedProduct.category.description,
                     imageUrl: relatedProduct.category.imageUrl,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  } : {
+                    id: 0,
+                    name: 'Uncategorized',
+                    slug: 'uncategorized',
+                    description: null,
+                    imageUrl: '',
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()

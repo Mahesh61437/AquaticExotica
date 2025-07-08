@@ -53,7 +53,7 @@ interface ApiProduct {
     slug: string;
     description: string | null;
     imageUrl: string;
-  };
+  } | null;
   tags: number[]; // Tag IDs for API operations
   tagDetails: TagItem[]; // Tag objects for display
   rating: string;
@@ -105,6 +105,18 @@ export default function ProductManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const requiredFields = [
+    'name',
+    'description',
+    'price',
+    'stock',
+    'categoryId',
+    'imageUrl',
+  ];
+  const isFormValid = requiredFields.every(
+    (field) => formData[field as keyof typeof formData] && formData[field as keyof typeof formData] !== '' && formData[field as keyof typeof formData] !== 0
+  );
+  const [formError, setFormError] = useState<string | null>(null);
   
   // Debounce search input
   useEffect(() => {
@@ -353,12 +365,13 @@ export default function ProductManagement() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form data - image is now optional
-    if (!formData.name || !formData.description || !formData.price || !formData.categoryId) {
+    setFormError(null);
+    // Validate all required fields
+    if (!formData.name || !formData.description || !formData.price || !formData.stock || !formData.categoryId || !formData.imageUrl) {
+      setFormError("Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.");
       toast({
         title: "Error",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.",
         variant: "destructive",
       });
       return;
@@ -592,6 +605,10 @@ export default function ProductManagement() {
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Show form error if present */}
+            {formError && (
+              <div className="text-red-600 text-sm font-medium mb-2">{formError}</div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Product Name *</Label>
@@ -615,6 +632,7 @@ export default function ProductManagement() {
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="" disabled>Select a category</SelectItem>
                     {categoriesLoading ? (
                       <div className="flex items-center justify-center p-2">
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -667,7 +685,7 @@ export default function ProductManagement() {
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="imageOptions">Product Image</Label>
+                <Label htmlFor="imageOptions">Product Image *</Label>
                 <div className="space-y-4">
                   <FirebaseImageSelector
                     initialImage={formData.imageUrl}
@@ -700,13 +718,11 @@ export default function ProductManagement() {
                   type="number"
                   value={formData.stock || 0}
                   onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-                  min={0}
+                  min={1}
                   required
                 />
               </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+              
               <div className="space-y-2">
                 <Label htmlFor="rating">Rating (0-5) *</Label>
                 <Input
@@ -717,7 +733,9 @@ export default function ProductManagement() {
                   required
                 />
               </div>
-              
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tags">Tags</Label>
                 <div className="flex gap-2">
@@ -891,7 +909,7 @@ export default function ProductManagement() {
               </Button>
               <Button 
                 type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
+                disabled={!isFormValid || createMutation.isPending || updateMutation.isPending}
               >
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -907,12 +925,21 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={{
                   ...editingProduct,
-                  category: {
+                  category: editingProduct.category ? {
                     id: editingProduct.category.id,
                     name: editingProduct.category.name,
                     slug: editingProduct.category.slug,
                     description: editingProduct.category.description,
                     imageUrl: editingProduct.category.imageUrl,
+                    isActive: true,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  } : {
+                    id: 0,
+                    name: 'Uncategorized',
+                    slug: 'uncategorized',
+                    description: null,
+                    imageUrl: '',
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
