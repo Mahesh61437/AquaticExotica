@@ -75,15 +75,30 @@ interface TagItem {
 }
 
 // Custom interface for API calls with tag IDs
-interface ProductWithTagIds extends Omit<InsertProduct, 'tags'> {
+interface ProductWithTagIds {
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice?: string;
+  discountPercentage?: number;
+  stock: number;
+  categoryId: number;
   tags: number[];
+  rating: string;
+  isActive?: boolean;
+  isNew: boolean;
+  isSale: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  imageUrl: string;
+  thumbnailUrl?: string;
 }
 
 export default function ProductManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ApiProduct | null>(null);
-  const [formData, setFormData] = useState<Partial<InsertProduct>>({
+  const [formData, setFormData] = useState<Partial<ProductWithTagIds>>({
     name: "",
     description: "",
     price: "",
@@ -114,7 +129,16 @@ export default function ProductManagement() {
     'imageUrl',
   ];
   const isFormValid = requiredFields.every(
-    (field) => formData[field as keyof typeof formData] && formData[field as keyof typeof formData] !== '' && formData[field as keyof typeof formData] !== 0
+    (field) => {
+      const value = formData[field as keyof typeof formData];
+      if (field === 'categoryId') {
+        return value && value !== 0;
+      }
+      if (field === 'stock') {
+        return typeof value === 'number' && value >= 0;
+      }
+      return value && value !== '';
+    }
   );
   const [formError, setFormError] = useState<string | null>(null);
   
@@ -243,6 +267,7 @@ export default function ProductManagement() {
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: ProductWithTagIds) => {
+      console.log('🚀 Creating product with data:', data);
       return await apiRequest("/api/products/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -259,10 +284,11 @@ export default function ProductManagement() {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('❌ Create product error:', error);
       toast({
         title: "Error",
-        description: `Failed to create product: ${error.message}`,
+        description: `Failed to create product: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -271,6 +297,7 @@ export default function ProductManagement() {
   // Update product mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<ProductWithTagIds> }) => {
+      console.log('🔄 Updating product', id, 'with data:', data);
       return await apiRequest(`/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -287,10 +314,11 @@ export default function ProductManagement() {
       setIsOpen(false);
       resetForm();
     },
-    onError: (error) => {
+    onError: (error: any) => {
+      console.error('❌ Update product error:', error);
       toast({
         title: "Error",
-        description: `Failed to update product: ${error.message}`,
+        description: `Failed to update product: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     },
@@ -399,17 +427,29 @@ export default function ProductManagement() {
     }
 
     // Prepare data with tag IDs for API
-    const submitData = {
-      ...formData,
-      tags: selectedTagIds || []
+    const submitData: ProductWithTagIds = {
+      name: formData.name || '',
+      description: formData.description || '',
+      price: formData.price || '',
+      compareAtPrice: formData.compareAtPrice || '',
+      stock: formData.stock || 0,
+      categoryId: formData.categoryId || 0,
+      tags: selectedTagIds || [],
+      rating: formData.rating || '0',
+      isNew: formData.isNew || false,
+      isSale: formData.isSale || false,
+      isFeatured: formData.isFeatured || false,
+      isTrending: formData.isTrending || false,
+      imageUrl: formData.imageUrl || '',
+      thumbnailUrl: formData.thumbnailUrl || '',
     };
 
     console.log('📤 Submitting product data:', submitData);
 
     if (editingProduct) {
-      updateMutation.mutate({ id: editingProduct.id, data: submitData as ProductWithTagIds });
+      updateMutation.mutate({ id: editingProduct.id, data: submitData });
     } else {
-      createMutation.mutate(submitData as ProductWithTagIds);
+      createMutation.mutate(submitData);
     }
   };
 
