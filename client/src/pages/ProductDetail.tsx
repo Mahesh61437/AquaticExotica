@@ -250,14 +250,65 @@ export default function ProductDetail() {
                   <span className="text-gray-400 line-through text-lg">
                     {formatPrice(product.compareAtPrice)}
                   </span>
-                  <span className="ml-2 bg-accent text-white text-xs font-bold px-2 py-1 rounded">
-                    SALE
-                  </span>
+                  {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
+                  {(() => {
+                    if (product.isFeatured) {
+                      return (
+                        <span className="ml-2 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          FEATURED
+                        </span>
+                      );
+                    } else if (product.isTrending) {
+                      return (
+                        <span className="ml-2 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          TRENDING
+                        </span>
+                      );
+                    } else if (product.isNew) {
+                      return (
+                        <span className="ml-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          NEW
+                        </span>
+                      );
+                    } else if (product.isSale) {
+                      return (
+                        <span className="ml-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          SALE
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               ) : (
-                <span className="text-2xl font-semibold">
-                  {formatPrice(product.price)}
-                </span>
+                <div className="flex items-center">
+                  <span className="text-2xl font-semibold">
+                    {formatPrice(product.price)}
+                  </span>
+                  {/* Priority Badge for products without compareAtPrice */}
+                  {(() => {
+                    if (product.isFeatured) {
+                      return (
+                        <span className="ml-2 bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          FEATURED
+                        </span>
+                      );
+                    } else if (product.isTrending) {
+                      return (
+                        <span className="ml-2 bg-orange-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          TRENDING
+                        </span>
+                      );
+                    } else if (product.isNew) {
+                      return (
+                        <span className="ml-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                          NEW
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
               )}
             </div>
             

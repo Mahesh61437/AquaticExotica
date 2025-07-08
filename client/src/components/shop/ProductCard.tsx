@@ -66,13 +66,43 @@ export function ProductCard({ product }: ProductCardProps) {
           onLoad={() => setImageLoaded(true)}
         />
         
-        {/* Sale or New Badge */}
-        {product.isSale && (
-          <div className="badge-sale">SALE</div>
-        )}
-        {product.isNew && (
-          <div className="badge-new">NEW</div>
-        )}
+        {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
+        {(() => {
+          if (product.isFeatured) {
+            return (
+              <div className="absolute top-2 left-2 z-10">
+                <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">
+                  FEATURED
+                </Badge>
+              </div>
+            );
+          } else if (product.isTrending) {
+            return (
+              <div className="absolute top-2 left-2 z-10">
+                <Badge className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+                  TRENDING
+                </Badge>
+              </div>
+            );
+          } else if (product.isNew) {
+            return (
+              <div className="absolute top-2 left-2 z-10">
+                <Badge className="bg-green-600 hover:bg-green-700 text-white font-semibold">
+                  NEW
+                </Badge>
+              </div>
+            );
+          } else if (product.isSale) {
+            return (
+              <div className="absolute top-2 left-2 z-10">
+                <Badge className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+                  SALE
+                </Badge>
+              </div>
+            );
+          }
+          return null;
+        })()}
         
         {/* Quick Actions */}
         <div className="quick-actions">

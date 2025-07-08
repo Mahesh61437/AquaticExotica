@@ -16,6 +16,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -59,14 +60,11 @@ export default function AdminSetup() {
         secretKey: data.secretKey
       };
       
-      const response = await apiRequest("POST", "/api/auth/create-first-admin", payload);
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create admin account");
-      }
-
-      const result = await response.json();
+      const result = await apiRequest("/api/auth/create-first-admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
       toast({
         title: "Success",
@@ -134,7 +132,7 @@ export default function AdminSetup() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••" {...field} />
+                      <PasswordInput placeholder="••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -148,7 +146,7 @@ export default function AdminSetup() {
                   <FormItem>
                     <FormLabel>Confirm Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="••••••" {...field} />
+                      <PasswordInput placeholder="••••••" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -162,8 +160,7 @@ export default function AdminSetup() {
                   <FormItem>
                     <FormLabel>Secret Setup Key</FormLabel>
                     <FormControl>
-                      <Input 
-                        type="password" 
+                      <PasswordInput 
                         placeholder="Enter setup key" 
                         {...field} 
                       />

@@ -310,6 +310,7 @@ export default function ProductManagement() {
   });
 
   const handleEdit = (product: ApiProduct) => {
+    console.log('✏️ Editing product:', product.name, 'with image URL:', product.imageUrl);
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -363,9 +364,25 @@ export default function ProductManagement() {
       return;
     }
     
-    // Set default placeholder image if no image was uploaded
-    if (!formData.imageUrl) {
-      formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
+    // Check if image URL is empty or just whitespace
+    const hasImage = formData.imageUrl && formData.imageUrl.trim() !== "";
+    
+    if (!hasImage) {
+      const usePlaceholder = window.confirm(
+        "No image has been selected. Would you like to use a placeholder image, or would you prefer to add an image first?"
+      );
+      
+      if (usePlaceholder) {
+        formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=No+Image";
+      } else {
+        // User chose not to use placeholder, focus on image field
+        toast({
+          title: "Image Required",
+          description: "Please select an image for the product",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     // Prepare data with tag IDs for API
@@ -373,6 +390,8 @@ export default function ProductManagement() {
       ...formData,
       tags: selectedTagIds || []
     };
+
+    console.log('📤 Submitting product data:', submitData);
 
     if (editingProduct) {
       updateMutation.mutate({ id: editingProduct.id, data: submitData as ProductWithTagIds });
@@ -382,6 +401,7 @@ export default function ProductManagement() {
   };
 
   const resetForm = () => {
+    console.log('🔄 Resetting form - clearing image URL');
     setFormData({
       name: "",
       description: "",
@@ -651,7 +671,10 @@ export default function ProductManagement() {
                 <div className="space-y-4">
                   <FirebaseImageSelector
                     initialImage={formData.imageUrl}
-                    onImageSelected={(url) => setFormData({ ...formData, imageUrl: url })}
+                    onImageSelected={(url) => {
+                      console.log('🖼️ Image selected:', url);
+                      setFormData({ ...formData, imageUrl: url });
+                    }}
                     className="w-full"
                   />
                 </div>
