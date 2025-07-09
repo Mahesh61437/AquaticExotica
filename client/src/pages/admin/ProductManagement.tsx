@@ -128,16 +128,25 @@ export default function ProductManagement() {
     'categoryId',
     'imageUrl',
   ];
+  // Simplified validation for debugging
   const isFormValid = requiredFields.every(
     (field) => {
       const value = formData[field as keyof typeof formData];
+      console.log(`Validating ${field}:`, { value, type: typeof value });
+      
       if (field === 'categoryId') {
-        return value && value !== 0;
+        const isValid = value && value !== 0;
+        console.log(`  categoryId validation:`, { value, isValid });
+        return isValid;
       }
       if (field === 'stock') {
-        return typeof value === 'number' && value >= 0;
+        const isValid = typeof value === 'number' && value >= 0;
+        console.log(`  stock validation:`, { value, type: typeof value, isValid });
+        return isValid;
       }
-      return value && value !== '';
+      const isValid = value && value !== '';
+      console.log(`  ${field} validation:`, { value, length: typeof value === 'string' ? value.length : 'N/A', isValid });
+      return isValid;
     }
   );
   
@@ -157,6 +166,30 @@ export default function ProductManagement() {
       }
       return { field, value, isValid, type: typeof value };
     })
+  });
+  
+  // More detailed debugging
+  console.log('🔍 Detailed field analysis:');
+  requiredFields.forEach(field => {
+    const value = formData[field as keyof typeof formData];
+    console.log(`  ${field}:`, {
+      value,
+      type: typeof value,
+      length: typeof value === 'string' ? value.length : 'N/A',
+      isTruthy: Boolean(value),
+      isNotZero: value !== 0,
+      isNumber: typeof value === 'number',
+      isGTEZero: typeof value === 'number' && value >= 0,
+      isValid: (() => {
+        if (field === 'categoryId') {
+          return Boolean(value && value !== 0);
+        } else if (field === 'stock') {
+          return typeof value === 'number' && value >= 0;
+        } else {
+          return Boolean(value && value !== '');
+        }
+      })()
+    });
   });
   
   // Debug form data changes
@@ -1039,6 +1072,40 @@ export default function ProductManagement() {
                 Form valid: {isFormValid ? '✅' : '❌'} | 
                 Pending: {(createMutation.isPending || updateMutation.isPending) ? 'Yes' : 'No'}
               </div>
+              {/* Test button to fill all required fields */}
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  setFormData({
+                    ...formData,
+                    name: "Test Product",
+                    description: "Test description",
+                    price: "100",
+                    stock: 10,
+                    categoryId: categories?.[0]?.id || 1,
+                    imageUrl: "https://placehold.co/600x800/e6e6e6/999999?text=Test+Image"
+                  });
+                }}
+                className="mt-2"
+              >
+                Fill Test Data
+              </Button>
+              {/* Debug button to log current form state */}
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm"
+                onClick={() => {
+                  console.log('🔍 Current form data:', formData);
+                  console.log('🔍 Required fields:', requiredFields);
+                  console.log('🔍 Categories:', categories);
+                }}
+                className="mt-2 ml-2"
+              >
+                Log Form State
+              </Button>
             </DialogFooter>
           </form>
           
