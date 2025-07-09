@@ -141,6 +141,29 @@ export default function ProductManagement() {
     }
   );
   
+  // Debug logging for form validation
+  console.log('🔍 Form validation debug:', {
+    formData,
+    isFormValid,
+    fieldChecks: requiredFields.map(field => {
+      const value = formData[field as keyof typeof formData];
+      let isValid = false;
+      if (field === 'categoryId') {
+        isValid = Boolean(value && value !== 0);
+      } else if (field === 'stock') {
+        isValid = typeof value === 'number' && value >= 0;
+      } else {
+        isValid = Boolean(value && value !== '');
+      }
+      return { field, value, isValid, type: typeof value };
+    })
+  });
+  
+  // Debug form data changes
+  useEffect(() => {
+    console.log('📝 Form data changed:', formData);
+  }, [formData]);
+  
 
   const [formError, setFormError] = useState<string | null>(null);
   
@@ -662,7 +685,13 @@ export default function ProductManagement() {
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Product name"
                   required
+                  className={formData.name && formData.name !== '' ? 'border-green-500' : 'border-red-500'}
                 />
+                {formData.name && formData.name !== '' ? (
+                  <span className="text-xs text-green-600">✅ Valid</span>
+                ) : (
+                  <span className="text-xs text-red-600">❌ Required</span>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -676,7 +705,7 @@ export default function ProductManagement() {
                   }}
                   required
                 >
-                  <SelectTrigger id="category">
+                  <SelectTrigger id="category" className={formData.categoryId && formData.categoryId !== 0 ? 'border-green-500' : 'border-red-500'}>
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -695,6 +724,11 @@ export default function ProductManagement() {
                     )}
                   </SelectContent>
                 </Select>
+                {formData.categoryId && formData.categoryId !== 0 ? (
+                  <span className="text-xs text-green-600">✅ Valid</span>
+                ) : (
+                  <span className="text-xs text-red-600">❌ Required</span>
+                )}
               </div>
             </div>
             
@@ -705,6 +739,11 @@ export default function ProductManagement() {
                 onChange={(value) => setFormData({ ...formData, description: value })}
                 placeholder="Enter product description..."
               />
+              {formData.description && formData.description !== '' ? (
+                <span className="text-xs text-green-600">✅ Valid</span>
+              ) : (
+                <span className="text-xs text-red-600">❌ Required</span>
+              )}
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -716,7 +755,13 @@ export default function ProductManagement() {
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   placeholder="E.g. 1999"
                   required
+                  className={formData.price && formData.price !== '' ? 'border-green-500' : 'border-red-500'}
                 />
+                {formData.price && formData.price !== '' ? (
+                  <span className="text-xs text-green-600">✅ Valid</span>
+                ) : (
+                  <span className="text-xs text-red-600">❌ Required</span>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -742,6 +787,22 @@ export default function ProductManagement() {
                     }}
                     className="w-full"
                   />
+                  {/* Temporary direct input for testing */}
+                  <div className="mt-2">
+                    <Label htmlFor="directImageUrl">Or enter image URL directly:</Label>
+                    <Input
+                      id="directImageUrl"
+                      value={formData.imageUrl || ""}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                      className={formData.imageUrl && formData.imageUrl !== '' ? 'border-green-500' : 'border-red-500'}
+                    />
+                    {formData.imageUrl && formData.imageUrl !== '' ? (
+                      <span className="text-xs text-green-600">✅ Valid</span>
+                    ) : (
+                      <span className="text-xs text-red-600">❌ Required</span>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -771,7 +832,13 @@ export default function ProductManagement() {
                   }}
                   min={1}
                   required
+                  className={typeof formData.stock === 'number' && formData.stock >= 0 ? 'border-green-500' : 'border-red-500'}
                 />
+                {typeof formData.stock === 'number' && formData.stock >= 0 ? (
+                  <span className="text-xs text-green-600">✅ Valid</span>
+                ) : (
+                  <span className="text-xs text-red-600">❌ Required</span>
+                )}
               </div>
               
               <div className="space-y-2">
@@ -967,6 +1034,11 @@ export default function ProductManagement() {
                 )}
                 {editingProduct ? "Update Product" : "Add Product"}
               </Button>
+              {/* Debug info */}
+              <div className="text-xs text-muted-foreground mt-2">
+                Form valid: {isFormValid ? '✅' : '❌'} | 
+                Pending: {(createMutation.isPending || updateMutation.isPending) ? 'Yes' : 'No'}
+              </div>
             </DialogFooter>
           </form>
           

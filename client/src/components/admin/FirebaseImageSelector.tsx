@@ -25,8 +25,19 @@ export function FirebaseImageSelector({
   const [errorLoading, setErrorLoading] = useState(false);
 
   const handlePathChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setImagePath(e.target.value);
+    const newPath = e.target.value;
+    setImagePath(newPath);
     setErrorLoading(false);
+    
+    // Auto-load image when path is entered (if it looks like a valid path)
+    if (newPath && newPath.includes('/')) {
+      // Small delay to avoid too many requests
+      setTimeout(() => {
+        if (imagePath === newPath) {
+          handleLoadImage();
+        }
+      }, 1000);
+    }
   };
 
   const handleTokenChange = (e: React.ChangeEvent<HTMLInputElement>) => {
