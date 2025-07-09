@@ -140,6 +140,8 @@ export default function ProductManagement() {
       return value && value !== '';
     }
   );
+  
+
   const [formError, setFormError] = useState<string | null>(null);
   
   // Debounce search input
@@ -350,7 +352,7 @@ export default function ProductManagement() {
   });
 
   const handleEdit = (product: ApiProduct) => {
-    console.log('✏️ Editing product:', product.name, 'with image URL:', product.imageUrl);
+    console.log('✏️ Editing product:', product.name, 'with image URL:', product.imageUrl, 'thumbnail URL:', product.thumbnailUrl);
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -441,10 +443,12 @@ export default function ProductManagement() {
       isFeatured: formData.isFeatured || false,
       isTrending: formData.isTrending || false,
       imageUrl: formData.imageUrl || '',
-      thumbnailUrl: formData.thumbnailUrl || '',
+      ...(formData.thumbnailUrl && { thumbnailUrl: formData.thumbnailUrl }),
     };
 
     console.log('📤 Submitting product data:', submitData);
+    console.log('🔍 Form data thumbnailUrl:', formData.thumbnailUrl);
+    console.log('🔍 Submit data thumbnailUrl:', submitData.thumbnailUrl);
 
     if (editingProduct) {
       updateMutation.mutate({ id: editingProduct.id, data: submitData });
@@ -665,7 +669,11 @@ export default function ProductManagement() {
                 <Label htmlFor="category">Category *</Label>
                 <Select
                   value={formData.categoryId?.toString() || ""}
-                  onValueChange={(value) => setFormData({ ...formData, categoryId: parseInt(value) })}
+                  onValueChange={(value) => {
+                    if (value !== "no-categories") {
+                      setFormData({ ...formData, categoryId: parseInt(value) });
+                    }
+                  }}
                   required
                 >
                   <SelectTrigger id="category">
@@ -756,7 +764,11 @@ export default function ProductManagement() {
                   id="stock"
                   type="number"
                   value={formData.stock || 0}
-                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const stockValue = value === '' ? 0 : parseInt(value) || 0;
+                    setFormData({ ...formData, stock: stockValue });
+                  }}
                   min={1}
                   required
                 />
