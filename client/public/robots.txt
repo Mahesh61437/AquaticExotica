@@ -1,0 +1,23 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://aquaticexotica.com/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin/
+Disallow: /admin-setup/
+Disallow: /debug/
+Disallow: /signup-test/
+
+# Allow important pages
+Allow: /shop/
+Allow: /product/
+Allow: /contact/
+Allow: /shipping/
+Allow: /faq/
+Allow: /terms/
+Allow: /privacy/
+
+# Crawl delay (optional)
+Crawl-delay: 1 

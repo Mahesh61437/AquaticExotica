@@ -78,3 +78,58 @@ export function getStockStatus(stockLevel: number): { status: StockStatus; color
     };
   }
 }
+
+/**
+ * Generate a SEO-friendly slug from a string
+ */
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
+    .replace(/[\s_-]+/g, '-') // Replace spaces, underscores, and multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ''); // Remove leading and trailing hyphens
+}
+
+/**
+ * Extract product ID from a slug that contains both slug and ID
+ */
+export function extractProductIdFromSlug(slug: string): number | null {
+  const match = slug.match(/-(\d+)$/);
+  return match ? parseInt(match[1]) : null;
+}
+
+/**
+ * Generate a product URL with slug and ID
+ */
+export function generateProductUrl(product: { id: number; name: string }): string {
+  const slug = generateSlug(product.name);
+  return `/product/${slug}-${product.id}`;
+}
+
+/**
+ * Generate a category URL with slug
+ */
+export function generateCategoryUrl(category: { slug: string; name: string }): string {
+  const slug = category.slug || generateSlug(category.name);
+  return `/shop/${slug}`;
+}
+
+/**
+ * Clean and format text for SEO
+ */
+export function cleanTextForSEO(text: string): string {
+  return text
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim();
+}
+
+/**
+ * Generate meta description from content
+ */
+export function generateMetaDescription(content: string, maxLength: number = 160): string {
+  const cleaned = cleanTextForSEO(content);
+  if (cleaned.length <= maxLength) return cleaned;
+  return cleaned.substring(0, maxLength - 3) + '...';
+}

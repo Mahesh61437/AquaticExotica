@@ -5,6 +5,7 @@ import heroImage from "@assets/akva_4.jpeg";
 import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Suspense, lazy } from "react";
+import { generateMetaDescription } from "@/lib/utils";
 
 // Lazy loaded components
 const FeaturedCategories = lazy(() => import("@/components/home/FeaturedCategories"));
@@ -63,12 +64,44 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>AquaticExotica - Premium Aquarium Products</title>
-        <meta name="description" content="AquaticExotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000." />
-        <meta property="og:title" content="AquaticExotica - Premium Aquarium Products" />
-        <meta property="og:description" content="AquaticExotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000." />
+        <title>Aquatic Exotica - Premium Aquarium Products & Aquatic Plants</title>
+        <meta name="description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
+        <meta name="keywords" content="aquatic plants, aquarium supplies, aquascaping, fish tank, aquatic exotica, india, aquarium equipment, aquatic plants online" />
+        <meta property="og:title" content="Aquatic Exotica - Premium Aquarium Products & Aquatic Plants" />
+        <meta property="og:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
         <meta property="og:type" content="website" />
         <meta property="og:image" content="/images/aquarium_banner.jpeg" />
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Aquatic Exotica - Premium Aquarium Products & Aquatic Plants" />
+        <meta name="twitter:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
+        <meta name="twitter:image" content="/images/aquarium_banner.jpeg" />
+        <link rel="canonical" href={window.location.href} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Aquatic Exotica",
+            "url": window.location.origin,
+            "logo": `${window.location.origin}/images/aquarium_banner.jpeg`,
+            "description": "Premium aquatic plants, rare fish species, and professional aquarium equipment",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Chittoor",
+              "addressRegion": "Andhra Pradesh",
+              "addressCountry": "IN"
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "telephone": "+91-8074751370",
+              "contactType": "customer service",
+              "email": "mahesh@aquaticexotica.com"
+            },
+            "sameAs": [
+              "https://aquaticexotica.com"
+            ]
+          })}
+        </script>
       </Helmet>
 
       {/* Simple Hero Banner */}

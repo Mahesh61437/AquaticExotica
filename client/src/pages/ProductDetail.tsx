@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { ShoppingCart, Package, ChevronRight, Truck, RotateCcw, Shield, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { 
   Accordion,
   AccordionContent,
@@ -13,8 +12,9 @@ import {
 } from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
+import { useAuth } from "@/context/AuthContext";
 import { Product } from "@/types";
-import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
+import { formatPrice, generateStarRating, getStockStatus, extractProductIdFromSlug, generateMetaDescription, cleanTextForSEO } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
@@ -22,6 +22,31 @@ import { ProductImageCarousel } from "@/components/product/ProductImageCarousel"
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import React from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Plus, Edit, Trash2, Tag, ImageIcon, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { StockNotifier } from "@/components/admin/StockNotifier";
+import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 
 // Define image type
 interface ProductImage {
@@ -74,22 +99,63 @@ interface PaginatedResponse<T> {
 }
 
 export default function ProductDetail() {
-  const [, params] = useRoute("/product/:id");
+  const [, params] = useRoute("/product/:slug");
   const { toast } = useToast();
   const { addItem } = useCart();
+  const { currentUser } = useAuth();
   const [quantity, setQuantity] = useState(1);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
-  const productId = params?.id ? parseInt(params.id) : 0;
+  // Edit form state
+  const [editFormData, setEditFormData] = useState<Partial<{
+    name: string;
+    description: string;
+    price: string;
+    compareAtPrice: string;
+    stock: number;
+    categoryId: number;
+    rating: string;
+    isNew: boolean;
+    isSale: boolean;
+    isFeatured: boolean;
+    isTrending: boolean;
+    imageUrl: string;
+    thumbnailUrl: string;
+  }>>({});
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  
+  // Extract product ID from the slug
+  const productId = params?.slug ? extractProductIdFromSlug(params.slug) : null;
   
   const { data: product, isLoading, error } = useQuery<ApiProduct>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Handle invalid product ID from slug
+  if (productId === null) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h1 className="text-2xl font-heading font-bold mb-4">Product Not Found</h1>
+        <p className="text-gray-600 mb-6">The product you are looking for does not exist or has been removed.</p>
+        <Button asChild>
+          <a href="/shop">Continue Shopping</a>
+        </Button>
+      </div>
+    );
+  }
   
   // Fetch tags for conversion
   const { data: tagsResponse } = useQuery<ApiTag[] | PaginatedResponse<ApiTag>>({
     queryKey: ["/api/tags/"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch categories for edit modal
+  const { data: categoriesResponse } = useQuery<any[] | PaginatedResponse<any>>({
+    queryKey: ["/api/categories/"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -109,6 +175,23 @@ export default function ProductDetail() {
     
     return [];
   }, [tagsResponse]);
+
+  // Extract categories array from response
+  const categories: any[] = React.useMemo(() => {
+    if (!categoriesResponse) return [];
+    
+    // Check if response is paginated
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
+      return (categoriesResponse as PaginatedResponse<any>).data || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(categoriesResponse)) {
+      return categoriesResponse;
+    }
+    
+    return [];
+  }, [categoriesResponse]);
 
   // Helper function to convert tag objects to tag names
   const convertTagsToNames = (tags: ApiTag[]): string[] => {
@@ -173,6 +256,98 @@ export default function ProductDetail() {
     setQuantity(Math.max(1, value));
   };
 
+  // Edit handlers
+  const handleEditOpen = () => {
+    if (!product) return;
+    
+    setEditFormData({
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      compareAtPrice: product.compareAtPrice,
+      stock: product.stock,
+      categoryId: product.category?.id || 0,
+      rating: product.rating,
+      isNew: product.isNew,
+      isSale: product.isSale,
+      isFeatured: product.isFeatured,
+      isTrending: product.isTrending,
+      imageUrl: product.imageUrl,
+      thumbnailUrl: product.thumbnailUrl,
+    });
+    
+    // Set selected tags
+    setSelectedTagIds(product.tags || []);
+    setTagInput("");
+    
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product) return;
+
+    try {
+      const submitData = {
+        name: editFormData.name || product.name,
+        description: editFormData.description || product.description,
+        price: editFormData.price || product.price,
+        compareAtPrice: editFormData.compareAtPrice || product.compareAtPrice,
+        stock: editFormData.stock || product.stock,
+        categoryId: editFormData.categoryId || product.category?.id || 0,
+        tags: selectedTagIds,
+        rating: editFormData.rating || product.rating,
+        isNew: editFormData.isNew ?? product.isNew,
+        isSale: editFormData.isSale ?? product.isSale,
+        isFeatured: editFormData.isFeatured ?? product.isFeatured,
+        isTrending: editFormData.isTrending ?? product.isTrending,
+        imageUrl: editFormData.imageUrl || product.imageUrl,
+        thumbnailUrl: editFormData.thumbnailUrl || product.thumbnailUrl,
+      };
+
+      await apiRequest(`/api/products/${product.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submitData)
+      });
+
+      toast({
+        title: "Success",
+        description: "Product updated successfully",
+      });
+      
+      setIsEditModalOpen(false);
+      // Refresh the product data
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to update product: ${error.message || 'Unknown error'}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddTag = () => {
+    if (tagInput.trim()) {
+      const tag = tags.find((t: ApiTag) => t.name.toLowerCase() === tagInput.trim().toLowerCase());
+      if (tag && !selectedTagIds.includes(tag.id)) {
+        setSelectedTagIds([...selectedTagIds, tag.id]);
+        setTagInput("");
+      } else if (!tag) {
+        toast({
+          title: "Error",
+          description: "Tag not found. Please select from available tags.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleRemoveTag = (tagId: number) => {
+    setSelectedTagIds(selectedTagIds.filter((id: number) => id !== tagId));
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-12">
@@ -208,11 +383,42 @@ export default function ProductDetail() {
     <>
       <Helmet>
         <title>{product.name} - Aquatic Exotica</title>
-        <meta name="description" content={product.description} />
+        <meta name="description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
+        <meta name="keywords" content={`${product.name}, aquatic plants, aquascaping, aquarium supplies, ${product.category?.name || 'aquatic'}, aquatic exotica, india`} />
         <meta property="og:title" content={`${product.name} - Aquatic Exotica`} />
-        <meta property="og:description" content={product.description} />
+        <meta property="og:description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
         <meta property="og:image" content={product.imageUrl} />
         <meta property="og:type" content="product" />
+        <meta property="og:url" content={window.location.href} />
+        <meta property="product:price:amount" content={product.price} />
+        <meta property="product:price:currency" content="INR" />
+        <meta property="product:availability" content={product.stock > 0 ? "in stock" : "out of stock"} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${product.name} - Aquatic Exotica`} />
+        <meta name="twitter:description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
+        <meta name="twitter:image" content={product.imageUrl} />
+        <link rel="canonical" href={window.location.href} />
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": product.name,
+            "description": cleanTextForSEO(product.description),
+            "image": product.imageUrl,
+            "offers": {
+              "@type": "Offer",
+              "price": product.price,
+              "priceCurrency": "INR",
+              "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              "url": window.location.href
+            },
+            "brand": {
+              "@type": "Brand",
+              "name": "Aquatic Exotica"
+            },
+            "category": product.category?.name || "Aquatic Plants"
+          })}
+        </script>
       </Helmet>
 
       <div className="container mx-auto px-4 py-12">
@@ -224,7 +430,7 @@ export default function ProductDetail() {
           {product.category && (
             <>
               <ChevronRight className="h-4 w-4 mx-2" />
-              <a href={`/shop/${product.category.slug || product.category.name?.toLowerCase()}`} className="hover:text-primary">
+              <a href={`/shop/${product.category.slug || product.category.name?.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-primary">
                 {product.category.name || 'Category'}
               </a>
             </>
@@ -243,7 +449,20 @@ export default function ProductDetail() {
 
           {/* Product Info */}
           <div>
-            <h1 className="text-3xl font-heading font-bold">{product.name}</h1>
+            <div className="flex items-start justify-between">
+              <h1 className="text-3xl font-heading font-bold">{product.name}</h1>
+              {currentUser?.isAdmin && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleEditOpen}
+                  className="ml-4"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Product
+                </Button>
+              )}
+            </div>
             
             <div className="flex items-center mt-4">
               <div className="flex text-yellow-400 text-sm mr-2"
@@ -513,6 +732,231 @@ export default function ProductDetail() {
           </div>
         )}
       </div>
+
+      {/* Edit Product Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update product information. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleEditSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Product Name *</Label>
+                  <Input
+                    id="name"
+                    value={editFormData.name || ''}
+                    onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    placeholder="Enter product name"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="price">Price *</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.price || ''}
+                    onChange={(e) => setEditFormData({...editFormData, price: e.target.value})}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="compareAtPrice">Compare At Price</Label>
+                  <Input
+                    id="compareAtPrice"
+                    type="number"
+                    step="0.01"
+                    value={editFormData.compareAtPrice || ''}
+                    onChange={(e) => setEditFormData({...editFormData, compareAtPrice: e.target.value})}
+                    placeholder="0.00"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="stock">Stock *</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={editFormData.stock || ''}
+                    onChange={(e) => setEditFormData({...editFormData, stock: parseInt(e.target.value) || 0})}
+                    placeholder="0"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="rating">Rating</Label>
+                  <Input
+                    id="rating"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={editFormData.rating || ''}
+                    onChange={(e) => setEditFormData({...editFormData, rating: e.target.value})}
+                    placeholder="0.0"
+                  />
+                </div>
+              </div>
+              
+              {/* Category and Tags */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="category">Category</Label>
+                  <Select
+                    value={editFormData.categoryId?.toString() || ''}
+                    onValueChange={(value) => setEditFormData({...editFormData, categoryId: parseInt(value) || 0})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                                      <SelectContent>
+                    <SelectItem value="0">No Category</SelectItem>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id.toString()}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <Label>Tags</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Input
+                      value={tagInput}
+                      onChange={(e) => setTagInput(e.target.value)}
+                      placeholder="Type tag name and press Enter"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTag();
+                        }
+                      }}
+                    />
+                    <Button type="button" onClick={handleAddTag} size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTagIds.map((tagId) => {
+                      const tag = tags.find((t: ApiTag) => t.id === tagId);
+                      return tag ? (
+                        <Badge key={tagId} variant="secondary" className="flex items-center gap-1">
+                          {tag.name}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveTag(tagId)}
+                            className="ml-1 hover:text-red-500"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Input
+                    id="imageUrl"
+                    value={editFormData.imageUrl || ''}
+                    onChange={(e) => setEditFormData({...editFormData, imageUrl: e.target.value})}
+                    placeholder="https://example.com/image.jpg"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
+                  <Input
+                    id="thumbnailUrl"
+                    value={editFormData.thumbnailUrl || ''}
+                    onChange={(e) => setEditFormData({...editFormData, thumbnailUrl: e.target.value})}
+                    placeholder="https://example.com/thumbnail.jpg"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Description */}
+            <div>
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={editFormData.description || ''}
+                onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                placeholder="Enter product description"
+                rows={4}
+              />
+            </div>
+            
+            {/* Product Flags */}
+            <div className="space-y-4">
+              <Label>Product Flags</Label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isNew"
+                    checked={editFormData.isNew || false}
+                    onCheckedChange={(checked) => setEditFormData({...editFormData, isNew: checked as boolean})}
+                  />
+                  <Label htmlFor="isNew">New</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isSale"
+                    checked={editFormData.isSale || false}
+                    onCheckedChange={(checked) => setEditFormData({...editFormData, isSale: checked as boolean})}
+                  />
+                  <Label htmlFor="isSale">Sale</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isFeatured"
+                    checked={editFormData.isFeatured || false}
+                    onCheckedChange={(checked) => setEditFormData({...editFormData, isFeatured: checked as boolean})}
+                  />
+                  <Label htmlFor="isFeatured">Featured</Label>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="isTrending"
+                    checked={editFormData.isTrending || false}
+                    onCheckedChange={(checked) => setEditFormData({...editFormData, isTrending: checked as boolean})}
+                  />
+                  <Label htmlFor="isTrending">Trending</Label>
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

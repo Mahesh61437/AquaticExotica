@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Package, ShoppingCart } from "lucide-react";
 import { Link } from "wouter";
 import { Product } from "@/types";
-import { formatPrice, generateStarRating, getStockStatus } from "@/lib/utils";
+import { formatPrice, generateStarRating, getStockStatus, generateProductUrl } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OptimizedImage } from "@/components/ui/optimized-image";
@@ -51,7 +51,7 @@ export function ProductCard({ product }: ProductCardProps) {
 
   return (
     <Link 
-      href={`/product/${product.id}`}
+      href={generateProductUrl(product)}
       className="product-card group"
     >
       <div className="product-image relative overflow-hidden">

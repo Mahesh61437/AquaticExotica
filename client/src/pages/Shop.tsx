@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { ProductFilters } from "@/components/shop/ProductFilters";
+import { generateMetaDescription } from "@/lib/utils";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
@@ -16,6 +17,8 @@ export default function Shop() {
   const searchQuery = urlParams.get("search") || "";
   const filterParam = urlParams.get("filter") || "";
   const categoryParam = urlParams.get("category") || "";
+  const pageParam = parseInt(urlParams.get("page") || "1");
+  const limitParam = parseInt(urlParams.get("limit") || "12");
 
   // State for filters
   const [activeCategoryIds, setActiveCategoryIds] = useState<number[]>([]);
@@ -71,10 +74,16 @@ export default function Shop() {
     <>
       <Helmet>
         <title>{pageTitle} - Aquatic Exotica</title>
-        <meta name="description" content={`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`} />
+        <meta name="description" content={generateMetaDescription(`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`)} />
+        <meta name="keywords" content={`aquatic plants, aquascaping, aquarium supplies, ${pageTitle.toLowerCase()}, aquatic exotica, india`} />
         <meta property="og:title" content={`${pageTitle} - Aquatic Exotica`} />
-        <meta property="og:description" content={`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`} />
+        <meta property="og:description" content={generateMetaDescription(`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`)} />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${pageTitle} - Aquatic Exotica`} />
+        <meta name="twitter:description" content={generateMetaDescription(`Browse our collection of ${pageTitle.toLowerCase()} at Aquatic Exotica. Find the perfect plants or aquascaping supplies with fast delivery across India.`)} />
+        <link rel="canonical" href={window.location.href} />
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">
