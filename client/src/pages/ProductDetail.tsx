@@ -132,10 +132,45 @@ export default function ProductDetail() {
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    retryDelay: 1000,
   });
 
   // Handle invalid product ID from slug
   if (productId === null) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h1 className="text-2xl font-heading font-bold mb-4">Product Not Found</h1>
+        <p className="text-gray-600 mb-6">The product you are looking for does not exist or has been removed.</p>
+        <Button asChild>
+          <a href="/shop">Continue Shopping</a>
+        </Button>
+      </div>
+    );
+  }
+
+  // Early return for loading state
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+          <Skeleton className="aspect-[3/4] w-full rounded-lg" />
+          <div className="space-y-6">
+            <Skeleton className="h-10 w-3/4" />
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-6 w-1/4" />
+            <div className="space-y-4 mt-6">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Early return for error or missing product
+  if (error || !product) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-heading font-bold mb-4">Product Not Found</h1>
@@ -348,75 +383,46 @@ export default function ProductDetail() {
     setSelectedTagIds(selectedTagIds.filter((id: number) => id !== tagId));
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-          <Skeleton className="aspect-[3/4] w-full rounded-lg" />
-          <div className="space-y-6">
-            <Skeleton className="h-10 w-3/4" />
-            <Skeleton className="h-6 w-1/3" />
-            <Skeleton className="h-6 w-1/4" />
-            <div className="space-y-4 mt-6">
-              <Skeleton className="h-28 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  if (error || !product) {
-    return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <h1 className="text-2xl font-heading font-bold mb-4">Product Not Found</h1>
-        <p className="text-gray-600 mb-6">The product you are looking for does not exist or has been removed.</p>
-        <Button asChild>
-          <a href="/shop">Continue Shopping</a>
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <>
       <Helmet>
-        <title>{product.name} - Aquatic Exotica</title>
-        <meta name="description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
-        <meta name="keywords" content={`${product.name}, aquatic plants, aquascaping, aquarium supplies, ${product.category?.name || 'aquatic'}, aquatic exotica, india`} />
-        <meta property="og:title" content={`${product.name} - Aquatic Exotica`} />
-        <meta property="og:description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
-        <meta property="og:image" content={product.imageUrl} />
+        <title>{product?.name || 'Product'} - Aquatic Exotica</title>
+        <meta name="description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
+        <meta name="keywords" content={`${product?.name || 'product'}, aquatic plants, aquascaping, aquarium supplies, ${product?.category?.name || 'aquatic'}, aquatic exotica, india`} />
+        <meta property="og:title" content={`${product?.name || 'Product'} - Aquatic Exotica`} />
+        <meta property="og:description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
+        <meta property="og:image" content={product?.imageUrl || ''} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={window.location.href} />
-        <meta property="product:price:amount" content={product.price} />
+        <meta property="product:price:amount" content={product?.price || '0'} />
         <meta property="product:price:currency" content="INR" />
-        <meta property="product:availability" content={product.stock > 0 ? "in stock" : "out of stock"} />
+        <meta property="product:availability" content={(product?.stock || 0) > 0 ? "in stock" : "out of stock"} />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${product.name} - Aquatic Exotica`} />
-        <meta name="twitter:description" content={generateMetaDescription(cleanTextForSEO(product.description))} />
-        <meta name="twitter:image" content={product.imageUrl} />
+        <meta name="twitter:title" content={`${product?.name || 'Product'} - Aquatic Exotica`} />
+        <meta name="twitter:description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
+        <meta name="twitter:image" content={product?.imageUrl || ''} />
         <link rel="canonical" href={window.location.href} />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
-            "name": product.name,
-            "description": cleanTextForSEO(product.description),
-            "image": product.imageUrl,
+            "name": product?.name || 'Product',
+            "description": cleanTextForSEO(product?.description || ''),
+            "image": product?.imageUrl || '',
             "offers": {
               "@type": "Offer",
-              "price": product.price,
+              "price": product?.price || '0',
               "priceCurrency": "INR",
-              "availability": product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              "availability": (product?.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
               "url": window.location.href
             },
             "brand": {
               "@type": "Brand",
               "name": "Aquatic Exotica"
             },
-            "category": product.category?.name || "Aquatic Plants"
+            "category": product?.category?.name || "Aquatic Plants"
           })}
         </script>
       </Helmet>
@@ -443,14 +449,14 @@ export default function ProductDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Product Image Carousel */}
           <ProductImageCarousel 
-            images={product.images || []}
-            fallbackImage={product.imageUrl}
+            images={product?.images || []}
+            fallbackImage={product?.imageUrl || ''}
           />
 
           {/* Product Info */}
           <div>
             <div className="flex items-start justify-between">
-              <h1 className="text-3xl font-heading font-bold">{product.name}</h1>
+              <h1 className="text-3xl font-heading font-bold">{product?.name || 'Product'}</h1>
               {currentUser?.isAdmin && (
                 <Button
                   variant="outline"
@@ -694,7 +700,7 @@ export default function ProductDetail() {
             <h2 className="text-2xl font-heading font-bold mb-8">You May Also Like</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct: ApiProduct) => (
-                <ProductCard key={relatedProduct.id} product={{
+                <ProductCard key={`related-${relatedProduct.id}`} product={{
                   ...relatedProduct,
                   category: relatedProduct.category ? {
                     id: relatedProduct.category.id,
@@ -735,7 +741,7 @@ export default function ProductDetail() {
 
       {/* Edit Product Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" key={`edit-modal-${product.id}`}>
           <DialogHeader>
             <DialogTitle>Edit Product</DialogTitle>
             <DialogDescription>
@@ -824,7 +830,7 @@ export default function ProductDetail() {
                                       <SelectContent>
                     <SelectItem value="0">No Category</SelectItem>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id.toString()}>
+                      <SelectItem key={`category-${category.id}`} value={category.id.toString()}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -855,7 +861,7 @@ export default function ProductDetail() {
                     {selectedTagIds.map((tagId) => {
                       const tag = tags.find((t: ApiTag) => t.id === tagId);
                       return tag ? (
-                        <Badge key={tagId} variant="secondary" className="flex items-center gap-1">
+                        <Badge key={`tag-${tagId}`} variant="secondary" className="flex items-center gap-1">
                           {tag.name}
                           <button
                             type="button"

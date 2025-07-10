@@ -42,15 +42,6 @@ interface ApiTag {
   createdAt: string;
 }
 
-// Define paginated response type
-interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
-
 interface ProductGridProps {
   category?: string;
   filter?: string;
@@ -79,165 +70,214 @@ export function ProductGrid({
   // Pagination state
   const [currentPage, setCurrentPage] = React.useState(initialPage);
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
-  const [paginationMode, setPaginationMode] = React.useState<'pagination' | 'load-more'>('pagination');
-  // Build the API endpoint with query parameters
-  let endpoint = "/api/products/";
-  const queryParams = new URLSearchParams();
-  
-  // Add pagination parameters
-  queryParams.append('page', currentPage.toString());
-  queryParams.append('limit', itemsPerPage.toString());
-  
-  // Add category IDs if any are selected
-  if (activeCategoryIds.length > 0) {
-    queryParams.append('category_id', activeCategoryIds.join(','));
-  }
-  
-  // Add price range if it's not the default
-  if (activePriceRange[0] > 0 || activePriceRange[1] < 10000) {
-    queryParams.append('price_min', activePriceRange[0].toString());
-    queryParams.append('price_max', activePriceRange[1].toString());
-  }
-  
-  // Add in stock filter if active
-  if (activeInStock) {
-    queryParams.append('in_stock', 'true');
-  }
-  
-  // Add search query if present
-  if (searchQuery) {
-    queryParams.append('q', searchQuery);
-  }
-  
-  // Use category-specific endpoint if we have a category URL param and no active filters
-  if (category && activeCategoryIds.length === 0 && activePriceRange[0] === 0 && activePriceRange[1] === 10000 && !activeInStock && !searchQuery) {
-    endpoint = `/api/products/category/${category}?${queryParams.toString()}`;
-  } else {
-    endpoint = `/api/products/?${queryParams.toString()}`;
-  }
+  const [allProducts, setAllProducts] = React.useState<ApiProduct[]>([]);
+  const [fetchedPages, setFetchedPages] = React.useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = React.useState(true);
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
 
-  const { data: response, isLoading, error } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
-    queryKey: [endpoint, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, currentPage, itemsPerPage],
+  // Build the API endpoint with query parameters
+  const buildEndpoint = (page: number) => {
+    let endpoint = "/api/products/";
+    const queryParams = new URLSearchParams();
+    
+    // Add pagination parameters
+    queryParams.append('page', page.toString());
+    queryParams.append('page_size', itemsPerPage.toString());
+    
+    // Add category IDs if any are selected
+    if (activeCategoryIds.length > 0) {
+      queryParams.append('category_id', activeCategoryIds.join(','));
+    }
+    
+    // Add price range if it's not the default
+    if (activePriceRange[0] > 0 || activePriceRange[1] < 10000) {
+      queryParams.append('price_min', activePriceRange[0].toString());
+      queryParams.append('price_max', activePriceRange[1].toString());
+    }
+    
+    // Add in stock filter if active
+    if (activeInStock) {
+      queryParams.append('in_stock', 'true');
+    }
+    
+    // Add search query if present
+    if (searchQuery) {
+      queryParams.append('q', searchQuery);
+    }
+    
+    // Use category-specific endpoint if we have a category URL param and no active filters
+    if (category && activeCategoryIds.length === 0 && activePriceRange[0] === 0 && activePriceRange[1] === 10000 && !activeInStock && !searchQuery) {
+      endpoint = `/api/products/category/${category}?${queryParams.toString()}`;
+    } else {
+      endpoint = `/api/products/?${queryParams.toString()}`;
+    }
+    
+    return endpoint;
+  };
+
+  // Fetch current page
+  const { data: currentPageData, isLoading, error } = useQuery<ApiProduct[]>({
+    queryKey: ['products', buildEndpoint(currentPage), category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, currentPage, itemsPerPage],
     queryFn: async () => {
-      console.log('🛍️ ProductGrid API call:', endpoint);
-      return await apiRequest(endpoint);
+      console.log('🛍️ ProductGrid API call:', buildEndpoint(currentPage));
+      const response = await apiRequest(buildEndpoint(currentPage));
+      return response || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
   });
 
   // Fetch tags for conversion
-  const { data: tagsResponse } = useQuery<ApiTag[] | PaginatedResponse<ApiTag>>({
+  const { data: tagsResponse } = useQuery<ApiTag[]>({
     queryKey: ["/api/tags/"],
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
-
-  // Extract tags array from response
-  const tags: ApiTag[] = React.useMemo(() => {
-    if (!tagsResponse) return [];
-    
-    // Check if response is paginated
-    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
-      return (tagsResponse as PaginatedResponse<ApiTag>).data || [];
-    }
-    
-    // Check if response is a direct array
-    if (Array.isArray(tagsResponse)) {
-      return tagsResponse;
-    }
-    
-    return [];
-  }, [tagsResponse]);
 
   // Helper function to convert tag objects to tag names
   const convertTagsToNames = (tags: ApiTag[]): string[] => {
     return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
-  // Handle different response formats and extract pagination info
-  const products: ApiProduct[] = React.useMemo(() => {
-    if (!response) return [];
-    
-    // Check if response is paginated
-    if (response && typeof response === 'object' && 'data' in response) {
-      return (response as PaginatedResponse<ApiProduct>).data || [];
-    }
-    
-    // Check if response is a direct array
-    if (Array.isArray(response)) {
-      return response;
-    }
-    
-    return [];
-  }, [response]);
-
-  // Extract pagination info
-  const paginationInfo = React.useMemo(() => {
-    if (!response) return null;
-    
-    // Check if response is paginated
-    if (response && typeof response === 'object' && 'data' in response) {
-      const paginatedResponse = response as PaginatedResponse<ApiProduct>;
-      return {
-        total: paginatedResponse.total,
-        page: paginatedResponse.page,
-        limit: paginatedResponse.limit,
-        totalPages: paginatedResponse.totalPages
-      };
-    }
-    
-    // If not paginated, calculate basic info
-    if (Array.isArray(response)) {
-      return {
-        total: response.length,
-        page: 1,
-        limit: response.length,
-        totalPages: 1
-      };
-    }
-    
-    return null;
-  }, [response]);
-
-  // Apply client-side filtering based on filter parameter
-  const filteredProducts = React.useMemo(() => {
-    if (!filter) return products;
-    
-    switch (filter) {
-      case "new":
-        return products.filter(product => product.isNew);
-      case "sale":
-        return products.filter(product => product.isSale);
-      case "trending":
-        return products.filter(product => product.isTrending);
-      default:
-        return products;
-    }
-  }, [products, filter]);
-
-  // Reset to first page when filters change
+  // Update all products when current page data changes
   React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllProducts(prev => {
+        const newProducts = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace products for this page
+        currentPageData.forEach((product, index) => {
+          newProducts[startIndex + index] = product;
+        });
+        
+        return newProducts;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
+    }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when filters change
+  React.useEffect(() => {
+    setAllProducts([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1);
     onPageChange?.(1);
   }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, onPageChange]);
 
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
+    
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildEndpoint(page));
+      const pageData = response || [];
+      
+      setAllProducts(prev => {
+        const newProducts = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace products for this page
+        pageData.forEach((product: ApiProduct, index: number) => {
+          newProducts[startIndex + index] = product;
+        });
+        
+        return newProducts;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Function to fetch next page
+  const fetchNextPage = async () => {
+    const nextPage = currentPage + 1;
+    if (!fetchedPages.has(nextPage) && hasMorePages) {
+      await fetchPage(nextPage);
+    }
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allProducts.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get products for current page
+  const currentPageProducts = allProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
+
+  // Apply client-side filtering based on filter parameter
+  const filteredProducts = React.useMemo(() => {
+    if (!filter) return currentPageProducts;
+    
+    switch (filter) {
+      case "new":
+        return currentPageProducts.filter(product => product.isNew);
+      case "sale":
+        return currentPageProducts.filter(product => product.isSale);
+      case "trending":
+        return currentPageProducts.filter(product => product.isTrending);
+      default:
+        return currentPageProducts;
+    }
+  }, [currentPageProducts, filter]);
+
   // Update URL when page changes
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
     onPageChange?.(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchNextPage();
+    }
   };
 
   const handleLimitChange = (limit: number) => {
     setItemsPerPage(limit);
+    setAllProducts([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1);
     onLimitChange?.(limit);
     onPageChange?.(1);
   };
 
-  // No need for additional client-side category filtering since we're using API filtering
-  const displayProducts = filteredProducts;
+  // Pre-fetch next page when current page changes
+  React.useEffect(() => {
+    if (hasMorePages && !fetchedPages.has(currentPage + 1)) {
+      fetchNextPage();
+    }
+  }, [currentPage, hasMorePages, fetchedPages]);
 
-  if (isLoading) {
+  if (isLoading && currentPage === 1) {
     return (
       <div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -251,24 +291,11 @@ export function ProductGrid({
             </div>
           ))}
         </div>
-        {paginationInfo && paginationInfo.totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
-            <div className="text-sm text-muted-foreground">
-              <Skeleton className="h-4 w-32" />
-            </div>
-            <div className="flex items-center gap-2">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-8 w-8" />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
-  if (error) {
-    // Instead of showing an error, show empty products to allow filtering to work
+  if (error && currentPage === 1) {
     console.warn('API Error loading products:', error);
     return (
       <div className="text-center py-10">
@@ -284,7 +311,7 @@ export function ProductGrid({
     );
   }
 
-  if (displayProducts.length === 0) {
+  if (filteredProducts.length === 0 && !isLoading) {
     return (
       <div className="text-center py-10">
         <h3 className="text-xl font-medium mb-2">No products found</h3>
@@ -299,45 +326,23 @@ export function ProductGrid({
 
   // Pagination controls component
   const PaginationControls = () => {
-    if (!paginationInfo || paginationInfo.totalPages <= 1) return null;
+    if (totalPages <= 1) return null;
 
-    const { page, totalPages, total } = paginationInfo;
-    const startItem = (page - 1) * itemsPerPage + 1;
-    const endItem = Math.min(page * itemsPerPage, total);
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, allProducts.length);
 
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
-        <div className="flex items-center gap-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {startItem} to {endItem} of {total} products
-          </div>
-          
-          {/* Pagination mode toggle */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant={paginationMode === 'pagination' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPaginationMode('pagination')}
-            >
-              Pages
-            </Button>
-            <Button
-              variant={paginationMode === 'load-more' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setPaginationMode('load-more')}
-            >
-              Load More
-            </Button>
-          </div>
+        <div className="text-sm text-muted-foreground">
+          Showing {startItem} to {endItem} of {allProducts.length} products
         </div>
         
-        {paginationMode === 'pagination' && (
-          <div className="flex items-center gap-2">
-                      <Button
+        <div className="flex items-center gap-2">
+          <Button
             variant="outline"
             size="sm"
             onClick={() => handlePageChange(1)}
-            disabled={page <= 1}
+            disabled={currentPage <= 1}
           >
             <ChevronsLeft className="h-4 w-4" />
           </Button>
@@ -345,68 +350,48 @@ export function ProductGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePageChange(page - 1)}
-            disabled={page <= 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
             
-            <div className="flex items-center gap-1">
-              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                let pageNum;
-                if (totalPages <= 5) {
-                  pageNum = i + 1;
-                } else if (page <= 3) {
-                  pageNum = i + 1;
-                } else if (page >= totalPages - 2) {
-                  pageNum = totalPages - 4 + i;
-                } else {
-                  pageNum = page - 2 + i;
-                }
-                
-                return (
-                  <Button
-                    key={pageNum}
-                    variant={pageNum === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePageChange(pageNum)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {pageNum}
-                  </Button>
-                );
-              })}
-            </div>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(page + 1)}
-              disabled={page >= totalPages}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={page >= totalPages}
-            >
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pageNum === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handlePageChange(pageNum)}
+                  className="w-8 h-8 p-0"
+                  disabled={isLoadingMore && !fetchedPages.has(pageNum)}
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
           </div>
-        )}
-        
-        {paginationMode === 'load-more' && page < totalPages && (
+          
           <Button
-            onClick={() => setCurrentPage(page + 1)}
-            disabled={isLoading}
-            className="px-6"
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages || !hasMorePages}
           >
-            {isLoading ? 'Loading...' : 'Load More Products'}
+            <ChevronRight className="h-4 w-4" />
           </Button>
-        )}
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(totalPages)}
+            disabled={currentPage >= totalPages || !hasMorePages}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     );
   };
@@ -414,7 +399,7 @@ export function ProductGrid({
   return (
     <div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {displayProducts.map((product) => (
+        {filteredProducts.map((product) => (
           <ProductCard key={product.id} product={{
             id: product.id,
             name: product.name,

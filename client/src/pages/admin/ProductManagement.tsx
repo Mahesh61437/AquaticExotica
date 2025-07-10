@@ -120,6 +120,10 @@ export default function ProductManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [allProducts, setAllProducts] = useState<ApiProduct[]>([]);
+  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const requiredFields = [
     'name',
     'description',
@@ -214,25 +218,27 @@ export default function ProductManagement() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  // Fetch products with pagination and search
-  const { data: productsResponse, isLoading } = useQuery({
+  // Build API endpoint for products
+  const buildProductsEndpoint = (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(itemsPerPage)
+    });
+    
+    if (debouncedSearchQuery) {
+      params.append('query', debouncedSearchQuery);
+    }
+    
+    return `/api/products/?${params.toString()}`;
+  };
+
+  // Fetch current page of products
+  const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/products/", currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: async ({ queryKey }) => {
-      const basePath = queryKey[0] as string;
-      const page = queryKey[1] as number;
-      const limit = queryKey[2] as number;
-      const query = queryKey[3] as string;
-      
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit)
-      });
-      
-      if (query) {
-        params.append('query', query);
-      }
-      
-      return await apiRequest(`${basePath}?${params.toString()}`);
+    queryFn: async () => {
+      console.log('🛍️ Admin ProductManagement API call:', buildProductsEndpoint(currentPage));
+      const response = await apiRequest(buildProductsEndpoint(currentPage));
+      return response || [];
     },
   });
   
@@ -252,22 +258,86 @@ export default function ProductManagement() {
     },
   });
   
-  // Extract products array from response
-  const products: ApiProduct[] = React.useMemo(() => {
-    if (!productsResponse) return [];
-    
-    // Check if response is paginated
-    if (productsResponse && typeof productsResponse === 'object' && 'data' in productsResponse) {
-      return (productsResponse as any).data || [];
+  // Update all products when current page data changes
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllProducts(prev => {
+        const newProducts = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace products for this page
+        currentPageData.forEach((product: ApiProduct, index: number) => {
+          newProducts[startIndex + index] = product;
+        });
+        
+        return newProducts;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
     }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when search changes
+  React.useEffect(() => {
+    setAllProducts([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
     
-    // Check if response is a direct array
-    if (Array.isArray(productsResponse)) {
-      return productsResponse;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildProductsEndpoint(page));
+      const pageData = response || [];
+      
+      setAllProducts(prev => {
+        const newProducts = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace products for this page
+        pageData.forEach((product: ApiProduct, index: number) => {
+          newProducts[startIndex + index] = product;
+        });
+        
+        return newProducts;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    return [];
-  }, [productsResponse]);
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allProducts.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get products for current page
+  const products: ApiProduct[] = allProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
   
   // Extract categories array from response
   const categories: any[] = React.useMemo(() => {
@@ -558,12 +628,25 @@ export default function ProductManagement() {
     setSelectedTagIds(selectedTagIds.filter((id: number) => id !== tagId));
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchPage(page + 1);
+    }
   };
 
   const handleLimitChange = (limit: number) => {
     setItemsPerPage(limit);
+    setAllProducts([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1); // Reset to first page when changing limit
   };
 
@@ -683,8 +766,8 @@ export default function ProductManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: (productsResponse as any)?.pagination?.totalCount || products.length,
-            totalPages: (productsResponse as any)?.pagination?.totalPages || 1
+            totalCount: allProducts.length,
+            totalPages: totalPages
           }}
           isLoading={isLoading}
           emptyMessage="No products found. Add your first product to get started."
