@@ -338,6 +338,8 @@ export default function ProductManagement() {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   ).filter(Boolean);
+
+
   
   // Extract categories array from response
   const categories: any[] = React.useMemo(() => {

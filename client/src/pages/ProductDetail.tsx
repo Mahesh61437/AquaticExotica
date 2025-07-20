@@ -93,11 +93,6 @@ interface ApiTag {
   createdAt: string;
 }
 
-// Define paginated response type
-interface PaginatedResponse<T> {
-  data: T[];
-}
-
 export default function ProductDetail() {
   const [, params] = useRoute("/product/:slug");
   const { toast } = useToast();
@@ -128,13 +123,82 @@ export default function ProductDetail() {
   // Extract product ID from the slug
   const productId = params?.slug ? extractProductIdFromSlug(params.slug) : null;
   
+  console.log('🔍 ProductDetail - Slug:', params?.slug, 'Product ID:', productId);
+  
+  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const { data: product, isLoading, error } = useQuery<ApiProduct>({
     queryKey: [`/api/products/${productId}`],
     enabled: !!productId,
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
     retryDelay: 1000,
+    queryFn: async () => {
+      console.log('📦 Fetching product:', productId);
+      const response = await apiRequest(`/api/products/${productId}`);
+      console.log('📦 Product response:', response);
+      return response;
+    },
   });
+
+  // Fetch tags for conversion
+  const { data: tagsResponse } = useQuery<ApiTag[]>({
+    queryKey: ["/api/tags/"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => {
+      console.log('🏷️ Fetching tags');
+      const response = await apiRequest("/api/tags/");
+      console.log('🏷️ Tags response:', response);
+      return Array.isArray(response) ? response : [];
+    },
+  });
+
+  // Fetch categories for edit modal
+  const { data: categoriesResponse } = useQuery<any[]>({
+    queryKey: ["/api/categories/"],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => {
+      console.log('📂 Fetching categories');
+      const response = await apiRequest("/api/categories/");
+      console.log('📂 Categories response:', response);
+      return Array.isArray(response) ? response : [];
+    },
+  });
+
+  // Fetch related products
+  const { data: relatedProductsResponse } = useQuery<ApiProduct[]>({
+    queryKey: [`/api/products/${productId}/related`],
+    enabled: !!product,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    queryFn: async () => {
+      console.log('🔄 Fetching related products');
+      const response = await apiRequest(`/api/products/${productId}/related`);
+      console.log('🔄 Related products response:', response);
+      return Array.isArray(response) ? response : [];
+    },
+  });
+
+  // Extract tags array from response
+  const tags: ApiTag[] = React.useMemo(() => {
+    if (!tagsResponse) return [];
+    return Array.isArray(tagsResponse) ? tagsResponse : [];
+  }, [tagsResponse]);
+
+  // Extract categories array from response
+  const categories: any[] = React.useMemo(() => {
+    if (!categoriesResponse) return [];
+    return Array.isArray(categoriesResponse) ? categoriesResponse : [];
+  }, [categoriesResponse]);
+
+  // Extract related products array from response
+  const relatedProducts: ApiProduct[] = React.useMemo(() => {
+    if (!relatedProductsResponse) return [];
+    return Array.isArray(relatedProductsResponse) ? relatedProductsResponse : [];
+  }, [relatedProductsResponse]);
+
+  // Helper function to convert tag objects to tag names
+  const convertTagsToNames = (tags: ApiTag[]): string[] => {
+    return tags.map(tag => tag.name).filter(name => name !== '');
+  };
 
   // Handle invalid product ID from slug
   if (productId === null) {
@@ -171,6 +235,7 @@ export default function ProductDetail() {
 
   // Early return for error or missing product
   if (error || !product) {
+    console.error('❌ ProductDetail error:', error);
     return (
       <div className="container mx-auto px-4 py-12 text-center">
         <h1 className="text-2xl font-heading font-bold mb-4">Product Not Found</h1>
@@ -181,81 +246,6 @@ export default function ProductDetail() {
       </div>
     );
   }
-  
-  // Fetch tags for conversion
-  const { data: tagsResponse } = useQuery<ApiTag[] | PaginatedResponse<ApiTag>>({
-    queryKey: ["/api/tags/"],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Fetch categories for edit modal
-  const { data: categoriesResponse } = useQuery<any[] | PaginatedResponse<any>>({
-    queryKey: ["/api/categories/"],
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Extract tags array from response
-  const tags: ApiTag[] = React.useMemo(() => {
-    if (!tagsResponse) return [];
-    
-    // Check if response is paginated
-    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
-      return (tagsResponse as PaginatedResponse<ApiTag>).data || [];
-    }
-    
-    // Check if response is a direct array
-    if (Array.isArray(tagsResponse)) {
-      return tagsResponse;
-    }
-    
-    return [];
-  }, [tagsResponse]);
-
-  // Extract categories array from response
-  const categories: any[] = React.useMemo(() => {
-    if (!categoriesResponse) return [];
-    
-    // Check if response is paginated
-    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
-      return (categoriesResponse as PaginatedResponse<any>).data || [];
-    }
-    
-    // Check if response is a direct array
-    if (Array.isArray(categoriesResponse)) {
-      return categoriesResponse;
-    }
-    
-    return [];
-  }, [categoriesResponse]);
-
-  // Helper function to convert tag objects to tag names
-  const convertTagsToNames = (tags: ApiTag[]): string[] => {
-    return tags.map(tag => tag.name).filter(name => name !== '');
-  };
-
-  // Fetch related products
-  const { data: relatedProductsResponse } = useQuery<ApiProduct[] | PaginatedResponse<ApiProduct>>({
-    queryKey: [`/api/products/${productId}/related`],
-    enabled: !!product,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  });
-
-  // Extract related products array from response
-  const relatedProducts: ApiProduct[] = React.useMemo(() => {
-    if (!relatedProductsResponse) return [];
-    
-    // Check if response is paginated
-    if (relatedProductsResponse && typeof relatedProductsResponse === 'object' && 'data' in relatedProductsResponse) {
-      return (relatedProductsResponse as PaginatedResponse<ApiProduct>).data || [];
-    }
-    
-    // Check if response is a direct array
-    if (Array.isArray(relatedProductsResponse)) {
-      return relatedProductsResponse;
-    }
-    
-    return [];
-  }, [relatedProductsResponse]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -382,8 +372,6 @@ export default function ProductDetail() {
   const handleRemoveTag = (tagId: number) => {
     setSelectedTagIds(selectedTagIds.filter((id: number) => id !== tagId));
   };
-
-
 
   return (
     <>
@@ -827,14 +815,14 @@ export default function ProductDetail() {
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
-                                      <SelectContent>
-                    <SelectItem value="0">No Category</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={`category-${category.id}`} value={category.id.toString()}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+                    <SelectContent>
+                      <SelectItem value="0">No Category</SelectItem>
+                      {categories.map((category) => (
+                        <SelectItem key={`category-${category.id}`} value={category.id.toString()}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
                 </div>
                 

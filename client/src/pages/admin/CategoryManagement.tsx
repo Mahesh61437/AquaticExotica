@@ -33,6 +33,10 @@ export default function CategoryManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Debounce search input
   useEffect(() => {
@@ -43,49 +47,110 @@ export default function CategoryManagement() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
   
-  // Reset to first page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  // Build API endpoint for categories
+  const buildCategoriesEndpoint = (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(itemsPerPage)
+    });
+    
+    if (debouncedSearchQuery) {
+      params.append('query', debouncedSearchQuery);
+    }
+    
+    return `/api/categories/?${params.toString()}`;
+  };
 
-  // Fetch categories with pagination and search
-  const { data: categoriesResponse, isLoading } = useQuery({
+  // Fetch current page of categories
+  const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/categories/", currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: async ({ queryKey }) => {
-      const basePath = queryKey[0] as string;
-      const page = queryKey[1] as number;
-      const limit = queryKey[2] as number;
-      const query = queryKey[3] as string;
-      
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit)
-      });
-      
-      if (query) {
-        params.append('query', query);
-      }
-      
-      return await apiRequest(`${basePath}?${params.toString()}`);
+    queryFn: async () => {
+      console.log('📂 CategoryManagement API call:', buildCategoriesEndpoint(currentPage));
+      const response = await apiRequest(buildCategoriesEndpoint(currentPage));
+      return response || [];
     },
   });
   
-  // Extract categories array from response
-  const categories: Category[] = React.useMemo(() => {
-    if (!categoriesResponse) return [];
-    
-    // Check if response is paginated
-    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
-      return (categoriesResponse as any).data || [];
+  // Update all categories when current page data changes
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllCategories(prev => {
+        const newCategories = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace categories for this page
+        currentPageData.forEach((category: Category, index: number) => {
+          newCategories[startIndex + index] = category;
+        });
+        
+        return newCategories;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
     }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when search changes
+  React.useEffect(() => {
+    setAllCategories([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
     
-    // Check if response is a direct array
-    if (Array.isArray(categoriesResponse)) {
-      return categoriesResponse;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildCategoriesEndpoint(page));
+      const pageData = response || [];
+      
+      setAllCategories(prev => {
+        const newCategories = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace categories for this page
+        pageData.forEach((category: Category, index: number) => {
+          newCategories[startIndex + index] = category;
+        });
+        
+        return newCategories;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    return [];
-  }, [categoriesResponse]);
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allCategories.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get categories for current page
+  const categories: Category[] = allCategories.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
   
   // Create category mutation
   const createMutation = useMutation({
@@ -199,11 +264,6 @@ export default function CategoryManagement() {
       });
       return;
     }
-    
-    // Set default placeholder image if no image was uploaded
-    if (!formData.imageUrl) {
-      formData.imageUrl = "https://placehold.co/600x800/e6e6e6/999999?text=Category";
-    }
 
     if (editingCategory) {
       updateMutation.mutate({ id: editingCategory.id, data: formData });
@@ -235,12 +295,25 @@ export default function CategoryManagement() {
     }
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchPage(page + 1);
+    }
   };
 
   const handleLimitChange = (limit: number) => {
     setItemsPerPage(limit);
+    setAllCategories([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1); // Reset to first page when changing limit
   };
 
@@ -321,8 +394,8 @@ export default function CategoryManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: (categoriesResponse as any)?.pagination?.totalCount || categories.length,
-            totalPages: (categoriesResponse as any)?.pagination?.totalPages || 1
+            totalCount: allCategories.length,
+            totalPages: totalPages
           }}
           isLoading={isLoading}
           emptyMessage="No categories found. Add your first category to get started."

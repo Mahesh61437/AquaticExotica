@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, PaginationProps } from "@/components/admin/DataTable";
 import {
   Dialog,
   DialogContent,
@@ -40,63 +33,132 @@ interface ApiUser {
   dateJoined: string;
 }
 
-// Define paginated response type
-interface PaginatedResponse<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    totalCount: number;
-    totalPages: number;
-  };
-}
-
 export default function UserManagement() {
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<ApiUser | null>(null);
   const [searchEmail, setSearchEmail] = useState("");
+  const [debouncedSearchEmail, setDebouncedSearchEmail] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [allUsers, setAllUsers] = useState<ApiUser[]>([]);
+  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // Fetch users with pagination and search
-  const { data: usersResponse, isLoading } = useQuery<ApiUser[] | PaginatedResponse<ApiUser>>({
-    queryKey: ["/api/users/", currentPage, itemsPerPage, searchEmail],
-    queryFn: async ({ queryKey }) => {
-      const basePath = queryKey[0] as string;
-      const page = queryKey[1] as number;
-      const limit = queryKey[2] as number;
-      const email = queryKey[3] as string;
-      
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
-      });
-      
-      if (email) {
-        params.append('email', email);
-      }
-      
-      return await apiRequest(`${basePath}?${params.toString()}`);
+  // Debounce search input
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchEmail(searchEmail);
+    }, 300);
+    
+    return () => clearTimeout(timer);
+  }, [searchEmail]);
+
+  // Build API endpoint for users
+  const buildUsersEndpoint = (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(itemsPerPage)
+    });
+    
+    if (debouncedSearchEmail) {
+      params.append('email', debouncedSearchEmail);
+    }
+    
+    return `/api/users/?${params.toString()}`;
+  };
+
+  // Fetch current page of users
+  const { data: currentPageData, isLoading } = useQuery({
+    queryKey: ["/api/users/", currentPage, itemsPerPage, debouncedSearchEmail],
+    queryFn: async () => {
+      console.log('👥 UserManagement API call:', buildUsersEndpoint(currentPage));
+      const response = await apiRequest(buildUsersEndpoint(currentPage));
+      return response || [];
     },
   });
   
-  // Extract users array from response
-  const users: ApiUser[] = React.useMemo(() => {
-    if (!usersResponse) return [];
-    
-    // Check if response is paginated
-    if (usersResponse && typeof usersResponse === 'object' && 'data' in usersResponse) {
-      return (usersResponse as PaginatedResponse<ApiUser>).data || [];
+  // Update all users when current page data changes
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllUsers(prev => {
+        const newUsers = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace users for this page
+        currentPageData.forEach((user: ApiUser, index: number) => {
+          newUsers[startIndex + index] = user;
+        });
+        
+        return newUsers;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
     }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when search changes
+  React.useEffect(() => {
+    setAllUsers([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1);
+  }, [debouncedSearchEmail]);
+
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
     
-    // Check if response is a direct array
-    if (Array.isArray(usersResponse)) {
-      return usersResponse;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildUsersEndpoint(page));
+      const pageData = response || [];
+      
+      setAllUsers(prev => {
+        const newUsers = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace users for this page
+        pageData.forEach((user: ApiUser, index: number) => {
+          newUsers[startIndex + index] = user;
+        });
+        
+        return newUsers;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    return [];
-  }, [usersResponse]);
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allUsers.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get users for current page
+  const users: ApiUser[] = allUsers.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
 
   // Update user admin status mutation - grant admin
   const grantAdminMutation = useMutation({
@@ -174,213 +236,160 @@ export default function UserManagement() {
     }).format(d);
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchEmail(e.target.value);
-    setCurrentPage(1); // Reset to first page on new search
-  };
-
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchPage(page + 1);
+    }
   };
 
-  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setItemsPerPage(Number(e.target.value));
-    setCurrentPage(1); // Reset to first page when changing items per page
+  const handleLimitChange = (limit: number) => {
+    setItemsPerPage(limit);
+    setAllUsers([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1); // Reset to first page when changing limit
   };
 
   return (
     <div>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <h2 className="text-2xl font-bold">User Management</h2>
-        
-        <div className="w-full md:w-auto flex items-center gap-2">
-          <div className="relative w-full md:w-64">
-            <Input 
-              type="text" 
-              placeholder="Search by email..."
-              value={searchEmail}
-              onChange={handleSearchChange}
-              className="pl-10"
-            />
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
-              </svg>
-            </div>
-          </div>
-        </div>
       </div>
 
-      {isLoading ? (
-        <div className="flex justify-center py-10">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Username</TableHead>
-                <TableHead>Joined</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user: ApiUser) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.firstName || user.lastName || user.username}
-                      </p>
-                      {user.phone && (
-                        <p className="text-sm text-muted-foreground">{user.phone}</p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{user.email || "No email"}</TableCell>
-                  <TableCell>{user.username}</TableCell>
-                  <TableCell>{formatDate(user.dateJoined)}</TableCell>
-                  <TableCell>
-                    <Badge variant={user.isAdmin ? "default" : "secondary"}>
-                      {user.isAdmin ? "Admin" : "User"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleSelectUser(user)}
-                    >
-                      <UserCog className="h-4 w-4 mr-2" />
-                      Manage
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Pagination */}
-      {users.length > 0 && (
-        <div className="flex items-center justify-between space-x-2 py-4">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium">Rows per page</p>
-            <Select value={String(itemsPerPage)} onValueChange={(value) => handleItemsPerPageChange({ target: { value } } as any)}>
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={itemsPerPage} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={String(pageSize)}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
-            Page {currentPage} of {(usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1}
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
-            >
-              <span className="sr-only">Go to first page</span>
-              <ChevronsLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="h-8 w-8 p-0"
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === ((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
-            >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              className="hidden h-8 w-8 p-0 lg:flex"
-              onClick={() => handlePageChange((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
-              disabled={currentPage === ((usersResponse as PaginatedResponse<ApiUser>)?.pagination?.totalPages || 1)}
-            >
-              <span className="sr-only">Go to last page</span>
-              <ChevronsRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* User Management Dialog */}
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Manage User</DialogTitle>
-            <DialogDescription>
-              {selectedUser && (
-                <div className="space-y-2">
-                  <p><strong>Name:</strong> {selectedUser.firstName && selectedUser.lastName 
-                    ? `${selectedUser.firstName} ${selectedUser.lastName}` 
-                    : selectedUser.firstName || selectedUser.lastName || selectedUser.username}</p>
-                  <p><strong>Email:</strong> {selectedUser.email || "No email"}</p>
-                  <p><strong>Username:</strong> {selectedUser.username}</p>
-                  <p><strong>Phone:</strong> {selectedUser.phone || "No phone"}</p>
-                  <p><strong>Joined:</strong> {formatDate(selectedUser.dateJoined)}</p>
-                  <p><strong>Current Role:</strong> {selectedUser.isAdmin ? "Admin" : "User"}</p>
+      {users && (
+        <DataTable 
+          data={users}
+          searchField={{
+            placeholder: "Search by email...",
+            value: searchEmail,
+            onChange: setSearchEmail
+          }}
+          columns={[
+            {
+              header: "Name",
+              accessor: (user: ApiUser) => (
+                <div className="flex flex-col">
+                  <span className="font-medium">{user.firstName} {user.lastName}</span>
+                  <span className="text-sm text-muted-foreground">@{user.username}</span>
                 </div>
-              )}
+              )
+            },
+            {
+              header: "Email",
+              accessor: "email"
+            },
+            {
+              header: "Phone",
+              accessor: (user: ApiUser) => user.phone || "N/A"
+            },
+            {
+              header: "Joined",
+              accessor: (user: ApiUser) => formatDate(user.dateJoined)
+            },
+            {
+              header: "Role",
+              accessor: (user: ApiUser) => (
+                <Badge variant={user.isAdmin ? "default" : "outline"}>
+                  {user.isAdmin ? "Admin" : "User"}
+                </Badge>
+              )
+            },
+            {
+              header: "Actions",
+              accessor: (user: ApiUser) => (
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectUser(user)}
+                  >
+                    <UserCog className="h-4 w-4 mr-1" />
+                    Manage
+                  </Button>
+                </div>
+              ),
+              className: "text-right"
+            }
+          ]}
+          pagination={{
+            page: currentPage,
+            limit: itemsPerPage,
+            totalCount: allUsers.length,
+            totalPages: totalPages
+          }}
+          isLoading={isLoading}
+          emptyMessage="No users found."
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+        />
+      )}
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage User: {selectedUser?.firstName} {selectedUser?.lastName}</DialogTitle>
+            <DialogDescription>
+              Manage admin privileges for this user.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4">
-            {selectedUser && (
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="admin-status"
-                  checked={selectedUser.isAdmin}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      handleGrantAdmin();
-                    } else {
-                      handleRevokeAdmin();
-                    }
-                  }}
+            <div className="space-y-2">
+              <Label>Admin Status</Label>
+              <div className="flex items-center justify-between">
+                <span className="text-sm">
+                  {selectedUser?.isAdmin ? "Admin privileges granted" : "Regular user"}
+                </span>
+                <Switch 
+                  checked={selectedUser?.isAdmin || false}
                   disabled={grantAdminMutation.isPending || revokeAdminMutation.isPending}
                 />
-                <Label htmlFor="admin-status">
-                  {selectedUser.isAdmin ? "Revoke Admin" : "Grant Admin"} privileges
-                </Label>
               </div>
-            )}
+            </div>
+            
+            <div className="space-y-2">
+              <Label>User Details</Label>
+              <div className="text-sm space-y-1">
+                <div><strong>Name:</strong> {selectedUser?.firstName} {selectedUser?.lastName}</div>
+                <div><strong>Email:</strong> {selectedUser?.email}</div>
+                <div><strong>Username:</strong> @{selectedUser?.username}</div>
+                <div><strong>Phone:</strong> {selectedUser?.phone || "N/A"}</div>
+                <div><strong>Joined:</strong> {selectedUser ? formatDate(selectedUser.dateJoined) : ""}</div>
+              </div>
+            </div>
           </div>
           
           <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsOpen(false)}
-              disabled={grantAdminMutation.isPending || revokeAdminMutation.isPending}
-            >
-              Close
-            </Button>
+            {selectedUser?.isAdmin ? (
+              <Button 
+                variant="destructive"
+                onClick={handleRevokeAdmin}
+                disabled={revokeAdminMutation.isPending}
+              >
+                {revokeAdminMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Revoke Admin
+              </Button>
+            ) : (
+              <Button 
+                onClick={handleGrantAdmin}
+                disabled={grantAdminMutation.isPending}
+              >
+                {grantAdminMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Grant Admin
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

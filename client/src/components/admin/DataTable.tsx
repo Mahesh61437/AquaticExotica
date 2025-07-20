@@ -113,68 +113,83 @@ export function DataTable<T>({
           </Table>
           
           {/* Pagination Controls */}
-          <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-2 border-t">
-            <div className="flex items-center gap-2 mb-4 sm:mb-0">
-              <Label htmlFor="itemsPerPage">Show</Label>
-              <Select
-                value={limit.toString()}
-                onValueChange={(value) => onLimitChange(Number(value))}
-              >
-                <SelectTrigger className="w-[80px]">
-                  <SelectValue placeholder={limit.toString()} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                </SelectContent>
-              </Select>
-              <span className="text-sm text-muted-foreground">
-                of {totalCount} entries
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onPageChange(1)}
-                disabled={page === 1}
-              >
-                <ChevronsLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onPageChange(page - 1)}
-                disabled={page === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-2 border-t">
+              <div className="flex items-center gap-2 mb-4 sm:mb-0">
+                <Label htmlFor="itemsPerPage">Show</Label>
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(value) => onLimitChange(Number(value))}
+                >
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue placeholder={limit.toString()} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5</SelectItem>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">
+                  of {totalCount} entries
+                </span>
+              </div>
               
-              <span className="mx-2 text-sm">
-                Page {page} of {totalPages || 1}
-              </span>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onPageChange(page + 1)}
-                disabled={page === totalPages || totalPages === 0}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => onPageChange(totalPages)}
-                disabled={page === totalPages || totalPages === 0}
-              >
-                <ChevronsRight className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange(1)}
+                  disabled={page === 1}
+                >
+                  <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange(page - 1)}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pageNum === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => onPageChange(pageNum)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange(page + 1)}
+                  disabled={page === totalPages || totalPages === 0}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onPageChange(totalPages)}
+                  disabled={page === totalPages || totalPages === 0}
+                >
+                  <ChevronsRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

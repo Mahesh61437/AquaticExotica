@@ -36,6 +36,10 @@ export default function TagManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [allTags, setAllTags] = useState<ApiTag[]>([]);
+  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Debounce search input
   useEffect(() => {
@@ -46,50 +50,111 @@ export default function TagManagement() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
   
-  // Reset to first page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  // Build API endpoint for tags
+  const buildTagsEndpoint = (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(itemsPerPage)
+    });
+    
+    if (debouncedSearchQuery) {
+      params.append('query', debouncedSearchQuery);
+    }
+    
+    return `/api/tags/?${params.toString()}`;
+  };
 
-  // Fetch tags with pagination and search
-  const { data: tagsResponse, isLoading } = useQuery({
+  // Fetch current page of tags
+  const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/tags/", currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: async ({ queryKey }) => {
-      const basePath = queryKey[0] as string;
-      const page = queryKey[1] as number;
-      const limit = queryKey[2] as number;
-      const query = queryKey[3] as string;
-      
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit)
-      });
-      
-      if (query) {
-        params.append('query', query);
-      }
-      
-      return await apiRequest(`${basePath}?${params.toString()}`);
+    queryFn: async () => {
+      console.log('🏷️ TagManagement API call:', buildTagsEndpoint(currentPage));
+      const response = await apiRequest(buildTagsEndpoint(currentPage));
+      return response || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
   
-  // Extract tags array from response
-  const tags: ApiTag[] = React.useMemo(() => {
-    if (!tagsResponse) return [];
-    
-    // Check if response is paginated
-    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
-      return (tagsResponse as any).data || [];
+  // Update all tags when current page data changes
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllTags(prev => {
+        const newTags = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace tags for this page
+        currentPageData.forEach((tag: ApiTag, index: number) => {
+          newTags[startIndex + index] = tag;
+        });
+        
+        return newTags;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
     }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when search changes
+  React.useEffect(() => {
+    setAllTags([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
     
-    // Check if response is a direct array
-    if (Array.isArray(tagsResponse)) {
-      return tagsResponse;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildTagsEndpoint(page));
+      const pageData = response || [];
+      
+      setAllTags(prev => {
+        const newTags = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace tags for this page
+        pageData.forEach((tag: ApiTag, index: number) => {
+          newTags[startIndex + index] = tag;
+        });
+        
+        return newTags;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    return [];
-  }, [tagsResponse]);
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allTags.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get tags for current page
+  const tags: ApiTag[] = allTags.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
 
   // Create tag mutation
   const createMutation = useMutation({
@@ -209,21 +274,30 @@ export default function TagManagement() {
     setEditingTag(null);
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchPage(page + 1);
+    }
   };
 
   const handleLimitChange = (limit: number) => {
     setItemsPerPage(limit);
+    setAllTags([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1); // Reset to first page when changing limit
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -286,8 +360,8 @@ export default function TagManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: (tagsResponse as any)?.pagination?.totalCount || tags.length,
-            totalPages: (tagsResponse as any)?.pagination?.totalPages || 1
+            totalCount: allTags.length,
+            totalPages: totalPages
           }}
           isLoading={isLoading}
           emptyMessage="No tags found. Add your first tag to get started."
@@ -302,8 +376,8 @@ export default function TagManagement() {
             <DialogTitle>{editingTag ? "Edit Tag" : "Add New Tag"}</DialogTitle>
             <DialogDescription>
               {editingTag 
-                ? "Update the tag name below." 
-                : "Enter a name for the new tag."}
+                ? "Update the tag information below." 
+                : "Fill in the details to add a new tag."}
             </DialogDescription>
           </DialogHeader>
           
@@ -312,28 +386,15 @@ export default function TagManagement() {
               <Label htmlFor="name">Tag Name *</Label>
               <Input
                 id="name"
-                value={formData.name}
+                value={formData.name || ""}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter tag name"
+                placeholder="Tag name"
                 required
               />
             </div>
             
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsOpen(false);
-                  resetForm();
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={createMutation.isPending || updateMutation.isPending}
-              >
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}

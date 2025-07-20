@@ -95,8 +95,32 @@ export function generateSlug(text: string): string {
  * Extract product ID from a slug that contains both slug and ID
  */
 export function extractProductIdFromSlug(slug: string): number | null {
+  console.log('🔍 Extracting product ID from slug:', slug);
+  
+  // Handle empty or invalid slug
+  if (!slug || typeof slug !== 'string') {
+    console.log('❌ Invalid slug:', slug);
+    return null;
+  }
+  
+  // Try to match the pattern: slug-123
   const match = slug.match(/-(\d+)$/);
-  return match ? parseInt(match[1]) : null;
+  
+  if (match) {
+    const productId = parseInt(match[1]);
+    console.log('✅ Extracted product ID:', productId);
+    return productId;
+  }
+  
+  // If no match found, try to parse the entire slug as a number (fallback)
+  const numericSlug = parseInt(slug);
+  if (!isNaN(numericSlug)) {
+    console.log('✅ Parsed numeric slug as product ID:', numericSlug);
+    return numericSlug;
+  }
+  
+  console.log('❌ No product ID found in slug:', slug);
+  return null;
 }
 
 /**

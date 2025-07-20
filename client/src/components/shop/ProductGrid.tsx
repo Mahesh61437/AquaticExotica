@@ -117,7 +117,7 @@ export function ProductGrid({
 
   // Fetch current page
   const { data: currentPageData, isLoading, error } = useQuery<ApiProduct[]>({
-    queryKey: ['products', buildEndpoint(currentPage), category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, currentPage, itemsPerPage],
+    queryKey: ['products', currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock],
     queryFn: async () => {
       console.log('🛍️ ProductGrid API call:', buildEndpoint(currentPage));
       const response = await apiRequest(buildEndpoint(currentPage));
@@ -165,8 +165,36 @@ export function ProductGrid({
     }
   }, [currentPageData, currentPage, itemsPerPage]);
 
+  // Debug logging for pagination state
+  React.useEffect(() => {
+    console.log('🔍 ProductGrid Pagination State:', {
+      currentPage,
+      itemsPerPage,
+      allProductsLength: allProducts.length,
+      fetchedPages: Array.from(fetchedPages),
+      hasMorePages,
+      currentPageProducts: allProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage).filter(Boolean).length,
+      filters: {
+        category,
+        filter,
+        searchQuery,
+        activeCategoryIds,
+        activePriceRange,
+        activeInStock
+      }
+    });
+  }, [currentPage, itemsPerPage, allProducts.length, fetchedPages, hasMorePages, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+
   // Reset pagination when filters change
   React.useEffect(() => {
+    console.log('🔄 Resetting pagination due to filter change:', {
+      category,
+      filter,
+      searchQuery,
+      activeCategoryIds,
+      activePriceRange,
+      activeInStock
+    });
     setAllProducts([]);
     setFetchedPages(new Set());
     setHasMorePages(true);

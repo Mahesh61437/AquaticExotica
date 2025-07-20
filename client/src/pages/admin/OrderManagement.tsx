@@ -109,6 +109,10 @@ export default function OrderManagement() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [allOrders, setAllOrders] = useState<NewOrder[]>([]);
+  const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
+  const [hasMorePages, setHasMorePages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   
   // Debounce search input
   useEffect(() => {
@@ -119,49 +123,110 @@ export default function OrderManagement() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
   
-  // Reset to first page when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchQuery]);
+  // Build API endpoint for orders
+  const buildOrdersEndpoint = (page: number) => {
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(itemsPerPage)
+    });
+    
+    if (debouncedSearchQuery) {
+      params.append('query', debouncedSearchQuery);
+    }
+    
+    return `/api/orders/?${params.toString()}`;
+  };
 
-  // Fetch orders with pagination and search
-  const { data: ordersResponse, isLoading } = useQuery({
+  // Fetch current page of orders
+  const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: async ({ queryKey }) => {
-      const basePath = queryKey[0] as string;
-      const page = queryKey[1] as number;
-      const limit = queryKey[2] as number;
-      const query = queryKey[3] as string;
-      
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit)
-      });
-      
-      if (query) {
-        params.append('query', query);
-      }
-      
-      return await apiRequest(`${basePath}?${params.toString()}`);
+    queryFn: async () => {
+      console.log('📦 OrderManagement API call:', buildOrdersEndpoint(currentPage));
+      const response = await apiRequest(buildOrdersEndpoint(currentPage));
+      return response || [];
     },
   });
   
-  // Extract orders array from response
-  const orders: NewOrder[] = React.useMemo(() => {
-    if (!ordersResponse) return [];
-    
-    // Check if response is paginated
-    if (ordersResponse && typeof ordersResponse === 'object' && 'data' in ordersResponse) {
-      return (ordersResponse as any).data || [];
+  // Update all orders when current page data changes
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      setAllOrders(prev => {
+        const newOrders = [...prev];
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        
+        // Replace orders for this page
+        currentPageData.forEach((order: NewOrder, index: number) => {
+          newOrders[startIndex + index] = order;
+        });
+        
+        return newOrders;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
+      
+      // Check if we have more pages
+      if (currentPageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } else if (currentPageData && currentPageData.length === 0) {
+      // No more data
+      setHasMorePages(false);
     }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
+  // Reset pagination when search changes
+  React.useEffect(() => {
+    setAllOrders([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
+    setCurrentPage(1);
+  }, [debouncedSearchQuery]);
+
+  // Function to fetch a specific page
+  const fetchPage = async (page: number) => {
+    if (fetchedPages.has(page)) return;
     
-    // Check if response is a direct array
-    if (Array.isArray(ordersResponse)) {
-      return ordersResponse;
+    setIsLoadingMore(true);
+    try {
+      const response = await apiRequest(buildOrdersEndpoint(page));
+      const pageData = response || [];
+      
+      setAllOrders(prev => {
+        const newOrders = [...prev];
+        const startIndex = (page - 1) * itemsPerPage;
+        
+        // Replace orders for this page
+        pageData.forEach((order: NewOrder, index: number) => {
+          newOrders[startIndex + index] = order;
+        });
+        
+        return newOrders;
+      });
+      
+      setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
+      
+      // Check if we have more pages
+      if (pageData.length < itemsPerPage) {
+        setHasMorePages(false);
+      }
+    } catch (error) {
+      console.error('Error fetching page:', page, error);
+    } finally {
+      setIsLoadingMore(false);
     }
-    
-    return [];
-  }, [ordersResponse]);
+  };
+
+  // Calculate total pages based on fetched data
+  const totalPages = Math.max(
+    Math.ceil(allOrders.length / itemsPerPage),
+    Math.max(...Array.from(fetchedPages), 0)
+  );
+
+  // Get orders for current page
+  const orders: NewOrder[] = allOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  ).filter(Boolean);
 
   // Update order status mutation
   const updateStatusMutation = useMutation({
@@ -173,13 +238,7 @@ export default function OrderManagement() {
       });
     },
     onSuccess: () => {
-      // Invalidate query to refresh orders list
-      const queryKey = ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery];
-      queryKey.forEach((_, index) => {
-        const partialKey = queryKey.slice(0, index + 1);
-        queryClient.invalidateQueries({ queryKey: partialKey });
-      });
-      
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/"] });
       toast({
         title: "Status Updated",
         description: "Order status has been updated successfully",
@@ -198,7 +257,7 @@ export default function OrderManagement() {
   const getStatusBadge = (status: string) => {
     const colorClass = statusColors[status.toLowerCase()] || "bg-gray-100 text-gray-800 border-gray-300";
     return (
-      <span className={`px-2 py-1 text-xs rounded-full border ${colorClass}`}>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${colorClass}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
@@ -210,6 +269,8 @@ export default function OrderManagement() {
       day: 'numeric',
       month: 'short',
       year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
     }).format(date);
   };
 
@@ -217,7 +278,6 @@ export default function OrderManagement() {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -247,18 +307,31 @@ export default function OrderManagement() {
     updateStatusMutation.mutate({ id: selectedOrder.id, status: newStatus });
   };
 
-  const handlePageChange = (page: number) => {
+  const handlePageChange = async (page: number) => {
     setCurrentPage(page);
+    
+    // Fetch the page if not already fetched
+    if (!fetchedPages.has(page)) {
+      await fetchPage(page);
+    }
+    
+    // Pre-fetch next page if available
+    if (hasMorePages && !fetchedPages.has(page + 1)) {
+      fetchPage(page + 1);
+    }
   };
 
   const handleLimitChange = (limit: number) => {
     setItemsPerPage(limit);
+    setAllOrders([]);
+    setFetchedPages(new Set());
+    setHasMorePages(true);
     setCurrentPage(1); // Reset to first page when changing limit
   };
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <h2 className="text-2xl font-bold">Order Management</h2>
       </div>
 
@@ -273,30 +346,28 @@ export default function OrderManagement() {
           columns={[
             {
               header: "Order ID",
-              accessor: (order: NewOrder) => (
-                <span className="font-medium">#{order.id}</span>
-              )
+              accessor: "id",
+              className: "font-medium"
             },
             {
               header: "Customer",
-              accessor: (order: NewOrder) => (
-                <div>
-                  <p className="font-medium">{order.shippingAddress?.recipientName || "N/A"}</p>
-                  <p className="text-sm text-muted-foreground">{order.shippingAddress?.recipientPhone || "No phone"}</p>
-                </div>
-              )
+              accessor: (order: NewOrder) => order.shippingAddress.recipientName
             },
             {
-              header: "Date",
-              accessor: (order: NewOrder) => formatDate(order.createdAt)
+              header: "Items",
+              accessor: (order: NewOrder) => order.items.length
             },
             {
               header: "Total",
-              accessor: (order: NewOrder) => formatCurrency(Number(order.grandTotal) || 0)
+              accessor: (order: NewOrder) => formatCurrency(order.grandTotal)
             },
             {
               header: "Status",
               accessor: (order: NewOrder) => getStatusBadge(order.status)
+            },
+            {
+              header: "Date",
+              accessor: (order: NewOrder) => formatDate(order.createdAt)
             },
             {
               header: "Actions",
@@ -306,7 +377,6 @@ export default function OrderManagement() {
                     variant="outline"
                     size="icon"
                     onClick={() => handleViewOrder(order)}
-                    title="View Order"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -314,7 +384,6 @@ export default function OrderManagement() {
                     variant="outline"
                     size="icon"
                     onClick={() => handleUpdateStatus(order)}
-                    title="Update Status"
                   >
                     <PenLine className="h-4 w-4" />
                   </Button>
@@ -326,8 +395,8 @@ export default function OrderManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: (ordersResponse as any)?.pagination?.totalCount || orders.length,
-            totalPages: (ordersResponse as any)?.pagination?.totalPages || 1
+            totalCount: allOrders.length,
+            totalPages: totalPages
           }}
           isLoading={isLoading}
           emptyMessage="No orders found."
@@ -338,113 +407,90 @@ export default function OrderManagement() {
 
       {/* View Order Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Order #{selectedOrder?.id}</DialogTitle>
             <DialogDescription>
-              Placed on {selectedOrder && formatDate(selectedOrder.createdAt)}
+              Order details and items
             </DialogDescription>
           </DialogHeader>
           
           {selectedOrder && (
             <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Customer Information</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1">
-                      <p><span className="font-medium">Name:</span> {selectedOrder.shippingAddress?.recipientName || 'N/A'}</p>
-                      <p><span className="font-medium">Phone:</span> {selectedOrder.shippingAddress?.recipientPhone || 'N/A'}</p>
-                      <p><span className="font-medium">Address:</span> {selectedOrder.shippingAddress?.addressLine1 || 'N/A'}</p>
-                      <p><span className="font-medium">City:</span> {selectedOrder.shippingAddress?.city || 'N/A'}</p>
-                      <p><span className="font-medium">State:</span> {selectedOrder.shippingAddress?.state || 'N/A'}</p>
-                      <p><span className="font-medium">ZIP:</span> {selectedOrder.shippingAddress?.zipCode || 'N/A'}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Order Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1">
-                      <p><span className="font-medium">Status:</span> {getStatusBadge(selectedOrder.status)}</p>
-                      <p><span className="font-medium">Subtotal:</span> {formatCurrency(Number(selectedOrder.totalAmount))}</p>
-                      <p><span className="font-medium">Shipping:</span> {formatCurrency(Number(selectedOrder.shippingCost))}</p>
-                      <p><span className="font-medium">Total:</span> {formatCurrency(Number(selectedOrder.grandTotal))}</p>
-                      <p><span className="font-medium">Order Date:</span> {formatDate(selectedOrder.createdAt)}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-              
+              {/* Order Summary */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Order Items</CardTitle>
+                  <CardTitle>Order Summary</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[400px] border-collapse">
-                      <thead>
-                        <tr className="border-b">
-                          <th className="text-left p-2">Product</th>
-                          <th className="text-right p-2">Price</th>
-                          <th className="text-right p-2">Quantity</th>
-                          <th className="text-right p-2">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedOrder.items?.map((item: OrderItem, index: number) => (
-                          <tr key={index} className="border-b">
-                            <td className="p-2 flex items-center gap-2">
-                              {item.product.imageUrl && (
-                                <img 
-                                  src={item.product.imageUrl} 
-                                  alt={item.product.name} 
-                                  className="w-10 h-10 object-cover rounded" 
-                                />
-                              )}
-                              <div>
-                                <p className="font-medium">{item.product.name}</p>
-                                <p className="text-sm text-muted-foreground">ID: {item.product.id}</p>
-                              </div>
-                            </td>
-                            <td className="p-2 text-right">{formatCurrency(Number(item.price))}</td>
-                            <td className="p-2 text-right">{item.quantity}</td>
-                            <td className="p-2 text-right">{formatCurrency(item.totalPrice)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="font-medium">
-                          <td colSpan={3} className="p-2 text-right">Total:</td>
-                          <td className="p-2 text-right">{formatCurrency(Number(selectedOrder.grandTotal))}</td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Status</Label>
+                    <div className="mt-1">{getStatusBadge(selectedOrder.status)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Date</Label>
+                    <div className="mt-1">{formatDate(selectedOrder.createdAt)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Total Amount</Label>
+                    <div className="mt-1">{formatCurrency(selectedOrder.grandTotal)}</div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Shipping Cost</Label>
+                    <div className="mt-1">{formatPrice(selectedOrder.shippingCost)}</div>
                   </div>
                 </CardContent>
               </Card>
-              
-              <div className="flex justify-end gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsViewOpen(false)}
-                >
-                  Close
-                </Button>
-                <Button 
-                  onClick={() => {
-                    setIsViewOpen(false);
-                    handleUpdateStatus(selectedOrder);
-                  }}
-                >
-                  Update Status
-                </Button>
-              </div>
+
+              {/* Shipping Address */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Shipping Address</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div><strong>{selectedOrder.shippingAddress.recipientName}</strong></div>
+                    <div>{selectedOrder.shippingAddress.addressLine1}</div>
+                    {selectedOrder.shippingAddress.addressLine2 && (
+                      <div>{selectedOrder.shippingAddress.addressLine2}</div>
+                    )}
+                    <div>
+                      {selectedOrder.shippingAddress.city}, {selectedOrder.shippingAddress.state} {selectedOrder.shippingAddress.zipCode}
+                    </div>
+                    <div>{selectedOrder.shippingAddress.country}</div>
+                    <div>Phone: {selectedOrder.shippingAddress.recipientPhone}</div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Order Items */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Order Items ({selectedOrder.items.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {selectedOrder.items.map((item) => (
+                      <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                        <img 
+                          src={item.product.imageUrl} 
+                          alt={item.product.name}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium">{item.product.name}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Quantity: {item.quantity} × {formatPrice(item.price)}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-medium">{formatCurrency(item.totalPrice)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
         </DialogContent>
@@ -456,19 +502,16 @@ export default function OrderManagement() {
           <DialogHeader>
             <DialogTitle>Update Order Status</DialogTitle>
             <DialogDescription>
-              Change the status for order #{selectedOrder?.id}
+              Update the status for order #{selectedOrder?.id}
             </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleStatusSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={newStatus}
-                onValueChange={setNewStatus}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select a status" />
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="pending">Pending</SelectItem>
@@ -481,17 +524,7 @@ export default function OrderManagement() {
             </div>
             
             <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsStatusOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit"
-                disabled={updateStatusMutation.isPending}
-              >
+              <Button type="submit" disabled={updateStatusMutation.isPending}>
                 {updateStatusMutation.isPending && (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 )}
