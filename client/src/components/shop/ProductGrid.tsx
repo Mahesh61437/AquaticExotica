@@ -125,7 +125,9 @@ export function ProductGrid({
     queryFn: async () => {
       console.log('🛍️ ProductGrid API call:', buildEndpoint(currentPage));
       const response = await apiRequest(buildEndpoint(currentPage));
-      return response || [];
+      if (Array.isArray(response)) return response;
+      if (response && typeof response === 'object' && 'data' in response) return response.data;
+      return [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 1,
