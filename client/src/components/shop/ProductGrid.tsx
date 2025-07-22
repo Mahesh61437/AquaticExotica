@@ -1,5 +1,5 @@
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ProductCard } from "./ProductCard";
 import { Product } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -67,6 +67,8 @@ export function ProductGrid({
   onPageChange,
   onLimitChange
 }: ProductGridProps) {
+  const queryClient = useQueryClient();
+  
   // Pagination state
   const [currentPage, setCurrentPage] = React.useState(initialPage);
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
@@ -84,7 +86,7 @@ export function ProductGrid({
     queryParams.append('page', page.toString());
     queryParams.append('page_size', itemsPerPage.toString());
     
-    // Add category IDs if any are selected
+    // Add category IDs if any are selected (this takes priority over URL category)
     if (activeCategoryIds.length > 0) {
       queryParams.append('category_id', activeCategoryIds.join(','));
     }
@@ -105,13 +107,15 @@ export function ProductGrid({
       queryParams.append('q', searchQuery);
     }
     
-    // Use category-specific endpoint if we have a category URL param and no active filters
+    // Use category-specific endpoint ONLY if we have a category URL param AND no active filters
+    // This ensures that when filters are applied, we use the main products endpoint with filter params
     if (category && activeCategoryIds.length === 0 && activePriceRange[0] === 0 && activePriceRange[1] === 10000 && !activeInStock && !searchQuery) {
       endpoint = `/api/products/category/${category}?${queryParams.toString()}`;
     } else {
       endpoint = `/api/products/?${queryParams.toString()}`;
     }
     
+    console.log('🔗 ProductGrid endpoint:', endpoint);
     return endpoint;
   };
 
@@ -195,12 +199,19 @@ export function ProductGrid({
       activePriceRange,
       activeInStock
     });
+    
+    // Clear all cached data when filters change
     setAllProducts([]);
     setFetchedPages(new Set());
     setHasMorePages(true);
     setCurrentPage(1);
     onPageChange?.(1);
-  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, onPageChange]);
+    
+    // Invalidate the query to force a fresh fetch
+    queryClient.invalidateQueries({ 
+      queryKey: ['products', currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock] 
+    });
+  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, onPageChange, queryClient]);
 
   // Function to fetch a specific page
   const fetchPage = async (page: number) => {

@@ -89,6 +89,7 @@ export function ProductFilters({
   };
 
   const handleClearAll = () => {
+    console.log('🧹 Clearing all filters');
     onCategoryChange([]);
     setPriceMin("0");
     setPriceMax("10000");
@@ -98,6 +99,7 @@ export function ProductFilters({
     if (onInStockChange) {
       onInStockChange(false);
     }
+    // Always redirect to /shop to clear any category URL
     setLocation("/shop");
   };
 

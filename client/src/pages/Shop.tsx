@@ -57,18 +57,15 @@ export default function Shop() {
     };
   }, []);
 
-  // Set active category if coming from category route or query parameter, but only on initial render
-  // This prevents resetting activeCategories when user manually changes filters
+  // Handle category URL parameter - this should only set the category for the ProductGrid
+  // but not interfere with the filter state
   useEffect(() => {
-    if (params?.category && activeCategoryIds.length === 0) {
-      // For now, we'll handle category pages differently - they'll use the category-specific API
-      // and we won't set activeCategoryIds to avoid conflicts
-    } else if (categoryParam && activeCategoryIds.length === 0) {
-      // Handle category from query parameter
-      // This would need to be converted from category name to ID
-      // For now, we'll handle this in the ProductGrid component
-    }
-  }, [params?.category, categoryParam, activeCategoryIds.length]);
+    console.log('🏪 Shop page - Category params:', {
+      urlCategory: params?.category,
+      queryCategory: categoryParam,
+      activeCategoryIds
+    });
+  }, [params?.category, categoryParam, activeCategoryIds]);
 
   return (
     <>
