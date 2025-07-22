@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { ProductGrid } from "@/components/shop/ProductGrid";
 import { ProductFilters } from "@/components/shop/ProductFilters";
 import { generateMetaDescription } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { Category } from "@/types";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
@@ -26,17 +28,30 @@ export default function Shop() {
   const [activeInStock, setActiveInStock] = useState<boolean>(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
 
+  // Fetch all categories for slug-to-id mapping
+  const { data: categoriesResponse } = useQuery<Category[]>({
+    queryKey: ["/api/categories/"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const categories: Category[] = Array.isArray(categoriesResponse) ? categoriesResponse : [];
+
   // Determine page title
   let pageTitle = "All Products";
   let categorySlug = "";
+  let urlCategoryId: number | undefined = undefined;
   
   if (params?.category) {
     categorySlug = params.category;
     // Capitalize first letter
     pageTitle = params.category.charAt(0).toUpperCase() + params.category.slice(1);
+    // Map slug to ID
+    const found = categories.find(cat => cat.slug === params.category);
+    if (found) urlCategoryId = found.id;
   } else if (categoryParam) {
     // Handle category from query parameter
     pageTitle = categoryParam.charAt(0).toUpperCase() + categoryParam.slice(1);
+    const found = categories.find(cat => cat.slug === categoryParam);
+    if (found) urlCategoryId = found.id;
   } else if (searchQuery) {
     pageTitle = `Search: ${searchQuery}`;
   } else if (filterParam === "new") {
@@ -46,26 +61,22 @@ export default function Shop() {
   } else if (filterParam === "trending") {
     pageTitle = "Bestsellers";
   }
-  
+
   // Clear filters when leaving the shop page
   useEffect(() => {
     return () => {
-      // This cleanup function runs when the component unmounts (user leaves the page)
       setActiveCategoryIds([]); // Reset filters
       setActivePriceRange([0, 10000]);
       setActiveInStock(false);
     };
   }, []);
 
-  // Handle category URL parameter - this should only set the category for the ProductGrid
-  // but not interfere with the filter state
+  // If we land on a category URL, set the filter state to that category ID (only on initial render)
   useEffect(() => {
-    console.log('🏪 Shop page - Category params:', {
-      urlCategory: params?.category,
-      queryCategory: categoryParam,
-      activeCategoryIds
-    });
-  }, [params?.category, categoryParam, activeCategoryIds]);
+    if (urlCategoryId && activeCategoryIds.length === 0) {
+      setActiveCategoryIds([urlCategoryId]);
+    }
+  }, [urlCategoryId, activeCategoryIds.length]);
 
   return (
     <>
@@ -144,7 +155,7 @@ export default function Shop() {
           {/* Products */}
           <div className="md:col-span-3">
             <ProductGrid 
-              category={params?.category} 
+              // category={params?.category}  // REMOVE passing slug
               filter={filterParam} 
               searchQuery={searchQuery}
               activeCategoryIds={activeCategoryIds}
