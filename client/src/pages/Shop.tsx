@@ -155,7 +155,7 @@ export default function Shop() {
           {/* Products */}
           <div className="md:col-span-3">
             <ProductGrid 
-              // category={params?.category}  // REMOVE passing slug
+              key={activeCategoryIds.join(',') + '-' + activePriceRange.join(',') + '-' + activeInStock + '-' + searchQuery + '-' + filterParam}
               filter={filterParam} 
               searchQuery={searchQuery}
               activeCategoryIds={activeCategoryIds}
