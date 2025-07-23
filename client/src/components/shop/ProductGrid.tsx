@@ -161,31 +161,8 @@ export function ProductGrid({
 
   // Update all products when current page data changes
   React.useEffect(() => {
-    if (
-      currentPage === 1 &&
-      activeCategoryIds.length === 0 &&
-      activePriceRange[0] === 0 &&
-      activePriceRange[1] === 10000 &&
-      !activeInStock &&
-      !searchQuery &&
-      !filter
-    ) {
-      // No filters: replace allProducts with the new data
-      setAllProducts(currentPageData || []);
-    } else if (currentPageData && currentPageData.length > 0) {
-      setAllProducts(prev => {
-        const newProducts = [...prev];
-        const startIndex = (currentPage - 1) * itemsPerPage;
-        // Replace products for this page
-        currentPageData.forEach((product, index) => {
-          newProducts[startIndex + index] = product;
-        });
-        return newProducts;
-      });
-    } else if (currentPageData && currentPageData.length === 0) {
-      setHasMorePages(false);
-    }
-  }, [currentPageData, currentPage, itemsPerPage, activeCategoryIds, activePriceRange, activeInStock, searchQuery, filter]);
+    setAllProducts(currentPageData || []);
+  }, [currentPageData]);
 
   // Debug logging for pagination state
   React.useEffect(() => {
