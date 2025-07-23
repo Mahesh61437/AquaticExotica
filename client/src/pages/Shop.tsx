@@ -27,6 +27,7 @@ export default function Shop() {
   const [activePriceRange, setActivePriceRange] = useState<[number, number]>([0, 10000]);
   const [activeInStock, setActiveInStock] = useState<boolean>(false);
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch all categories for slug-to-id mapping
   const { data: categoriesResponse } = useQuery<Category[]>({
@@ -68,6 +69,7 @@ export default function Shop() {
       setActiveCategoryIds([]); // Reset filters
       setActivePriceRange([0, 10000]);
       setActiveInStock(false);
+      setCurrentPage(1); // Reset page
     };
   }, []);
 
@@ -77,6 +79,14 @@ export default function Shop() {
       setActiveCategoryIds([urlCategoryId]);
     }
   }, [urlCategoryId, activeCategoryIds.length]);
+
+  // When filters are cleared, reset currentPage to 1
+  const handleClearFilters = () => {
+    setActiveCategoryIds([]);
+    setActivePriceRange([0, 10000]);
+    setActiveInStock(false);
+    setCurrentPage(1);
+  };
 
   return (
     <>
@@ -133,6 +143,7 @@ export default function Shop() {
                   activePriceRange={activePriceRange}
                   onInStockChange={setActiveInStock}
                   activeInStock={activeInStock}
+                  onClearFilters={handleClearFilters}
                 />
               </div>
             </SheetContent>
@@ -149,18 +160,21 @@ export default function Shop() {
               activePriceRange={activePriceRange}
               onInStockChange={setActiveInStock}
               activeInStock={activeInStock}
+              onClearFilters={handleClearFilters}
             />
           </div>
           
           {/* Products */}
           <div className="md:col-span-3">
             <ProductGrid 
-              key={activeCategoryIds.join(',') + '-' + activePriceRange.join(',') + '-' + activeInStock + '-' + searchQuery + '-' + filterParam}
+              key={activeCategoryIds.join(',') + '-' + activePriceRange.join(',') + '-' + activeInStock + '-' + searchQuery + '-' + filterParam + '-' + currentPage}
               filter={filterParam} 
               searchQuery={searchQuery}
               activeCategoryIds={activeCategoryIds}
               activePriceRange={activePriceRange}
               activeInStock={activeInStock}
+              initialPage={currentPage}
+              onPageChange={setCurrentPage}
             />
           </div>
         </div>

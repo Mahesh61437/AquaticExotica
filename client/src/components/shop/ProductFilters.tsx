@@ -22,6 +22,7 @@ interface ProductFiltersProps {
   activePriceRange?: [number, number];
   onInStockChange?: (inStock: boolean) => void;
   activeInStock?: boolean;
+  onClearFilters?: () => void;
 }
 
 export function ProductFilters({
@@ -30,7 +31,8 @@ export function ProductFilters({
   onPriceChange,
   activePriceRange = [0, 10000],
   onInStockChange,
-  activeInStock = false
+  activeInStock = false,
+  onClearFilters
 }: ProductFiltersProps) {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -101,6 +103,7 @@ export function ProductFilters({
     }
     // Always redirect to /shop to clear any category URL
     setLocation("/shop");
+    if (onClearFilters) onClearFilters();
   };
 
   // Update price inputs when activePriceRange changes
