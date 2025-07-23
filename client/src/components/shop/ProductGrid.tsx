@@ -73,7 +73,10 @@ export function ProductGrid({
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = React.useState(initialPage);
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
-  const [totalCount, setTotalCount] = React.useState(0);
+  const [pages, setPages] = React.useState<{ [page: number]: ApiProduct[] }>({});
+  const [lastPage, setLastPage] = React.useState<number | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
 
   // Build the API endpoint with query parameters
   const buildEndpoint = (page: number) => {
@@ -117,69 +120,120 @@ export function ProductGrid({
     return endpoint;
   };
 
-  // Fetch current page
-  const { data: currentPageData, isLoading, error } = useQuery<ApiProduct[]>({
-    queryKey: ['products', currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock],
-    queryFn: async () => {
-      const endpoint = buildEndpoint(currentPage);
-      console.log('ProductGrid API CALL', endpoint);
+  // Fetch a specific page and store it
+  const fetchPage = async (page: number) => {
+    if (pages[page]) return; // Already fetched
+    setIsLoading(true);
+    setError(null);
+    try {
+      const endpoint = buildEndpoint(page);
       const response = await apiRequest(endpoint);
-      console.log('ProductGrid API RESPONSE', response);
+      let data: ApiProduct[] = [];
       if (Array.isArray(response)) {
-        setTotalCount(response.length); // fallback if no totalCount
-        return response;
+        data = response;
+      } else if (response && typeof response === 'object' && 'data' in response) {
+        data = response.data;
       }
-      if (response && typeof response === 'object' && 'data' in response) {
-        setTotalCount(response.totalCount || response.data.length);
-        return response.data;
+      setPages(prev => ({ ...prev, [page]: data }));
+      // If this page returns less than itemsPerPage, it's the last page (including page 1)
+      if (data.length < itemsPerPage) {
+        setLastPage(page);
       }
-      setTotalCount(0);
-      return [];
-    },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1,
-  });
-
-  // Always use the latest API data for display
-  const productsToShow = currentPageData || [];
-
-  // Pagination controls (now using totalCount from API)
-  const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
-
-  // Handle page change
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    onPageChange?.(page);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleLimitChange = (limit: number) => {
-    setItemsPerPage(limit);
+  // On mount and when currentPage or filters change, fetch current and next page
+  React.useEffect(() => {
+    fetchPage(currentPage);
+    // Only prefetch next page if not lastPage and current page is full
+    if (
+      lastPage === null &&
+      pages[currentPage] &&
+      pages[currentPage].length === itemsPerPage
+    ) {
+      fetchPage(currentPage + 1);
+    }
+  }, [currentPage, itemsPerPage, lastPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+
+  // When filters change, reset all pagination state
+  React.useEffect(() => {
+    setPages({});
+    setLastPage(null);
     setCurrentPage(1);
-    onLimitChange?.(limit);
-    onPageChange?.(1);
+  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+
+  // Products to show for current page
+  const productsToShow = pages[currentPage] || [];
+
+  // Calculate total pages based on loaded pages and lastPage
+  const loadedPages = Object.keys(pages).map(Number).sort((a, b) => a - b);
+  const totalPages = lastPage ? lastPage : loadedPages.length > 0 ? Math.max(...loadedPages) : 1;
+
+  // Pagination controls
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
+        <div className="text-sm text-muted-foreground">
+          Showing page {currentPage} of {totalPages}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage - 1)}
+            disabled={currentPage <= 1}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => {
+              const pageNum = i + 1;
+              return (
+                <Button
+                  key={pageNum}
+                  variant={pageNum === currentPage ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(pageNum)}
+                  className="w-8 h-8 p-0"
+                >
+                  {pageNum}
+                </Button>
+              );
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(currentPage + 1)}
+            disabled={lastPage !== null && currentPage >= lastPage}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={lastPage !== null && currentPage >= lastPage}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    );
   };
-
-  // Debug logging for pagination state
-  React.useEffect(() => {
-    console.log('🔍 ProductGrid Pagination State:', {
-      currentPage,
-      itemsPerPage,
-      productsToShowLength: productsToShow.length,
-      filters: {
-        filter,
-        searchQuery,
-        activeCategoryIds,
-        activePriceRange,
-        activeInStock
-      }
-    });
-  }, [currentPage, itemsPerPage, productsToShow.length, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
-
-  // Reset page to 1 when filters change
-  React.useEffect(() => {
-    setCurrentPage(1);
-    onPageChange?.(1);
-  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, onPageChange]);
 
   if (isLoading && currentPage === 1) {
     return (
@@ -227,68 +281,6 @@ export function ProductGrid({
       </div>
     );
   }
-
-  // Pagination controls component (simplified)
-  const PaginationControls = () => {
-    if (totalPages <= 1) return null;
-    return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
-        <div className="text-sm text-muted-foreground">
-          Showing {productsToShow.length} products
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => {
-              const pageNum = i + 1;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === currentPage ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handlePageChange(pageNum)}
-                  className="w-8 h-8 p-0"
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(totalPages)}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div>
