@@ -73,6 +73,7 @@ export function ProductGrid({
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = React.useState(initialPage);
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
+  const [totalCount, setTotalCount] = React.useState(0);
 
   // Build the API endpoint with query parameters
   const buildEndpoint = (page: number) => {
@@ -124,8 +125,15 @@ export function ProductGrid({
       console.log('ProductGrid API CALL', endpoint);
       const response = await apiRequest(endpoint);
       console.log('ProductGrid API RESPONSE', response);
-      if (Array.isArray(response)) return response;
-      if (response && typeof response === 'object' && 'data' in response) return response.data;
+      if (Array.isArray(response)) {
+        setTotalCount(response.length); // fallback if no totalCount
+        return response;
+      }
+      if (response && typeof response === 'object' && 'data' in response) {
+        setTotalCount(response.totalCount || response.data.length);
+        return response.data;
+      }
+      setTotalCount(0);
       return [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -135,8 +143,7 @@ export function ProductGrid({
   // Always use the latest API data for display
   const productsToShow = currentPageData || [];
 
-  // Pagination controls (if you have total count from API, use it; otherwise, use productsToShow.length)
-  const totalCount = productsToShow.length;
+  // Pagination controls (now using totalCount from API)
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
   // Handle page change
