@@ -77,6 +77,19 @@ export function ProductGrid({
   const [hasMorePages, setHasMorePages] = React.useState(true);
   const [isLoadingMore, setIsLoadingMore] = React.useState(false);
 
+  // DEBUG: Log on mount and prop changes
+  React.useEffect(() => {
+    console.log('ProductGrid MOUNT/UPDATE', {
+      currentPage,
+      itemsPerPage,
+      activeCategoryIds,
+      activePriceRange,
+      activeInStock,
+      filter,
+      searchQuery
+    });
+  }, [currentPage, itemsPerPage, activeCategoryIds, activePriceRange, activeInStock, filter, searchQuery]);
+
   // Build the API endpoint with query parameters
   const buildEndpoint = (page: number) => {
     let endpoint = "/api/products/";
@@ -123,8 +136,10 @@ export function ProductGrid({
   const { data: currentPageData, isLoading, error } = useQuery<ApiProduct[]>({
     queryKey: ['products', currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock],
     queryFn: async () => {
-      console.log('🛍️ ProductGrid API call:', buildEndpoint(currentPage));
-      const response = await apiRequest(buildEndpoint(currentPage));
+      const endpoint = buildEndpoint(currentPage);
+      console.log('ProductGrid API CALL', endpoint);
+      const response = await apiRequest(endpoint);
+      console.log('ProductGrid API RESPONSE', response);
       if (Array.isArray(response)) return response;
       if (response && typeof response === 'object' && 'data' in response) return response.data;
       return [];
@@ -193,13 +208,14 @@ export function ProductGrid({
 
   // Reset pagination when filters change
   React.useEffect(() => {
-    console.log('🔄 Resetting pagination due to filter change:', {
-      category,
-      filter,
-      searchQuery,
+    console.log('ProductGrid RESET EFFECT', {
+      currentPage,
+      itemsPerPage,
       activeCategoryIds,
       activePriceRange,
-      activeInStock
+      activeInStock,
+      filter,
+      searchQuery
     });
     
     // Clear all cached data when filters change
