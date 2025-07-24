@@ -146,6 +146,15 @@ export function ProductGrid({
     }
   };
 
+  // Helper to change page and sync with parent if needed
+  const handlePageChange = (newPage: number) => {
+    if (onPageChange) {
+      onPageChange(newPage);
+    } else {
+      setCurrentPage(newPage);
+    }
+  };
+
   // On mount and when currentPage or filters change, fetch current and next page
   React.useEffect(() => {
     fetchPage(currentPage);
@@ -163,7 +172,11 @@ export function ProductGrid({
   React.useEffect(() => {
     setPages({});
     setLastPage(null);
-    setCurrentPage(1);
+    if (onPageChange) {
+      onPageChange(1);
+    } else {
+      setCurrentPage(1);
+    }
   }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
 
   // Products to show for current page
@@ -185,7 +198,7 @@ export function ProductGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(1)}
+            onClick={() => handlePageChange(1)}
             disabled={currentPage <= 1}
           >
             <ChevronsLeft className="h-4 w-4" />
@@ -193,7 +206,7 @@ export function ProductGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(currentPage - 1)}
+            onClick={() => handlePageChange(currentPage - 1)}
             disabled={currentPage <= 1}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -206,7 +219,7 @@ export function ProductGrid({
                   key={pageNum}
                   variant={pageNum === currentPage ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setCurrentPage(pageNum)}
+                  onClick={() => handlePageChange(pageNum)}
                   className="w-8 h-8 p-0"
                 >
                   {pageNum}
@@ -217,7 +230,7 @@ export function ProductGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(currentPage + 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
             disabled={lastPage !== null && currentPage >= lastPage}
           >
             <ChevronRight className="h-4 w-4" />
@@ -225,7 +238,7 @@ export function ProductGrid({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(totalPages)}
+            onClick={() => handlePageChange(totalPages)}
             disabled={lastPage !== null && currentPage >= lastPage}
           >
             <ChevronsRight className="h-4 w-4" />
