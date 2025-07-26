@@ -161,15 +161,13 @@ export function ProductGrid({
   // On mount and when currentPage or filters change, fetch current and next page
   React.useEffect(() => {
     fetchPage(currentPage);
-    // Only prefetch next page if not lastPage and current page is full
-    if (
-      lastPage === null &&
-      pages[currentPage] &&
-      pages[currentPage].length === itemsPerPage
-    ) {
+    
+    // Always prefetch next page if current page is full (indicating more pages likely exist)
+    // This helps us determine if there are more pages and show proper pagination
+    if (pages[currentPage] && pages[currentPage].length === itemsPerPage) {
       fetchPage(currentPage + 1);
     }
-  }, [currentPage, itemsPerPage, lastPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+  }, [currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
 
   // When filters change, reset all pagination state
   React.useEffect(() => {
