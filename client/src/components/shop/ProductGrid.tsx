@@ -189,9 +189,30 @@ export function ProductGrid({
   const loadedPages = Object.keys(pages).map(Number).sort((a, b) => a - b);
   const totalPages = lastPage ? lastPage : loadedPages.length > 0 ? Math.max(...loadedPages) : 1;
 
+  // Debug pagination state
+  console.log('🔢 Pagination Debug:', {
+    currentPage,
+    totalPages,
+    lastPage,
+    loadedPages,
+    productsToShow: productsToShow.length,
+    itemsPerPage,
+    pages: Object.keys(pages),
+    hasMoreData: productsToShow.length === itemsPerPage
+  });
+
   // Pagination controls
   const PaginationControls = () => {
-    if (totalPages <= 1) return null;
+    // Always show pagination controls, even if only one page
+    console.log('🎛️ PaginationControls:', {
+      totalPages,
+      currentPage,
+      productsToShowLength: productsToShow.length,
+      itemsPerPage,
+      lastPage,
+      shouldShowPagination: true
+    });
+    
     return (
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
         <div className="text-sm text-muted-foreground">
