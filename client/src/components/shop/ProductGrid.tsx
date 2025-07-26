@@ -162,11 +162,9 @@ export function ProductGrid({
   React.useEffect(() => {
     fetchPage(currentPage);
     
-    // Always prefetch next page if we're on page 1 (to discover if more pages exist)
-    // or if current page is full (indicating more pages likely exist)
-    if (currentPage === 1 || (pages[currentPage] && pages[currentPage].length === itemsPerPage)) {
-      fetchPage(currentPage + 1);
-    }
+    // Always prefetch next page to discover if more pages exist
+    // This ensures we know about all available pages as user navigates
+    fetchPage(currentPage + 1);
   }, [currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
 
   // When filters change, reset all pagination state
