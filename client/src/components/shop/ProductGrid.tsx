@@ -53,6 +53,7 @@ interface ProductGridProps {
   activePriceRange?: [number, number];
   activeInStock?: boolean;
   initialPage?: number;
+  currentPage?: number; // <-- add this
   initialLimit?: number;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
@@ -66,12 +67,14 @@ export function ProductGrid({
   activePriceRange = [0, 10000],
   activeInStock = false,
   initialPage = 1,
+  currentPage: controlledPage, // <-- destructure
   initialLimit = 12,
   onPageChange,
   onLimitChange
 }: ProductGridProps) {
   const queryClient = useQueryClient();
-  const [currentPage, setCurrentPage] = React.useState(initialPage);
+  const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
+  const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
   const [pages, setPages] = React.useState<{ [page: number]: ApiProduct[] }>({});
   const [lastPage, setLastPage] = React.useState<number | null>(null);
@@ -151,7 +154,7 @@ export function ProductGrid({
     if (onPageChange) {
       onPageChange(newPage);
     } else {
-      setCurrentPage(newPage);
+      setUncontrolledPage(newPage);
     }
   };
 
@@ -175,7 +178,7 @@ export function ProductGrid({
     if (onPageChange) {
       onPageChange(1);
     } else {
-      setCurrentPage(1);
+      setUncontrolledPage(1);
     }
   }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
 

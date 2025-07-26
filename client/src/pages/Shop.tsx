@@ -173,7 +173,7 @@ export default function Shop() {
               activeCategoryIds={activeCategoryIds}
               activePriceRange={activePriceRange}
               activeInStock={activeInStock}
-              initialPage={currentPage}
+              currentPage={currentPage}
               onPageChange={setCurrentPage}
             />
           </div>
