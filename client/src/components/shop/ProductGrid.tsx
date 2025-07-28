@@ -125,7 +125,12 @@ export function ProductGrid({
 
   // Fetch a specific page and store it
   const fetchPage = async (page: number) => {
-    if (pages[page]) return; // Already fetched
+    console.log('📥 fetchPage called for page:', page, 'pages state:', Object.keys(pages));
+    if (pages[page]) {
+      console.log('📥 Page', page, 'already fetched, skipping');
+      return; // Already fetched
+    }
+    console.log('📥 Fetching page', page);
     setIsLoading(true);
     setError(null);
     try {
@@ -137,6 +142,7 @@ export function ProductGrid({
       } else if (response && typeof response === 'object' && 'data' in response) {
         data = response.data;
       }
+      console.log('📥 Page', page, 'fetched', data.length, 'products');
       setPages(prev => ({ ...prev, [page]: data }));
       // If this page returns less than itemsPerPage, it's the last page (including page 1)
       if (data.length < itemsPerPage) {
@@ -180,6 +186,12 @@ export function ProductGrid({
 
   // Products to show for current page
   const productsToShow = pages[currentPage] || [];
+  
+  console.log('📦 Products to show for page', currentPage, ':', {
+    productsCount: productsToShow.length,
+    pagesState: Object.keys(pages),
+    currentPageData: pages[currentPage] ? pages[currentPage].length : 'not found'
+  });
 
   // Calculate total pages based on loaded pages and lastPage
   const loadedPages = Object.keys(pages).map(Number).sort((a, b) => a - b);
