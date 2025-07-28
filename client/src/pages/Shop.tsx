@@ -88,6 +88,12 @@ export default function Shop() {
     setCurrentPage(1);
   };
 
+  // Debug currentPage changes
+  const handlePageChange = (page: number) => {
+    console.log('🏪 Shop handlePageChange called with page:', page, 'current currentPage:', currentPage);
+    setCurrentPage(page);
+  };
+
   return (
     <>
       <Helmet>
@@ -174,7 +180,7 @@ export default function Shop() {
               activePriceRange={activePriceRange}
               activeInStock={activeInStock}
               currentPage={currentPage}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
             />
           </div>
         </div>

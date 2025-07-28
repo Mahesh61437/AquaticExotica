@@ -149,6 +149,10 @@ export function ProductGrid({
         setLastPage(page);
       }
     } catch (err) {
+      console.log('📥 Error fetching page', page, ':', err);
+      // If we get an error fetching a page, it likely means the page doesn't exist
+      // Set this as the last page to stop further prefetching
+      setLastPage(page - 1);
       setError(err as Error);
     } finally {
       setIsLoading(false);
@@ -157,9 +161,12 @@ export function ProductGrid({
 
   // Helper to change page and sync with parent if needed
   const handlePageChange = (newPage: number) => {
+    console.log('🔄 handlePageChange called with newPage:', newPage, 'currentPage:', currentPage);
     if (onPageChange) {
+      console.log('🔄 Calling onPageChange with:', newPage);
       onPageChange(newPage);
     } else {
+      console.log('🔄 Setting uncontrolled page to:', newPage);
       setUncontrolledPage(newPage);
     }
   };
@@ -168,9 +175,11 @@ export function ProductGrid({
   React.useEffect(() => {
     fetchPage(currentPage);
     
-    // Always prefetch next page to discover if more pages exist
-    // This ensures we know about all available pages as user navigates
-    fetchPage(currentPage + 1);
+    // Only prefetch next page if we haven't determined the last page yet
+    // This prevents trying to fetch non-existent pages
+    if (!lastPage) {
+      fetchPage(currentPage + 1);
+    }
   }, [currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
 
   // When filters change, reset all pagination state
@@ -192,6 +201,9 @@ export function ProductGrid({
     pagesState: Object.keys(pages),
     currentPageData: pages[currentPage] ? pages[currentPage].length : 'not found'
   });
+  
+  // Debug component re-renders
+  console.log('🔄 ProductGrid re-render - currentPage:', currentPage, 'controlledPage:', controlledPage);
 
   // Calculate total pages based on loaded pages and lastPage
   const loadedPages = Object.keys(pages).map(Number).sort((a, b) => a - b);
