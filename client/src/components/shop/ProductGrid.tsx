@@ -59,7 +59,7 @@ interface ProductGridProps {
   onLimitChange?: (limit: number) => void;
 }
 
-export function ProductGrid({ 
+export const ProductGrid = React.memo(({ 
   category, 
   filter, 
   searchQuery, 
@@ -71,7 +71,7 @@ export function ProductGrid({
   initialLimit = 12,
   onPageChange,
   onLimitChange
-}: ProductGridProps) {
+}: ProductGridProps) => {
   const queryClient = useQueryClient();
   const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
   const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
@@ -339,53 +339,70 @@ export function ProductGrid({
     );
   }
 
+  // Memoize the products mapping to prevent unnecessary re-renders
+  const productCards = React.useMemo(() => {
+    return productsToShow.map(product => {
+      const cat = product.category as Partial<Category>;
+      const safeCategory: Category = cat ? {
+        id: cat.id ?? 0,
+        name: cat.name ?? 'Uncategorized',
+        slug: cat.slug ?? 'uncategorized',
+        description: cat.description ?? null,
+        imageUrl: cat.imageUrl ?? '',
+        isActive: cat.isActive ?? true,
+        createdAt: cat.createdAt ?? '',
+        updatedAt: cat.updatedAt ?? ''
+      } : {
+        id: 0,
+        name: 'Uncategorized',
+        slug: 'uncategorized',
+        description: null,
+        imageUrl: '',
+        isActive: true,
+        createdAt: '',
+        updatedAt: ''
+      };
+      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
+        ? product.tagDetails.map(tag => ({
+            id: tag.id,
+            name: tag.name,
+            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
+            isActive: (tag as any).isActive ?? true,
+            createdAt: tag.createdAt ?? '',
+            updatedAt: (tag as any).updatedAt ?? ''
+          }))
+        : [];
+      return (
+        <ProductCard key={product.id} product={{
+          ...product,
+          tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
+          tagDetails: safeTagDetails,
+          category: safeCategory,
+          createdAt: product.createdAt || '',
+          updatedAt: product.updatedAt || ''
+        }} />
+      );
+    });
+  }, [productsToShow]);
+
   return (
     <div>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {productsToShow.map(product => {
-          const cat = product.category as Partial<Category>;
-          const safeCategory: Category = cat ? {
-            id: cat.id ?? 0,
-            name: cat.name ?? 'Uncategorized',
-            slug: cat.slug ?? 'uncategorized',
-            description: cat.description ?? null,
-            imageUrl: cat.imageUrl ?? '',
-            isActive: cat.isActive ?? true,
-            createdAt: cat.createdAt ?? '',
-            updatedAt: cat.updatedAt ?? ''
-          } : {
-            id: 0,
-            name: 'Uncategorized',
-            slug: 'uncategorized',
-            description: null,
-            imageUrl: '',
-            isActive: true,
-            createdAt: '',
-            updatedAt: ''
-          };
-          const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
-            ? product.tagDetails.map(tag => ({
-                id: tag.id,
-                name: tag.name,
-                slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
-                isActive: (tag as any).isActive ?? true,
-                createdAt: tag.createdAt ?? '',
-                updatedAt: (tag as any).updatedAt ?? ''
-              }))
-            : [];
-          return (
-            <ProductCard key={product.id} product={{
-              ...product,
-              tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
-              tagDetails: safeTagDetails,
-              category: safeCategory,
-              createdAt: product.createdAt || '',
-              updatedAt: product.updatedAt || ''
-            }} />
-          );
-        })}
+        {productCards}
       </div>
       <PaginationControls />
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function - only re-render if relevant props changed
+  return (
+    prevProps.category === nextProps.category &&
+    prevProps.filter === nextProps.filter &&
+    prevProps.searchQuery === nextProps.searchQuery &&
+    JSON.stringify(prevProps.activeCategoryIds) === JSON.stringify(nextProps.activeCategoryIds) &&
+    JSON.stringify(prevProps.activePriceRange) === JSON.stringify(nextProps.activePriceRange) &&
+    prevProps.activeInStock === nextProps.activeInStock &&
+    prevProps.currentPage === nextProps.currentPage &&
+    prevProps.initialLimit === nextProps.initialLimit
+  );
+});

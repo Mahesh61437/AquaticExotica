@@ -8,6 +8,7 @@ import { formatPrice, generateStarRating, getStockStatus, generateProductUrl } f
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { OptimizedImage } from "@/components/ui/optimized-image";
+import React from "react";
 
 // Custom interface for display purposes that allows string[] tags
 interface DisplayProduct extends Omit<Product, 'tags'> {
@@ -19,7 +20,7 @@ interface ProductCardProps {
   product: DisplayProduct;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   const { addItem } = useCart();
   const [isAdded, setIsAdded] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -174,4 +175,21 @@ export function ProductCard({ product }: ProductCardProps) {
       </div>
     </Link>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function - only re-render if product data actually changed
+  const prev = prevProps.product;
+  const next = nextProps.product;
+  
+  return (
+    prev.id === next.id &&
+    prev.name === next.name &&
+    prev.price === next.price &&
+    prev.stock === next.stock &&
+    prev.imageUrl === next.imageUrl &&
+    prev.thumbnailUrl === next.thumbnailUrl &&
+    prev.isNew === next.isNew &&
+    prev.isSale === next.isSale &&
+    prev.isFeatured === next.isFeatured &&
+    prev.isTrending === next.isTrending
+  );
+});
