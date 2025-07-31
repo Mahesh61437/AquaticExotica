@@ -135,6 +135,7 @@ export const ProductGrid = React.memo(({
     setError(null);
     try {
       const endpoint = buildEndpoint(page);
+      console.log('📥 API endpoint:', endpoint);
       const response = await apiRequest(endpoint);
       let data: ApiProduct[] = [];
       if (Array.isArray(response)) {
@@ -144,15 +145,13 @@ export const ProductGrid = React.memo(({
       }
       console.log('📥 Page', page, 'fetched', data.length, 'products');
       setPages(prev => ({ ...prev, [page]: data }));
-      // If this page returns less than itemsPerPage, it's the last page (including page 1)
       if (data.length < itemsPerPage) {
+        console.log('📥 Setting lastPage to', page, 'because data.length < itemsPerPage');
         setLastPage(page);
       }
     } catch (err) {
       console.log('📥 Error fetching page', page, ':', err);
-      // If we get an error fetching a page, it likely means the page doesn't exist
-      // Set this as the last page to stop further prefetching
-      setLastPage(page - 1);
+      setLastPage(page - 1); // Mark previous page as last
       setError(err as Error);
     } finally {
       setIsLoading(false);
@@ -173,25 +172,53 @@ export const ProductGrid = React.memo(({
 
   // On mount and when currentPage or filters change, fetch current and next page
   React.useEffect(() => {
-    fetchPage(currentPage);
+    // When filters change, reset all pagination state first
+    const filterKey = `${category}-${filter}-${searchQuery}-${activeCategoryIds.join(',')}-${activePriceRange.join(',')}-${activeInStock}`;
     
-    // Only prefetch next page if we haven't determined the last page yet
-    // This prevents trying to fetch non-existent pages
-    if (!lastPage) {
-      fetchPage(currentPage + 1);
-    }
-  }, [currentPage, itemsPerPage, category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
-
-  // When filters change, reset all pagination state
-  React.useEffect(() => {
+    console.log('🔄 Filter change detected:', {
+      filterKey,
+      category,
+      filter,
+      searchQuery,
+      activeCategoryIds,
+      activePriceRange,
+      activeInStock
+    });
+    
+    // Reset pagination state when filters change
     setPages({});
     setLastPage(null);
+    
+    // Reset to page 1 when filters change
     if (onPageChange) {
+      console.log('🔄 Resetting to page 1 via onPageChange');
       onPageChange(1);
     } else {
+      console.log('🔄 Resetting to page 1 via setUncontrolledPage');
       setUncontrolledPage(1);
     }
+    
+    // Fetch the first page after reset
+    console.log('🔄 Fetching page 1 after filter change');
+    fetchPage(1);
+    
+    // Prefetch the second page
+    console.log('🔄 Prefetching page 2 after filter change');
+    fetchPage(2);
   }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+
+  // Handle page changes (when user clicks pagination)
+  React.useEffect(() => {
+    // Only fetch if we're not already on page 1 (which is handled by the filter effect above)
+    if (currentPage > 1) {
+      fetchPage(currentPage);
+      
+      // Only prefetch next page if we haven't determined the last page yet
+      if (!lastPage) {
+        fetchPage(currentPage + 1);
+      }
+    }
+  }, [currentPage, itemsPerPage]);
 
   // Products to show for current page
   const productsToShow = pages[currentPage] || [];
@@ -220,6 +247,52 @@ export const ProductGrid = React.memo(({
     pages: Object.keys(pages),
     hasMoreData: productsToShow.length === itemsPerPage
   });
+
+  // Memoize the products mapping to prevent unnecessary re-renders
+  const productCards = React.useMemo(() => {
+    return productsToShow.map(product => {
+      const cat = product.category as Partial<Category>;
+      const safeCategory: Category = cat ? {
+        id: cat.id ?? 0,
+        name: cat.name ?? 'Uncategorized',
+        slug: cat.slug ?? 'uncategorized',
+        description: cat.description ?? null,
+        imageUrl: cat.imageUrl ?? '',
+        isActive: cat.isActive ?? true,
+        createdAt: cat.createdAt ?? '',
+        updatedAt: cat.updatedAt ?? ''
+      } : {
+        id: 0,
+        name: 'Uncategorized',
+        slug: 'uncategorized',
+        description: null,
+        imageUrl: '',
+        isActive: true,
+        createdAt: '',
+        updatedAt: ''
+      };
+      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
+        ? product.tagDetails.map(tag => ({
+            id: tag.id,
+            name: tag.name,
+            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
+            isActive: (tag as any).isActive ?? true,
+            createdAt: tag.createdAt ?? '',
+            updatedAt: (tag as any).updatedAt ?? ''
+          }))
+        : [];
+      return (
+        <ProductCard key={product.id} product={{
+          ...product,
+          tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
+          tagDetails: safeTagDetails,
+          category: safeCategory,
+          createdAt: product.createdAt || '',
+          updatedAt: product.updatedAt || ''
+        }} />
+      );
+    });
+  }, [productsToShow]);
 
   // Pagination controls
   const PaginationControls = () => {
@@ -338,52 +411,6 @@ export const ProductGrid = React.memo(({
       </div>
     );
   }
-
-  // Memoize the products mapping to prevent unnecessary re-renders
-  const productCards = React.useMemo(() => {
-    return productsToShow.map(product => {
-      const cat = product.category as Partial<Category>;
-      const safeCategory: Category = cat ? {
-        id: cat.id ?? 0,
-        name: cat.name ?? 'Uncategorized',
-        slug: cat.slug ?? 'uncategorized',
-        description: cat.description ?? null,
-        imageUrl: cat.imageUrl ?? '',
-        isActive: cat.isActive ?? true,
-        createdAt: cat.createdAt ?? '',
-        updatedAt: cat.updatedAt ?? ''
-      } : {
-        id: 0,
-        name: 'Uncategorized',
-        slug: 'uncategorized',
-        description: null,
-        imageUrl: '',
-        isActive: true,
-        createdAt: '',
-        updatedAt: ''
-      };
-      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
-        ? product.tagDetails.map(tag => ({
-            id: tag.id,
-            name: tag.name,
-            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
-            isActive: (tag as any).isActive ?? true,
-            createdAt: tag.createdAt ?? '',
-            updatedAt: (tag as any).updatedAt ?? ''
-          }))
-        : [];
-      return (
-        <ProductCard key={product.id} product={{
-          ...product,
-          tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
-          tagDetails: safeTagDetails,
-          category: safeCategory,
-          createdAt: product.createdAt || '',
-          updatedAt: product.updatedAt || ''
-        }} />
-      );
-    });
-  }, [productsToShow]);
 
   return (
     <div>

@@ -40,6 +40,7 @@ import DebugLogin from "./components/DebugLogin";
 // Performance optimization
 import { useEffect } from "react";
 import { prefetchHomepageData } from "@/lib/api-cache";
+import { preloadCriticalImages } from "@/lib/image-preloader";
 
 // Protected Route Component
 function ProtectedRoute({ children, requireAuth = false, requireAdmin = false }: { 
@@ -101,102 +102,81 @@ function HomeRedirect() {
 }
 
 function Router() {
-  // Prefetch all homepage data as soon as the app loads
-  useEffect(() => {
-    // Initialize prefetching immediately
-    prefetchHomepageData();
-    
-    // Set up homepage data prefetching when user is idle
-    let idleCallbackId: number;
-    
-    if ('requestIdleCallback' in window) {
-      idleCallbackId = window.requestIdleCallback(() => {
-        prefetchHomepageData();
-      }, { timeout: 2000 }); // 2-second timeout in case the browser never gets to an "idle" state
-    } else {
-      // Fallback for browsers without requestIdleCallback
-      const timeoutId = setTimeout(() => {
-        prefetchHomepageData();
-      }, 200);
-      
-      idleCallbackId = Number(timeoutId);
-    }
-    
-    return () => {
-      if ('requestIdleCallback' in window) {
-        window.cancelIdleCallback(idleCallbackId);
-      } else {
-        clearTimeout(idleCallbackId);
-      }
-    };
-  }, []);
+  const [location] = useLocation();
   
+  // Preload critical images and homepage data when app starts
+  useEffect(() => {
+    preloadCriticalImages();
+    prefetchHomepageData();
+  }, []);
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Header />
-      <main className="flex-1">
-        {/* This component handles cart merging when users log in */}
-        <AuthCartIntegration />
-        <Switch>
-          <Route path="/home" component={Home} />
-          <Route path="/" component={HomeRedirect} />
-          <Route path="/shop" component={Shop} />
-          <Route path="/shop/:category" component={Shop} />
-          <Route path="/product/:slug" component={ProductDetail} />
-          <Route path="/checkout" component={() => (
-            <ProtectedRoute requireAuth={true}>
-              <Checkout />
-            </ProtectedRoute>
-          )} />
-          <Route path="/order-confirmation/:id" component={OrderConfirmation} />
-          <Route path="/login" component={Login} />
-          <Route path="/signup" component={Signup} />
-          <Route path="/account" component={() => (
-            <ProtectedRoute requireAuth={true}>
-              <Account />
-            </ProtectedRoute>
-          )} />
-          <Route path="/my-orders" component={() => (
-            <ProtectedRoute requireAuth={true}>
-              <MyOrders />
-            </ProtectedRoute>
-          )} />
-          <Route path="/orders/:id" component={() => (
-            <ProtectedRoute requireAuth={true}>
-              <OrderDetail />
-            </ProtectedRoute>
-          )} />
-          <Route path="/admin" component={() => (
-            <ProtectedRoute requireAuth={true} requireAdmin={true}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          )} />
-          <Route path="/admin-setup" component={AdminSetup} />
-          <Route path="/contact" component={Contact} />
-          <Route path="/shipping" component={Shipping} />
-          <Route path="/faq" component={FAQ} />
-          <Route path="/terms" component={Terms} />
-          <Route path="/privacy" component={Privacy} />
-          <Route path="/signup-test" component={SignupTest} />
-          <Route path="/debug" component={DebugLogin} />
-          <Route component={NotFound} />
-        </Switch>
-      </main>
-      <Footer />
-      <ShoppingCart />
-    </div>
+    <Switch>
+      <Route path="/" component={HomeRedirect} />
+      <Route path="/home" component={Home} />
+      <Route path="/shop/:category?" component={Shop} />
+      <Route path="/product/:slug" component={ProductDetail} />
+      <Route path="/checkout" component={Checkout} />
+      <Route path="/order-confirmation" component={OrderConfirmation} />
+      
+      {/* Authentication Routes */}
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/signup-test" component={SignupTest} />
+      <Route path="/account" component={Account} />
+      
+      {/* Order Routes */}
+      <Route path="/my-orders" component={MyOrders} />
+      <Route path="/order/:id" component={OrderDetail} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin">
+        <ProtectedRoute requireAdmin>
+          <Switch>
+            <Route path="/admin" component={AdminDashboard} />
+            <Route path="/admin/setup" component={AdminSetup} />
+            <Route path="/admin/products" component={() => import("./pages/admin/ProductManagement").then(m => m.default)} />
+            <Route path="/admin/categories" component={() => import("./pages/admin/CategoryManagement").then(m => m.default)} />
+            <Route path="/admin/tags" component={() => import("./pages/admin/TagManagement").then(m => m.default)} />
+            <Route path="/admin/orders" component={() => import("./pages/admin/OrderManagement").then(m => m.default)} />
+            <Route path="/admin/users" component={() => import("./pages/admin/UserManagement").then(m => m.default)} />
+          </Switch>
+        </ProtectedRoute>
+      </Route>
+      
+      {/* Information Pages */}
+      <Route path="/contact" component={Contact} />
+      <Route path="/shipping" component={Shipping} />
+      <Route path="/faq" component={FAQ} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      
+      {/* Debug Routes */}
+      <Route path="/debug-login" component={DebugLogin} />
+      
+      {/* 404 Route */}
+      <Route component={NotFound} />
+    </Switch>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light">
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
         <AuthProvider>
           <CartProvider>
             <TooltipProvider>
-              <Toaster />
-              <Router />
+              <div className="min-h-screen flex flex-col">
+                <Header />
+                <main className="flex-1">
+                  <Router />
+                </main>
+                <Footer />
+                <ShoppingCart />
+                <AuthCartIntegration />
+                <Toaster />
+              </div>
             </TooltipProvider>
           </CartProvider>
         </AuthProvider>

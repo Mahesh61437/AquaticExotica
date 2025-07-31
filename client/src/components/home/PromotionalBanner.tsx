@@ -2,8 +2,10 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag } from "lucide-react";
 import heroImage from "@assets/akva_4.jpeg";
+import { CachedImage } from "@/components/ui/cached-image";
+import React from "react";
 
-export function PromotionalBanner() {
+export const PromotionalBanner = React.memo(() => {
   return (
     <section className="py-16 bg-gray-50">
       <div className="container mx-auto px-4">
@@ -31,10 +33,12 @@ export function PromotionalBanner() {
             <div className="hidden md:block w-full md:w-2/5 h-64">
               <div className="h-full p-6 flex items-center justify-center">
                 <div className="relative w-full h-full bg-white p-2 rounded-lg shadow-lg transform rotate-3">
-                  <img 
+                  <CachedImage 
                     src={heroImage} 
                     alt="Premium Aquarium Collection" 
                     className="w-full h-full object-cover rounded"
+                    size="large"
+                    objectFit="cover"
                   />
                   <div className="absolute bottom-3 left-3 bg-white px-3 py-1 rounded shadow text-blue-600 font-medium transform -rotate-3">
                     Premium Collection
@@ -47,4 +51,9 @@ export function PromotionalBanner() {
       </div>
     </section>
   );
-}
+}, (prevProps, nextProps) => {
+  // No props to compare, so always return true to prevent re-renders
+  return true;
+});
+
+PromotionalBanner.displayName = 'PromotionalBanner';

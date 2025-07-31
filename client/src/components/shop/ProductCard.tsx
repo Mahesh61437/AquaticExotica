@@ -7,7 +7,7 @@ import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus, generateProductUrl } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OptimizedImage } from "@/components/ui/optimized-image";
+import { CachedImage } from "@/components/ui/cached-image";
 import React from "react";
 
 // Custom interface for display purposes that allows string[] tags
@@ -23,7 +23,6 @@ interface ProductCardProps {
 export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   const { addItem } = useCart();
   const [isAdded, setIsAdded] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
 
   // Use thumbnail if available, otherwise fall back to main image
   const displayImage = product.thumbnailUrl || product.imageUrl;
@@ -56,15 +55,15 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
       className="product-card group"
     >
       <div className="product-image relative overflow-hidden">
-        {/* Using OptimizedImage component instead of manually handling lazy loading */}
-        <OptimizedImage 
+        {/* Using CachedImage component for better performance */}
+        <CachedImage 
           src={displayImage}
           alt={product.name}
           className="w-full h-full aspect-[3/4]"
           size="medium"
           quality={85}
           objectFit="cover"
-          onLoad={() => setImageLoaded(true)}
+          fallbackSrc={product.imageUrl}
         />
         
         {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
