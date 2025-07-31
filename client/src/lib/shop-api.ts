@@ -1,0 +1,202 @@
+import { apiRequest } from './queryClient';
+
+// API Response Types for Django REST Framework pagination
+export interface PaginationMeta {
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
+
+export interface ApiProduct {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  compareAtPrice: string;
+  discountPercentage: number;
+  stock: number;
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+    description: string | null;
+    imageUrl: string;
+  } | null;
+  tags: number[];
+  tagDetails: ApiTag[];
+  rating: string;
+  isActive: boolean;
+  isNew: boolean;
+  isSale: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  isInStock: boolean;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApiTag {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+// Django REST Framework pagination response
+export interface ProductsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: ApiProduct[];
+}
+
+// Filter Types
+export interface ProductFilters {
+  category_ids?: number[];
+  price_min?: number;
+  price_max?: number;
+  in_stock_only?: boolean;
+  search_query?: string;
+  filter_type?: 'new' | 'sale' | 'trending' | 'featured';
+  sort_by?: 'name' | 'price' | 'rating' | 'created_at';
+  sort_order?: 'asc' | 'desc';
+}
+
+// Shop API Functions
+export class ShopAPI {
+  private static buildQueryParams(filters: ProductFilters, page: number = 1, pageSize: number = 12): URLSearchParams {
+    const params = new URLSearchParams();
+    
+    // Pagination
+    params.append('page', page.toString());
+    params.append('page_size', pageSize.toString());
+    
+    // Filters
+    if (filters.category_ids && filters.category_ids.length > 0) {
+      params.append('category_ids', filters.category_ids.join(','));
+    }
+    
+    if (filters.price_min !== undefined) {
+      params.append('price_min', filters.price_min.toString());
+    }
+    
+    if (filters.price_max !== undefined) {
+      params.append('price_max', filters.price_max.toString());
+    }
+    
+    if (filters.in_stock_only) {
+      params.append('in_stock_only', 'true');
+    }
+    
+    if (filters.search_query) {
+      params.append('search', filters.search_query);
+    }
+    
+    if (filters.filter_type) {
+      params.append('filter', filters.filter_type);
+    }
+    
+    if (filters.sort_by) {
+      params.append('sort_by', filters.sort_by);
+    }
+    
+    if (filters.sort_order) {
+      params.append('sort_order', filters.sort_order);
+    }
+    
+    return params;
+  }
+
+  static async getProducts(
+    filters: ProductFilters = {},
+    page: number = 1,
+    pageSize: number = 12
+  ): Promise<ProductsResponse> {
+    try {
+      const params = this.buildQueryParams(filters, page, pageSize);
+      const endpoint = `/api/products/?${params.toString()}`;
+      
+      console.log('🛍️ ShopAPI: Fetching products with endpoint:', endpoint);
+      
+      const response = await apiRequest(endpoint);
+      
+      // Handle Django REST Framework pagination format
+      if (response && typeof response === 'object' && 'count' in response && 'results' in response) {
+        // Expected Django REST Framework format
+        return response as ProductsResponse;
+      } else if (Array.isArray(response)) {
+        // Fallback: array response without pagination metadata
+        console.warn('🛍️ ShopAPI: API returned array format, using fallback pagination');
+        const totalCount = response.length;
+        const totalPages = Math.ceil(totalCount / pageSize);
+        
+        return {
+          count: totalCount,
+          next: page < totalPages ? `?page=${page + 1}` : null,
+          previous: page > 1 ? `?page=${page - 1}` : null,
+          results: response
+        };
+      } else {
+        throw new Error('Invalid API response format');
+      }
+    } catch (error) {
+      console.error('🛍️ ShopAPI: Error fetching products:', error);
+      throw error;
+    }
+  }
+
+  static async getCategories() {
+    try {
+      const response = await apiRequest('/api/categories/');
+      
+      // Handle Django REST Framework pagination format
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      } else if (Array.isArray(response)) {
+        return response;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('🛍️ ShopAPI: Error fetching categories:', error);
+      return [];
+    }
+  }
+
+  static async getTags() {
+    try {
+      const response = await apiRequest('/api/tags/');
+      
+      // Handle Django REST Framework pagination format
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      } else if (Array.isArray(response)) {
+        return response;
+      }
+      
+      return [];
+    } catch (error) {
+      console.error('🛍️ ShopAPI: Error fetching tags:', error);
+      return [];
+    }
+  }
+}
+
+// Utility functions
+export const createProductFilters = (options: Partial<ProductFilters>): ProductFilters => {
+  return {
+    category_ids: options.category_ids || [],
+    price_min: options.price_min || 0,
+    price_max: options.price_max || 10000,
+    in_stock_only: options.in_stock_only || false,
+    search_query: options.search_query || '',
+    filter_type: options.filter_type,
+    sort_by: options.sort_by || 'name',
+    sort_order: options.sort_order || 'asc'
+  };
+};
+
+export const areFiltersEqual = (filters1: ProductFilters, filters2: ProductFilters): boolean => {
+  return JSON.stringify(filters1) === JSON.stringify(filters2);
+}; 

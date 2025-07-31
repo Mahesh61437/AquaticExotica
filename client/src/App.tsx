@@ -13,7 +13,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ShoppingCart } from "@/components/layout/ShoppingCart";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
-import Shop from "@/pages/Shop";
+import ShopNew from "@/pages/ShopNew";
 import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
@@ -114,7 +114,7 @@ function Router() {
     <Switch>
       <Route path="/" component={HomeRedirect} />
       <Route path="/home" component={Home} />
-      <Route path="/shop/:category?" component={Shop} />
+      <Route path="/shop/:category?" component={ShopNew} />
       <Route path="/product/:slug" component={ProductDetail} />
       <Route path="/checkout" component={Checkout} />
       <Route path="/order-confirmation" component={OrderConfirmation} />
