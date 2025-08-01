@@ -136,7 +136,10 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (filters.category_ids && filters.category_ids.length > 0) count++;
+    if (filters.category_ids && filters.category_ids.length > 0) {
+      // Count each category individually
+      count += filters.category_ids.length;
+    }
     if (filters.price_min !== 0 || filters.price_max !== 10000) count++;
     if (filters.in_stock_only) count++;
     if (filters.search_query) count++;

@@ -22,6 +22,9 @@ export default function ShopNew() {
   const filterParam = urlParams.get("filter") || "";
   const categoryParam = urlParams.get("category") || "";
   const pageParam = parseInt(urlParams.get("page") || "1");
+  const priceMinParam = parseInt(urlParams.get("price_min") || "0");
+  const priceMaxParam = parseInt(urlParams.get("price_max") || "10000");
+  const inStockParam = urlParams.get("in_stock_only") === "true";
 
   // Shop state
   const {
@@ -31,12 +34,38 @@ export default function ShopNew() {
     clearFilters,
     setPage,
     isFiltered,
-    activeFilterCount
+    activeFilterCount,
+    totalPages,
+    currentPage,
+    totalCount
   } = useShop();
 
   // Mobile filters state
   const [isMobileFiltersOpen, setIsMobileFiltersOpen] = React.useState(false);
   const [searchInput, setSearchInput] = React.useState(searchQuery);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('🛍️ ShopNew: Component state', {
+      urlParams: {
+        searchQuery,
+        filterParam,
+        categoryParam,
+        pageParam,
+        priceMinParam,
+        priceMaxParam,
+        inStockParam
+      },
+      shopState: {
+        filters,
+        isFiltered,
+        activeFilterCount,
+        totalPages,
+        currentPage,
+        totalCount
+      }
+    });
+  }, [searchQuery, filterParam, categoryParam, pageParam, priceMinParam, priceMaxParam, inStockParam, filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount]);
 
   // Initialize filters from URL parameters
   useEffect(() => {
@@ -65,16 +94,29 @@ export default function ShopNew() {
       }
     }
 
+    // Handle price range
+    if (priceMinParam > 0 || priceMaxParam < 10000) {
+      initialFilters.price_min = priceMinParam;
+      initialFilters.price_max = priceMaxParam;
+    }
+
+    // Handle in stock filter
+    if (inStockParam) {
+      initialFilters.in_stock_only = true;
+    }
+
     // Apply initial filters
     if (Object.keys(initialFilters).length > 0) {
+      console.log('🛍️ ShopNew: Applying initial filters:', initialFilters);
       setFilters(initialFilters);
     }
 
     // Set initial page
     if (pageParam > 1) {
+      console.log('🛍️ ShopNew: Setting initial page:', pageParam);
       setPage(pageParam);
     }
-  }, [params?.category, categoryParam, searchQuery, filterParam, categories, setFilters, setPage, pageParam]);
+  }, [params?.category, categoryParam, searchQuery, filterParam, priceMinParam, priceMaxParam, inStockParam, categories, setFilters, setPage, pageParam]);
 
   // Handle search input changes
   const handleSearchChange = (value: string) => {
@@ -84,6 +126,7 @@ export default function ShopNew() {
   // Handle search submission
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('🛍️ ShopNew: Submitting search:', searchInput);
     setFilters({ search_query: searchInput });
   };
 
@@ -130,6 +173,40 @@ export default function ShopNew() {
       </Helmet>
 
       <div className="container mx-auto px-4 py-8">
+        {/* Debug Info - Remove in production */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-4 p-4 bg-yellow-100 border border-yellow-400 rounded text-sm">
+            <h4 className="font-bold mb-2">Debug Info:</h4>
+            <div className="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <strong>URL Params:</strong>
+                <pre>{JSON.stringify({ searchQuery, filterParam, categoryParam, pageParam, priceMinParam, priceMaxParam, inStockParam }, null, 2)}</pre>
+              </div>
+              <div>
+                <strong>Shop State:</strong>
+                <pre>{JSON.stringify({ filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount }, null, 2)}</pre>
+              </div>
+            </div>
+            <div className="mt-4 space-x-2">
+              <Button size="sm" onClick={() => setFilters({ price_min: 200, price_max: 300 })}>
+                Test Price Filter (200-300)
+              </Button>
+              <Button size="sm" onClick={() => setFilters({ in_stock_only: true })}>
+                Test In Stock Filter
+              </Button>
+              <Button size="sm" onClick={() => setFilters({ category_ids: [1] })}>
+                Test Category Filter
+              </Button>
+              <Button size="sm" onClick={() => setPage(2)}>
+                Test Page 2
+              </Button>
+              <Button size="sm" onClick={clearFilters}>
+                Clear All Filters
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
           <div className="flex-1">

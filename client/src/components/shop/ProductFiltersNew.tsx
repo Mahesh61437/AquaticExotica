@@ -16,6 +16,41 @@ interface ProductFiltersNewProps {
   showClearButton?: boolean;
 }
 
+// Custom Price Range Component
+const PriceRangeSlider: React.FC<{
+  value: [number, number];
+  onValueChange: (value: [number, number]) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+}> = ({ value, onValueChange, min = 0, max = 10000, step = 500 }) => {
+  console.log('🎚️ PriceRangeSlider: value:', value, 'min:', min, 'max:', max);
+  
+  return (
+    <div className="space-y-4">
+      {/* Debug info in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
+          Debug: Min={value[0]}, Max={value[1]}, Array length={value.length}
+        </div>
+      )}
+      
+      <Slider
+        value={value}
+        onValueChange={onValueChange}
+        max={max}
+        min={min}
+        step={step}
+        className="w-full"
+      />
+      <div className="flex justify-between text-sm text-muted-foreground">
+        <span>{formatPrice(value[0])}</span>
+        <span>{formatPrice(value[1])}</span>
+      </div>
+    </div>
+  );
+};
+
 export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
   className = '',
   showTitle = true,
@@ -30,16 +65,27 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
     activeFilterCount
   } = useShop();
 
-  // Price range state
+  // Price range state - initialize from filters
   const [priceRange, setPriceRange] = React.useState<[number, number]>([
     filters.price_min || 0,
     filters.price_max || 10000
   ]);
 
+  // Update price range when filters change
+  React.useEffect(() => {
+    const newPriceRange: [number, number] = [
+      filters.price_min || 0,
+      filters.price_max || 10000
+    ];
+    console.log('🎚️ ProductFiltersNew: Updating price range from filters:', newPriceRange);
+    setPriceRange(newPriceRange);
+  }, [filters.price_min, filters.price_max]);
+
   // Debounced price range update
   React.useEffect(() => {
     const timer = setTimeout(() => {
       if (priceRange[0] !== filters.price_min || priceRange[1] !== filters.price_max) {
+        console.log('🎚️ ProductFiltersNew: Applying price range to filters:', priceRange);
         setFilters({
           price_min: priceRange[0],
           price_max: priceRange[1]
@@ -73,10 +119,17 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
   };
 
   // Clear specific filter
-  const clearFilter = (filterType: keyof ProductFilters) => {
+  const clearFilter = (filterType: keyof ProductFilters, value?: any) => {
     switch (filterType) {
       case 'category_ids':
-        setFilters({ category_ids: [] });
+        if (value !== undefined) {
+          // Remove specific category
+          const updatedCategories = filters.category_ids?.filter(id => id !== value) || [];
+          setFilters({ category_ids: updatedCategories });
+        } else {
+          // Remove all categories
+          setFilters({ category_ids: [] });
+        }
         break;
       case 'price_min':
       case 'price_max':
@@ -94,23 +147,26 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
     }
   };
 
-  // Get active filter display
+  // Get active filter display - now with separate bubbles for each category
   const getActiveFilters = () => {
-    const active: Array<{ key: keyof ProductFilters; label: string; value: string }> = [];
+    const active: Array<{ key: keyof ProductFilters; label: string; value: string; filterValue?: any }> = [];
 
+    // Separate bubble for each category
     if (filters.category_ids && filters.category_ids.length > 0) {
-      const categoryNames = filters.category_ids
-        .map(id => categories.find(cat => cat.id === id)?.name)
-        .filter(Boolean);
-      if (categoryNames.length > 0) {
-        active.push({
-          key: 'category_ids',
-          label: 'Categories',
-          value: categoryNames.join(', ')
-        });
-      }
+      filters.category_ids.forEach(categoryId => {
+        const category = categories.find(cat => cat.id === categoryId);
+        if (category) {
+          active.push({
+            key: 'category_ids',
+            label: 'Category',
+            value: category.name,
+            filterValue: categoryId
+          });
+        }
+      });
     }
 
+    // Price range as single bubble
     if (filters.price_min !== 0 || filters.price_max !== 10000) {
       active.push({
         key: 'price_min',
@@ -119,6 +175,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
       });
     }
 
+    // In stock filter
     if (filters.in_stock_only) {
       active.push({
         key: 'in_stock_only',
@@ -127,6 +184,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
       });
     }
 
+    // Search query
     if (filters.search_query) {
       active.push({
         key: 'search_query',
@@ -135,6 +193,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
       });
     }
 
+    // Filter type
     if (filters.filter_type) {
       active.push({
         key: 'filter_type',
@@ -182,9 +241,9 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground">Active Filters</h4>
           <div className="flex flex-wrap gap-2">
-            {activeFilters.map((filter) => (
+            {activeFilters.map((filter, index) => (
               <Badge
-                key={filter.key}
+                key={`${filter.key}-${filter.filterValue || index}`}
                 variant="secondary"
                 className="flex items-center gap-1"
               >
@@ -193,7 +252,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
                   variant="ghost"
                   size="sm"
                   className="h-4 w-4 p-0 hover:bg-transparent"
-                  onClick={() => clearFilter(filter.key)}
+                  onClick={() => clearFilter(filter.key, filter.filterValue)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -232,20 +291,13 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
       {/* Price Range */}
       <div className="space-y-4">
         <h4 className="font-medium">Price Range</h4>
-        <div className="space-y-4">
-          <Slider
-            value={priceRange}
-            onValueChange={setPriceRange}
-            max={10000}
-            min={0}
-            step={100}
-            className="w-full"
-          />
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>{formatPrice(priceRange[0])}</span>
-            <span>{formatPrice(priceRange[1])}</span>
-          </div>
-        </div>
+        <PriceRangeSlider
+          value={priceRange}
+          onValueChange={setPriceRange}
+          min={0}
+          max={10000}
+          step={500}
+        />
       </div>
 
       <Separator />

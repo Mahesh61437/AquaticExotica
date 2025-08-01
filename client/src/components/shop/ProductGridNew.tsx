@@ -143,6 +143,7 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
 
   // Pagination component
   const Pagination = () => {
+    // Always show pagination if there are multiple pages, regardless of filters
     if (!showPagination || totalPages <= 1) return null;
 
     const getVisiblePages = () => {
@@ -257,7 +258,7 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
             )}
           </div>
           
-          {isFiltered && (
+          {totalPages > 1 && (
             <div className="text-sm text-muted-foreground">
               Page {currentPage} of {totalPages}
             </div>

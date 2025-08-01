@@ -77,11 +77,11 @@ export class ShopAPI {
       params.append('category_ids', filters.category_ids.join(','));
     }
     
-    if (filters.price_min !== undefined) {
+    if (filters.price_min !== undefined && filters.price_min > 0) {
       params.append('price_min', filters.price_min.toString());
     }
     
-    if (filters.price_max !== undefined) {
+    if (filters.price_max !== undefined && filters.price_max < 10000) {
       params.append('price_max', filters.price_max.toString());
     }
     
@@ -105,6 +105,13 @@ export class ShopAPI {
       params.append('sort_order', filters.sort_order);
     }
     
+    console.log('🛍️ ShopAPI: Built query params:', {
+      filters,
+      page,
+      pageSize,
+      params: params.toString()
+    });
+    
     return params;
   }
 
@@ -121,9 +128,12 @@ export class ShopAPI {
       
       const response = await apiRequest(endpoint);
       
+      console.log('🛍️ ShopAPI: Raw response:', response);
+      
       // Handle Django REST Framework pagination format
       if (response && typeof response === 'object' && 'count' in response && 'results' in response) {
         // Expected Django REST Framework format
+        console.log('🛍️ ShopAPI: Using Django REST Framework format');
         return response as ProductsResponse;
       } else if (Array.isArray(response)) {
         // Fallback: array response without pagination metadata
