@@ -9,6 +9,7 @@ import { ProductFilters } from "@/components/shop/ProductFilters";
 import { generateMetaDescription } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@/types";
+import React from "react";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
@@ -34,7 +35,23 @@ export default function Shop() {
     queryKey: ["/api/categories/"],
     staleTime: 5 * 60 * 1000,
   });
-  const categories: Category[] = Array.isArray(categoriesResponse) ? categoriesResponse : [];
+  
+  // Extract categories array from response
+  const categories: Category[] = React.useMemo(() => {
+    if (!categoriesResponse) return [];
+    
+    // Check if response is paginated with {count, next, previous, results}
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'results' in categoriesResponse) {
+      return (categoriesResponse as any).results || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(categoriesResponse)) {
+      return categoriesResponse;
+    }
+    
+    return [];
+  }, [categoriesResponse]);
 
   // Determine page title
   let pageTitle = "All Products";

@@ -1,14 +1,12 @@
-import React from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ProductCard } from "./ProductCard";
-import { Product } from "@/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { apiRequest } from "@/lib/queryClient";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
-import type { Category, Tag } from '@/types';
+import React from 'react';
+import { ProductCard } from './ProductCard';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
+import { Product, Category, Tag } from '@/types';
 
-// Define new product type based on API response
+// Define API response types
 interface ApiProduct {
   id: number;
   name: string;
@@ -34,11 +32,11 @@ interface ApiProduct {
   isTrending: boolean;
   isInStock: boolean;
   imageUrl: string;
-  createdAt: string;
-  updatedAt: string;
+  thumbnailUrl?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-// Define tag type
 interface ApiTag {
   id: number;
   name: string;
@@ -53,7 +51,7 @@ interface ProductGridProps {
   activePriceRange?: [number, number];
   activeInStock?: boolean;
   initialPage?: number;
-  currentPage?: number; // <-- add this
+  currentPage?: number;
   initialLimit?: number;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
@@ -72,13 +70,10 @@ export const ProductGrid = React.memo(({
   onPageChange,
   onLimitChange
 }: ProductGridProps) => {
-  const queryClient = useQueryClient();
-  const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
-  const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
-  const [pages, setPages] = React.useState<{ [page: number]: ApiProduct[] }>({});
+  const [pages, setPages] = React.useState<Record<number, ApiProduct[]>>({});
   const [lastPage, setLastPage] = React.useState<number | null>(null);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
   const [error, setError] = React.useState<Error | null>(null);
 
   // Build the API endpoint with query parameters
@@ -125,47 +120,40 @@ export const ProductGrid = React.memo(({
 
   // Fetch a specific page and store it
   const fetchPage = async (page: number) => {
-    console.log('📥 fetchPage called for page:', page, 'pages state:', Object.keys(pages));
-    if (pages[page]) {
-      console.log('📥 Page', page, 'already fetched, skipping');
-      return; // Already fetched
-    }
-    console.log('📥 Fetching page', page);
-    setIsLoading(true);
-    setError(null);
     try {
-      const endpoint = buildEndpoint(page);
-      console.log('📥 API endpoint:', endpoint);
-      const response = await apiRequest(endpoint);
-      let data: ApiProduct[] = [];
-      if (Array.isArray(response)) {
-        data = response;
-      } else if (response && typeof response === 'object' && 'data' in response) {
-        data = response.data;
-      }
-      console.log('📥 Page', page, 'fetched', data.length, 'products');
-      setPages(prev => ({ ...prev, [page]: data }));
-      if (data.length < itemsPerPage) {
-        console.log('📥 Setting lastPage to', page, 'because data.length < itemsPerPage');
-        setLastPage(page);
+      console.log('📦 Fetching page:', page);
+      const response = await apiRequest(buildEndpoint(page));
+      
+      if (response && typeof response === 'object' && 'results' in response) {
+        // Paginated response with {count, next, previous, results}
+        const { results, count, next, previous } = response;
+        setPages(prev => ({ ...prev, [page]: results }));
+        
+        // Calculate total pages based on count and page size
+        if (count && itemsPerPage) {
+          const totalPages = Math.ceil(count / itemsPerPage);
+          setLastPage(totalPages);
+        }
+      } else if (Array.isArray(response)) {
+        // Direct array response
+        setPages(prev => ({ ...prev, [page]: response }));
+        setLastPage(1); // Single page
       }
     } catch (err) {
-      console.log('📥 Error fetching page', page, ':', err);
-      setLastPage(page - 1); // Mark previous page as last
+      console.error('❌ Error fetching page:', page, err);
       setError(err as Error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  // Helper to change page and sync with parent if needed
+  // Determine current page
+  const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
+
   const handlePageChange = (newPage: number) => {
-    console.log('🔄 handlePageChange called with newPage:', newPage, 'currentPage:', currentPage);
+    console.log('🔄 Page change requested:', newPage, 'current:', currentPage);
+    
     if (onPageChange) {
-      console.log('🔄 Calling onPageChange with:', newPage);
       onPageChange(newPage);
     } else {
-      console.log('🔄 Setting uncontrolled page to:', newPage);
       setUncontrolledPage(newPage);
     }
   };
@@ -230,37 +218,25 @@ export const ProductGrid = React.memo(({
   });
   
   // Debug component re-renders
-  console.log('🔄 ProductGrid re-render - currentPage:', currentPage, 'controlledPage:', controlledPage);
-
-  // Calculate total pages based on loaded pages and lastPage
-  const loadedPages = Object.keys(pages).map(Number).sort((a, b) => a - b);
-  const totalPages = lastPage ? lastPage : loadedPages.length > 0 ? Math.max(...loadedPages) : 1;
-
-  // Debug pagination state
-  console.log('🔢 Pagination Debug:', {
+  console.log('🔄 ProductGrid render:', {
     currentPage,
-    totalPages,
-    lastPage,
-    loadedPages,
     productsToShow: productsToShow.length,
-    itemsPerPage,
-    pages: Object.keys(pages),
-    hasMoreData: productsToShow.length === itemsPerPage
+    filterKey: `${category}-${filter}-${searchQuery}-${activeCategoryIds.join(',')}-${activePriceRange.join(',')}-${activeInStock}`
   });
 
-  // Memoize the products mapping to prevent unnecessary re-renders
+  // Convert API products to Product type for ProductCard
   const productCards = React.useMemo(() => {
-    return productsToShow.map(product => {
-      const cat = product.category as Partial<Category>;
-      const safeCategory: Category = cat ? {
-        id: cat.id ?? 0,
-        name: cat.name ?? 'Uncategorized',
-        slug: cat.slug ?? 'uncategorized',
-        description: cat.description ?? null,
-        imageUrl: cat.imageUrl ?? '',
-        isActive: cat.isActive ?? true,
-        createdAt: cat.createdAt ?? '',
-        updatedAt: cat.updatedAt ?? ''
+    return productsToShow.map((apiProduct: ApiProduct) => {
+      // Convert category
+      const safeCategory: Category = apiProduct.category ? {
+        id: apiProduct.category.id,
+        name: apiProduct.category.name,
+        slug: apiProduct.category.slug,
+        description: apiProduct.category.description,
+        imageUrl: apiProduct.category.imageUrl,
+        isActive: true,
+        createdAt: apiProduct.createdAt || new Date().toISOString(),
+        updatedAt: apiProduct.updatedAt || new Date().toISOString()
       } : {
         id: 0,
         name: 'Uncategorized',
@@ -268,146 +244,101 @@ export const ProductGrid = React.memo(({
         description: null,
         imageUrl: '',
         isActive: true,
-        createdAt: '',
-        updatedAt: ''
+        createdAt: apiProduct.createdAt || new Date().toISOString(),
+        updatedAt: apiProduct.updatedAt || new Date().toISOString()
       };
-      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
-        ? product.tagDetails.map(tag => ({
+
+      // Convert tagDetails to Tag type
+      const safeTagDetails: Tag[] = Array.isArray(apiProduct.tagDetails)
+        ? apiProduct.tagDetails.map(tag => ({
             id: tag.id,
             name: tag.name,
-            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
-            isActive: (tag as any).isActive ?? true,
-            createdAt: tag.createdAt ?? '',
-            updatedAt: (tag as any).updatedAt ?? ''
+            slug: tag.name.toLowerCase().replace(/\s+/g, '-'),
+            isActive: true,
+            createdAt: tag.createdAt,
+            updatedAt: new Date().toISOString()
           }))
         : [];
+
+      // Convert tags to string array (tag names)
+      const tagNames: string[] = safeTagDetails.map(tag => tag.name);
+
+      // Create Product object for ProductCard
+      const product: Product = {
+        id: apiProduct.id,
+        name: apiProduct.name,
+        description: apiProduct.description,
+        price: apiProduct.price,
+        compareAtPrice: apiProduct.compareAtPrice,
+        discountPercentage: apiProduct.discountPercentage,
+        stock: apiProduct.stock,
+        category: safeCategory,
+        tags: tagNames, // Convert to string array
+        tagDetails: safeTagDetails,
+        rating: apiProduct.rating,
+        isActive: apiProduct.isActive,
+        isNew: apiProduct.isNew,
+        isSale: apiProduct.isSale,
+        isFeatured: apiProduct.isFeatured,
+        isTrending: apiProduct.isTrending,
+        isInStock: apiProduct.isInStock,
+        imageUrl: apiProduct.imageUrl,
+        thumbnailUrl: apiProduct.thumbnailUrl,
+        createdAt: apiProduct.createdAt || new Date().toISOString(),
+        updatedAt: apiProduct.updatedAt || new Date().toISOString()
+      };
+
       return (
-        <ProductCard key={product.id} product={{
-          ...product,
-          tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
-          tagDetails: safeTagDetails,
-          category: safeCategory,
-          createdAt: product.createdAt || '',
-          updatedAt: product.updatedAt || ''
-        }} />
+        <ProductCard key={apiProduct.id} product={product} />
       );
     });
   }, [productsToShow]);
 
   // Pagination controls
   const PaginationControls = () => {
-    // Always show pagination controls, even if only one page
-    console.log('🎛️ PaginationControls:', {
-      totalPages,
-      currentPage,
-      productsToShowLength: productsToShow.length,
-      itemsPerPage,
-      lastPage,
-      shouldShowPagination: true
-    });
-    
-    return (
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t">
-        <div className="text-sm text-muted-foreground">
-          Showing page {currentPage} of {totalPages}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronsLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage - 1)}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => {
-              const pageNum = i + 1;
-              return (
-                <Button
-                  key={pageNum}
-                  variant={pageNum === currentPage ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handlePageChange(pageNum)}
-                  className="w-8 h-8 p-0"
-                >
-                  {pageNum}
-                </Button>
-              );
-            })}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(currentPage + 1)}
-            disabled={lastPage !== null && currentPage >= lastPage}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handlePageChange(totalPages)}
-            disabled={lastPage !== null && currentPage >= lastPage}
-          >
-            <ChevronsRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+    if (lastPage === null || lastPage <= 1) return null;
 
-  if (isLoading && currentPage === 1) {
     return (
-      <div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {[...Array(12)].map((_, index) => (
-            <div key={index} className="bg-white rounded-lg overflow-hidden shadow-sm">
-              <Skeleton className="aspect-[3/4] w-full" />
-              <div className="p-4">
-                <Skeleton className="h-4 w-2/3 mb-2" />
-                <Skeleton className="h-4 w-1/3" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error && currentPage === 1) {
-    console.warn('API Error loading products:', error);
-    return (
-      <div className="text-center py-10">
-        <h3 className="text-xl font-medium mb-2">No products available</h3>
-        <p className="text-gray-500">
-          {searchQuery 
-            ? `No results for "${searchQuery}". Try different keywords.` 
-            : filter 
-            ? `No ${filter} products available at the moment.` 
-            : "No products available at the moment. Please check back later."}
-        </p>
-      </div>
-    );
-  }
-
-  if (productsToShow.length === 0 && !isLoading) {
-    return (
-      <div className="text-center py-10">
-        <h3 className="text-xl font-medium mb-2">No products found</h3>
-        <p className="text-gray-500">
-          {searchQuery 
-            ? `No results for "${searchQuery}". Try different keywords.` 
-            : "Try adjusting your filters or check back later for new arrivals."}
-        </p>
+      <div className="flex items-center justify-center space-x-2 mt-8">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronsLeft className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        
+        <span className="text-sm">
+          Page {currentPage} of {lastPage}
+        </span>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === lastPage}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => handlePageChange(lastPage)}
+          disabled={currentPage === lastPage}
+        >
+          <ChevronsRight className="h-4 w-4" />
+        </Button>
       </div>
     );
   }

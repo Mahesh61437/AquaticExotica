@@ -10,14 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CachedImage } from "@/components/ui/cached-image";
 import React from "react";
 
-// Custom interface for display purposes that allows string[] tags
-interface DisplayProduct extends Omit<Product, 'tags'> {
-  tags: string[];
-  thumbnailUrl?: string;
-}
-
 interface ProductCardProps {
-  product: DisplayProduct;
+  product: Product;
 }
 
 export const ProductCard = React.memo(({ product }: ProductCardProps) => {
