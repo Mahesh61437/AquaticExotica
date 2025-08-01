@@ -59,8 +59,15 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
   const displayProducts = React.useMemo(() => {
     console.log('🛍️ ProductGridNew: Converting products to display format', {
       productsCount: products.length,
-      products: products.slice(0, 2) // Log first 2 products for debugging
+      products: products.slice(0, 2), // Log first 2 products for debugging
+      productsType: typeof products,
+      isArray: Array.isArray(products)
     });
+    
+    if (!Array.isArray(products)) {
+      console.warn('🛍️ ProductGridNew: Products is not an array:', products);
+      return [];
+    }
     
     return products.map(product => {
       const cat = product.category as Partial<Category>;
@@ -105,6 +112,11 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
       };
     });
   }, [products]);
+
+  console.log('🛍️ ProductGridNew: Final displayProducts', {
+    displayProductsCount: displayProducts.length,
+    displayProducts: displayProducts.slice(0, 2)
+  });
 
   // Loading skeleton
   if (isLoading && currentPage === 1) {
@@ -289,9 +301,36 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
 
       {/* Products grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {displayProducts.map(product => (
-          <ProductCard key={product.id} product={product} />
-        ))}
+        {console.log('🛍️ ProductGridNew: Rendering products grid', { displayProductsCount: displayProducts.length })}
+        
+        {/* Debug: Show raw products count */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="col-span-full p-4 bg-blue-100 border border-blue-400 rounded text-sm">
+            <strong>Debug:</strong> Raw products: {products.length} | Display products: {displayProducts.length}
+            {products.length > 0 && (
+              <div className="mt-2">
+                <strong>First product:</strong> {JSON.stringify(products[0], null, 2)}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {displayProducts.length > 0 ? (
+          displayProducts.map(product => (
+            <div key={product.id} className="bg-white rounded-lg p-4 border">
+              <h3 className="font-semibold">{product.name}</h3>
+              <p className="text-sm text-gray-600">₹{product.price}</p>
+              <p className="text-xs text-gray-400">ID: {product.id}</p>
+            </div>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-8">
+            <p className="text-gray-500">No products to display</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Products count: {products.length} | Display products count: {displayProducts.length}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Loading more indicator */}

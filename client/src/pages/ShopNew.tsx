@@ -69,7 +69,10 @@ export default function ShopNew() {
         totalPages,
         currentPage,
         totalCount,
-        productsCount: products.length
+        productsCount: products.length,
+        productsType: typeof products,
+        isProductsArray: Array.isArray(products),
+        firstProduct: products.length > 0 ? products[0] : null
       }
     });
   }, [searchQuery, filterParam, categoryParam, pageParam, priceMinParam, priceMaxParam, inStockParam, filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount, products]);

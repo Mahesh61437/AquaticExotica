@@ -56,11 +56,18 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
 
   // Memoized filter key for React Query - this ensures API calls when filters change
   const filterKey = useMemo(() => {
-    return JSON.stringify({ 
+    const key = JSON.stringify({ 
       filters, 
       page: currentPage, 
       pageSize 
     });
+    console.log('🛍️ useShop: Filter key generated', {
+      filters,
+      currentPage,
+      pageSize,
+      filterKey: key
+    });
+    return key;
   }, [filters, currentPage, pageSize]);
 
   // Fetch products - this will be called whenever filterKey changes
@@ -98,6 +105,21 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
   const hasNext = !!productsResponse?.next;
   const hasPrevious = !!productsResponse?.previous;
   const totalPages = Math.ceil(totalCount / pageSize);
+
+  // Debug logging for API response
+  useEffect(() => {
+    console.log('🛍️ useShop: API Response debug', {
+      productsResponse,
+      productsCount: products.length,
+      totalCount,
+      totalPages,
+      hasNext,
+      hasPrevious,
+      isLoading,
+      isError,
+      error
+    });
+  }, [productsResponse, products.length, totalCount, totalPages, hasNext, hasPrevious, isLoading, isError, error]);
 
   // Actions
   const setPage = useCallback((page: number) => {
