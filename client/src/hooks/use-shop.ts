@@ -54,12 +54,16 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
     createProductFilters(initialFilters)
   );
 
-  // Memoized filter key for React Query
+  // Memoized filter key for React Query - this ensures API calls when filters change
   const filterKey = useMemo(() => {
-    return JSON.stringify({ filters, page: currentPage, pageSize });
+    return JSON.stringify({ 
+      filters, 
+      page: currentPage, 
+      pageSize 
+    });
   }, [filters, currentPage, pageSize]);
 
-  // Fetch products
+  // Fetch products - this will be called whenever filterKey changes
   const {
     data: productsResponse,
     isLoading,
@@ -105,15 +109,21 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
   const setFilters = useCallback((newFilters: Partial<ProductFilters>) => {
     const updatedFilters = createProductFilters({ ...filters, ...newFilters });
     
-    // Only update if filters actually changed
-    if (!areFiltersEqual(filters, updatedFilters)) {
-      setFiltersState(updatedFilters);
-      setCurrentPage(1); // Reset to first page when filters change
-    }
+    console.log('🛍️ useShop: Setting filters', {
+      current: filters,
+      new: newFilters,
+      updated: updatedFilters,
+      changed: !areFiltersEqual(filters, updatedFilters)
+    });
+    
+    // Always update filters and reset to first page when filters change
+    setFiltersState(updatedFilters);
+    setCurrentPage(1); // Reset to first page when filters change
   }, [filters]);
 
   const clearFilters = useCallback(() => {
     const defaultFilters = createProductFilters({});
+    console.log('🛍️ useShop: Clearing filters');
     setFiltersState(defaultFilters);
     setCurrentPage(1);
   }, []);
@@ -158,9 +168,10 @@ export function useShop(options: UseShopOptions = {}): UseShopReturn {
       filters,
       isFiltered,
       activeFilterCount,
-      productsCount: products.length
+      productsCount: products.length,
+      filterKey
     });
-  }, [currentPage, totalPages, totalCount, hasNext, hasPrevious, filters, isFiltered, activeFilterCount, products.length]);
+  }, [currentPage, totalPages, totalCount, hasNext, hasPrevious, filters, isFiltered, activeFilterCount, products.length, filterKey]);
 
   return {
     // Data

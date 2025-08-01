@@ -22,9 +22,9 @@ export default function ShopNew() {
   const filterParam = urlParams.get("filter") || "";
   const categoryParam = urlParams.get("category") || "";
   const pageParam = parseInt(urlParams.get("page") || "1");
-  const priceMinParam = parseInt(urlParams.get("price_min") || "0");
-  const priceMaxParam = parseInt(urlParams.get("price_max") || "10000");
-  const inStockParam = urlParams.get("in_stock_only") === "true";
+  const priceMinParam = parseInt(urlParams.get("min_price") || "0");
+  const priceMaxParam = parseInt(urlParams.get("max_price") || "10000");
+  const inStockParam = urlParams.get("in_stock") === "true";
 
   // Shop state
   const {

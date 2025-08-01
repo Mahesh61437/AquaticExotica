@@ -85,7 +85,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
   React.useEffect(() => {
     const timer = setTimeout(() => {
       if (priceRange[0] !== filters.price_min || priceRange[1] !== filters.price_max) {
-        console.log('🎚️ ProductFiltersNew: Applying price range to filters:', priceRange);
+        console.log('💰 ProductFiltersNew: Applying price range to filters:', priceRange);
         setFilters({
           price_min: priceRange[0],
           price_max: priceRange[1]
@@ -100,6 +100,13 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
   const handleCategoryChange = (categoryId: number, checked: boolean) => {
     const currentCategories = filters.category_ids || [];
     
+    console.log('🏷️ ProductFiltersNew: Category change', {
+      categoryId,
+      checked,
+      currentCategories,
+      newCategories: checked ? [...currentCategories, categoryId] : currentCategories.filter(id => id !== categoryId)
+    });
+    
     if (checked) {
       setFilters({
         category_ids: [...currentCategories, categoryId]
@@ -113,6 +120,7 @@ export const ProductFiltersNew: React.FC<ProductFiltersNewProps> = ({
 
   // In-stock filter handler
   const handleInStockChange = (checked: boolean) => {
+    console.log('📦 ProductFiltersNew: In stock change', { checked });
     setFilters({
       in_stock_only: checked
     });

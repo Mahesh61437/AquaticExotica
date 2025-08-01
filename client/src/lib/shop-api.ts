@@ -72,21 +72,26 @@ export class ShopAPI {
     params.append('page', page.toString());
     params.append('page_size', pageSize.toString());
     
-    // Filters
+    // Filters - using correct API parameter names
     if (filters.category_ids && filters.category_ids.length > 0) {
-      params.append('category_ids', filters.category_ids.join(','));
+      const categoryParam = filters.category_ids.join(',');
+      params.append('category_id', categoryParam);
+      console.log('🏷️ ShopAPI: Multiple categories selected:', {
+        categoryIds: filters.category_ids,
+        categoryParam: categoryParam
+      });
     }
     
     if (filters.price_min !== undefined && filters.price_min > 0) {
-      params.append('price_min', filters.price_min.toString());
+      params.append('min_price', filters.price_min.toString());
     }
     
     if (filters.price_max !== undefined && filters.price_max < 10000) {
-      params.append('price_max', filters.price_max.toString());
+      params.append('max_price', filters.price_max.toString());
     }
     
     if (filters.in_stock_only) {
-      params.append('in_stock_only', 'true');
+      params.append('in_stock', 'true');
     }
     
     if (filters.search_query) {
