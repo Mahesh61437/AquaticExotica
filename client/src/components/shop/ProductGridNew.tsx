@@ -8,39 +8,60 @@ import { ProductFilters } from '@/lib/shop-api';
 import type { Category, Tag } from '@/types';
 
 interface ProductGridNewProps {
-  initialFilters?: Partial<ProductFilters>;
+  products: any[];
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  setPage: (page: number) => void;
+  isFiltered: boolean;
+  activeFilterCount: number;
   pageSize?: number;
   showPagination?: boolean;
   showResultsCount?: boolean;
 }
 
 export const ProductGridNew: React.FC<ProductGridNewProps> = ({
-  initialFilters = {},
+  products,
+  currentPage,
+  totalPages,
+  totalCount,
+  hasNext,
+  hasPrevious,
+  isLoading,
+  isError,
+  error,
+  setPage,
+  isFiltered,
+  activeFilterCount,
   pageSize = 12,
   showPagination = true,
   showResultsCount = true
 }) => {
-  const {
-    products,
-    currentPage,
-    totalPages,
-    totalCount,
-    hasNext,
-    hasPrevious,
-    isLoading,
-    isError,
-    error,
-    setPage,
-    isFiltered,
-    activeFilterCount
-  } = useShop({
-    initialFilters,
-    pageSize,
-    enableAutoFetch: true
-  });
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🛍️ ProductGridNew: Products updated', {
+      productsCount: products.length,
+      currentPage,
+      totalPages,
+      totalCount,
+      isFiltered,
+      activeFilterCount,
+      isLoading
+    });
+  }, [products, currentPage, totalPages, totalCount, isFiltered, activeFilterCount, isLoading]);
 
   // Convert API products to display format - MOVED TO TOP
   const displayProducts = React.useMemo(() => {
+    console.log('🛍️ ProductGridNew: Converting products to display format', {
+      productsCount: products.length,
+      products: products.slice(0, 2) // Log first 2 products for debugging
+    });
+    
     return products.map(product => {
       const cat = product.category as Partial<Category>;
       const safeCategory: Category = cat ? {

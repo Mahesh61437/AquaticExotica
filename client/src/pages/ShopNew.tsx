@@ -29,15 +29,21 @@ export default function ShopNew() {
   // Shop state
   const {
     categories,
+    products,
+    currentPage,
+    totalPages,
+    totalCount,
+    hasNext,
+    hasPrevious,
+    isLoading,
+    isError,
+    error,
     filters,
     setFilters,
     clearFilters,
     setPage,
     isFiltered,
-    activeFilterCount,
-    totalPages,
-    currentPage,
-    totalCount
+    activeFilterCount
   } = useShop();
 
   // Mobile filters state
@@ -62,10 +68,11 @@ export default function ShopNew() {
         activeFilterCount,
         totalPages,
         currentPage,
-        totalCount
+        totalCount,
+        productsCount: products.length
       }
     });
-  }, [searchQuery, filterParam, categoryParam, pageParam, priceMinParam, priceMaxParam, inStockParam, filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount]);
+  }, [searchQuery, filterParam, categoryParam, pageParam, priceMinParam, priceMaxParam, inStockParam, filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount, products]);
 
   // Initialize filters from URL parameters
   useEffect(() => {
@@ -184,7 +191,7 @@ export default function ShopNew() {
               </div>
               <div>
                 <strong>Shop State:</strong>
-                <pre>{JSON.stringify({ filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount }, null, 2)}</pre>
+                <pre>{JSON.stringify({ filters, isFiltered, activeFilterCount, totalPages, currentPage, totalCount, productsCount: products.length }, null, 2)}</pre>
               </div>
             </div>
             <div className="mt-4 space-x-2">
@@ -282,7 +289,18 @@ export default function ShopNew() {
           {/* Products Grid */}
           <div className="md:col-span-3">
             <ProductGridNew
-              initialFilters={filters}
+              products={products}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalCount={totalCount}
+              hasNext={hasNext}
+              hasPrevious={hasPrevious}
+              isLoading={isLoading}
+              isError={isError}
+              error={error}
+              setPage={setPage}
+              isFiltered={isFiltered}
+              activeFilterCount={activeFilterCount}
               pageSize={12}
               showPagination={true}
               showResultsCount={true}
@@ -292,4 +310,4 @@ export default function ShopNew() {
       </div>
     </>
   );
-} 
+}
