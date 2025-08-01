@@ -39,6 +39,52 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
     enableAutoFetch: true
   });
 
+  // Convert API products to display format - MOVED TO TOP
+  const displayProducts = React.useMemo(() => {
+    return products.map(product => {
+      const cat = product.category as Partial<Category>;
+      const safeCategory: Category = cat ? {
+        id: cat.id ?? 0,
+        name: cat.name ?? 'Uncategorized',
+        slug: cat.slug ?? 'uncategorized',
+        description: cat.description ?? null,
+        imageUrl: cat.imageUrl ?? '',
+        isActive: cat.isActive ?? true,
+        createdAt: cat.createdAt ?? '',
+        updatedAt: cat.updatedAt ?? ''
+      } : {
+        id: 0,
+        name: 'Uncategorized',
+        slug: 'uncategorized',
+        description: null,
+        imageUrl: '',
+        isActive: true,
+        createdAt: '',
+        updatedAt: ''
+      };
+
+      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
+        ? product.tagDetails.map(tag => ({
+            id: tag.id,
+            name: tag.name,
+            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
+            isActive: (tag as any).isActive ?? true,
+            createdAt: tag.createdAt ?? '',
+            updatedAt: (tag as any).updatedAt ?? ''
+          }))
+        : [];
+
+      return {
+        ...product,
+        tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
+        tagDetails: safeTagDetails,
+        category: safeCategory,
+        createdAt: product.createdAt || '',
+        updatedAt: product.updatedAt || ''
+      };
+    });
+  }, [products]);
+
   // Loading skeleton
   if (isLoading && currentPage === 1) {
     return (
@@ -94,52 +140,6 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
       </div>
     );
   }
-
-  // Convert API products to display format
-  const displayProducts = React.useMemo(() => {
-    return products.map(product => {
-      const cat = product.category as Partial<Category>;
-      const safeCategory: Category = cat ? {
-        id: cat.id ?? 0,
-        name: cat.name ?? 'Uncategorized',
-        slug: cat.slug ?? 'uncategorized',
-        description: cat.description ?? null,
-        imageUrl: cat.imageUrl ?? '',
-        isActive: cat.isActive ?? true,
-        createdAt: cat.createdAt ?? '',
-        updatedAt: cat.updatedAt ?? ''
-      } : {
-        id: 0,
-        name: 'Uncategorized',
-        slug: 'uncategorized',
-        description: null,
-        imageUrl: '',
-        isActive: true,
-        createdAt: '',
-        updatedAt: ''
-      };
-
-      const safeTagDetails: Tag[] = Array.isArray(product.tagDetails)
-        ? product.tagDetails.map(tag => ({
-            id: tag.id,
-            name: tag.name,
-            slug: (tag as any).slug ?? (tag.name ? tag.name.toLowerCase().replace(/\s+/g, '-') : ''),
-            isActive: (tag as any).isActive ?? true,
-            createdAt: tag.createdAt ?? '',
-            updatedAt: (tag as any).updatedAt ?? ''
-          }))
-        : [];
-
-      return {
-        ...product,
-        tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
-        tagDetails: safeTagDetails,
-        category: safeCategory,
-        createdAt: product.createdAt || '',
-        updatedAt: product.updatedAt || ''
-      };
-    });
-  }, [products]);
 
   // Pagination component
   const Pagination = () => {
