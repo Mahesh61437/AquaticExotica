@@ -44,129 +44,128 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   };
 
   return (
-    <Link 
-      href={generateProductUrl(product)}
-      className="product-card group"
-    >
-      <div className="product-image relative overflow-hidden">
-        {/* Using CachedImage component for better performance */}
-        <CachedImage 
-          src={displayImage}
-          alt={product.name}
-          className="w-full h-full aspect-[3/4]"
-          size="medium"
-          quality={85}
-          objectFit="cover"
-          fallbackSrc={product.imageUrl}
-        />
-        
-        {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
-        {(() => {
-          if (product.isFeatured) {
-            return (
-              <div className="absolute top-2 left-2 z-10">
-                <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">
-                  FEATURED
-                </Badge>
-              </div>
-            );
-          } else if (product.isTrending) {
-            return (
-              <div className="absolute top-2 left-2 z-10">
-                <Badge className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
-                  TRENDING
-                </Badge>
-              </div>
-            );
-          } else if (product.isNew) {
-            return (
-              <div className="absolute top-2 left-2 z-10">
-                <Badge className="bg-green-600 hover:bg-green-700 text-white font-semibold">
-                  NEW
-                </Badge>
-              </div>
-            );
-          } else if (product.isSale) {
-            return (
-              <div className="absolute top-2 left-2 z-10">
-                <Badge className="bg-red-600 hover:bg-red-700 text-white font-semibold">
-                  SALE
-                </Badge>
-              </div>
-            );
-          }
-          return null;
-        })()}
-        
-        {/* Quick Actions */}
-        <div className="quick-actions">
-          <Button 
-            className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
-            onClick={handleAddToCart}
-            disabled={product.stock <= 0}
-            title={product.stock <= 0 ? "Out of stock" : ""}
-          >
-            {isAdded ? (
-              <>
-                <Check className="h-4 w-4 mr-1" /> Added
-              </>
-            ) : product.stock <= 0 ? (
-              <>
-                <Package className="h-4 w-4 mr-1" /> Out of Stock
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-      
-      <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="font-medium">{product.name}</h3>
-            <div className="flex items-center mt-1">
-              {product.compareAtPrice ? (
-                <>
-                  <span className="text-accent font-semibold">
-                    {formatPrice(product.price)}
-                  </span>
-                  <span className="ml-2 text-gray-400 line-through text-sm">
-                    {formatPrice(product.compareAtPrice)}
-                  </span>
-                </>
-              ) : (
-                <span className="text-dark font-semibold">
-                  {formatPrice(product.price)}
-                </span>
-              )}
-            </div>
-            
-            {/* Stock Indicator */}
-            {(() => {
-              const stockInfo = getStockStatus(product.stock);
+    <div className="product-card group">
+      <Link href={generateProductUrl(product)}>
+        <div className="product-image">
+          {/* Using CachedImage component for better performance */}
+          <CachedImage 
+            src={displayImage}
+            alt={product.name}
+            className="w-full h-full aspect-[3/4]"
+            size="medium"
+            quality={85}
+            objectFit="cover"
+            fallbackSrc={product.imageUrl}
+          />
+          
+          {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
+          {(() => {
+            if (product.isFeatured) {
               return (
-                <div className="mt-2">
-                  <Badge className={`${stockInfo.color}`} variant="outline">
-                    <Package className="h-3 w-3 mr-1" />
-                    {stockInfo.text}
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">
+                    FEATURED
                   </Badge>
-                  {product.stock <= 5 && product.stock > 0 && (
-                    <p className="text-xs mt-1 text-amber-600 font-medium">Only {product.stock} left!</p>
-                  )}
                 </div>
               );
-            })()}
-            
-          </div>
-          <div className="flex text-yellow-400 text-sm" 
-            dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>
+            } else if (product.isTrending) {
+              return (
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+                    TRENDING
+                  </Badge>
+                </div>
+              );
+            } else if (product.isNew) {
+              return (
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-green-600 hover:bg-green-700 text-white font-semibold">
+                    NEW
+                  </Badge>
+                </div>
+              );
+            } else if (product.isSale) {
+              return (
+                <div className="absolute top-2 left-2 z-10">
+                  <Badge className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+                    SALE
+                  </Badge>
+                </div>
+              );
+            }
+            return null;
+          })()}
+          
+          {/* Quick Actions */}
+          <div className="quick-actions">
+            <Button 
+              className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
+              onClick={handleAddToCart}
+              disabled={product.stock <= 0}
+              title={product.stock <= 0 ? "Out of stock" : ""}
+            >
+              {isAdded ? (
+                <>
+                  <Check className="h-4 w-4 mr-1" /> Added
+                </>
+              ) : product.stock <= 0 ? (
+                <>
+                  <Package className="h-4 w-4 mr-1" /> Out of Stock
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
+                </>
+              )}
+            </Button>
           </div>
         </div>
-      </div>
-    </Link>
+        
+        <div className="p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-medium">{product.name}</h3>
+              <div className="flex items-center mt-1">
+                {product.compareAtPrice ? (
+                  <>
+                    <span className="text-accent font-semibold">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="ml-2 text-gray-400 line-through text-sm">
+                      {formatPrice(product.compareAtPrice)}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-dark font-semibold">
+                    {formatPrice(product.price)}
+                  </span>
+                )}
+              </div>
+              
+              {/* Stock Indicator */}
+              {(() => {
+                const stockInfo = getStockStatus(product.stock);
+                return (
+                  <div className="mt-2">
+                    <Badge className={`${stockInfo.color}`} variant="outline">
+                      <Package className="h-3 w-3 mr-1" />
+                      {stockInfo.text}
+                    </Badge>
+                    {product.stock <= 5 && product.stock > 0 && (
+                      <p className="text-xs mt-1 text-amber-600 font-medium">Only {product.stock} left!</p>
+                    )}
+                  </div>
+                );
+              })()}
+              
+            </div>
+            <div className="flex text-yellow-400 text-sm" 
+              dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>
+            </div>
+          </div>
+        </div>
+      </Link>
+    </div>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function - only re-render if product data actually changed

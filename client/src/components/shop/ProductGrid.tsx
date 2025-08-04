@@ -76,8 +76,19 @@ export const ProductGrid = React.memo(({
   const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
   const [error, setError] = React.useState<Error | null>(null);
 
+  // Debug props changes
+  console.log('🔄 ProductGrid props changed:', {
+    category,
+    filter,
+    searchQuery,
+    activeCategoryIds,
+    activePriceRange,
+    activeInStock,
+    controlledPage
+  });
+
   // Build the API endpoint with query parameters
-  const buildEndpoint = (page: number) => {
+  const buildEndpoint = React.useCallback((page: number) => {
     let endpoint = "/api/products/";
     const queryParams = new URLSearchParams();
     
@@ -116,10 +127,10 @@ export const ProductGrid = React.memo(({
     
     console.log('🔗 ProductGrid endpoint:', endpoint);
     return endpoint;
-  };
+  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock, itemsPerPage]);
 
   // Fetch a specific page and store it
-  const fetchPage = async (page: number) => {
+  const fetchPage = React.useCallback(async (page: number) => {
     try {
       console.log('📦 Fetching page:', page);
       const response = await apiRequest(buildEndpoint(page));
@@ -143,7 +154,7 @@ export const ProductGrid = React.memo(({
       console.error('❌ Error fetching page:', page, err);
       setError(err as Error);
     }
-  };
+  }, [buildEndpoint, itemsPerPage]);
 
   // Determine current page
   const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
@@ -158,7 +169,7 @@ export const ProductGrid = React.memo(({
     }
   };
 
-  // On mount and when currentPage or filters change, fetch current and next page
+  // On mount and when filters change, fetch current and next page
   React.useEffect(() => {
     // When filters change, reset all pagination state first
     const filterKey = `${category}-${filter}-${searchQuery}-${activeCategoryIds.join(',')}-${activePriceRange.join(',')}-${activeInStock}`;
@@ -193,7 +204,7 @@ export const ProductGrid = React.memo(({
     // Prefetch the second page
     console.log('🔄 Prefetching page 2 after filter change');
     fetchPage(2);
-  }, [category, filter, searchQuery, activeCategoryIds, activePriceRange, activeInStock]);
+  }, [fetchPage, onPageChange]);
 
   // Handle page changes (when user clicks pagination)
   React.useEffect(() => {
@@ -206,7 +217,7 @@ export const ProductGrid = React.memo(({
         fetchPage(currentPage + 1);
       }
     }
-  }, [currentPage, itemsPerPage]);
+  }, [currentPage, itemsPerPage, fetchPage, lastPage]);
 
   // Products to show for current page
   const productsToShow = pages[currentPage] || [];
@@ -352,8 +363,8 @@ export const ProductGrid = React.memo(({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function - only re-render if relevant props changed
-  return (
+  // Custom comparison function - return true if props are the same (no re-render), false if different (re-render)
+  const propsAreSame = (
     prevProps.category === nextProps.category &&
     prevProps.filter === nextProps.filter &&
     prevProps.searchQuery === nextProps.searchQuery &&
@@ -363,4 +374,28 @@ export const ProductGrid = React.memo(({
     prevProps.currentPage === nextProps.currentPage &&
     prevProps.initialLimit === nextProps.initialLimit
   );
+  
+  console.log('🔄 ProductGrid memo comparison:', {
+    propsAreSame,
+    prevProps: {
+      category: prevProps.category,
+      filter: prevProps.filter,
+      searchQuery: prevProps.searchQuery,
+      activeCategoryIds: prevProps.activeCategoryIds,
+      activePriceRange: prevProps.activePriceRange,
+      activeInStock: prevProps.activeInStock,
+      currentPage: prevProps.currentPage
+    },
+    nextProps: {
+      category: nextProps.category,
+      filter: nextProps.filter,
+      searchQuery: nextProps.searchQuery,
+      activeCategoryIds: nextProps.activeCategoryIds,
+      activePriceRange: nextProps.activePriceRange,
+      activeInStock: nextProps.activeInStock,
+      currentPage: nextProps.currentPage
+    }
+  });
+  
+  return propsAreSame;
 });
