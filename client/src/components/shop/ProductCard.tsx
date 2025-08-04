@@ -44,8 +44,8 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   };
 
   return (
-    <div className="product-card group">
-      <Link href={generateProductUrl(product)}>
+    <Link href={generateProductUrl(product)} className="block">
+      <div className="product-card group">
         <div className="product-image">
           {/* Using CachedImage component for better performance */}
           <CachedImage 
@@ -164,8 +164,8 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
             </div>
           </div>
         </div>
-      </Link>
-    </div>
+      </div>
+    </Link>
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function - only re-render if product data actually changed

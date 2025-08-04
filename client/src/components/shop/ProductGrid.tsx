@@ -75,6 +75,7 @@ export const ProductGrid = React.memo(({
   const [lastPage, setLastPage] = React.useState<number | null>(null);
   const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
   const [error, setError] = React.useState<Error | null>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
 
   // Debug props changes
   console.log('🔄 ProductGrid props changed:', {
@@ -133,6 +134,9 @@ export const ProductGrid = React.memo(({
   const fetchPage = React.useCallback(async (page: number) => {
     try {
       console.log('📦 Fetching page:', page);
+      setIsLoading(true);
+      setError(null);
+      
       const response = await apiRequest(buildEndpoint(page));
       
       if (response && typeof response === 'object' && 'results' in response) {
@@ -153,6 +157,8 @@ export const ProductGrid = React.memo(({
     } catch (err) {
       console.error('❌ Error fetching page:', page, err);
       setError(err as Error);
+    } finally {
+      setIsLoading(false);
     }
   }, [buildEndpoint, itemsPerPage]);
 
@@ -356,10 +362,40 @@ export const ProductGrid = React.memo(({
 
   return (
     <div>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {productCards}
-      </div>
-      <PaginationControls />
+      {isLoading && productsToShow.length === 0 ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(12)].map((_, index) => (
+            <div key={index} className="bg-white rounded-lg overflow-hidden shadow-sm">
+              <div className="aspect-[3/4] bg-gray-200 animate-pulse"></div>
+              <div className="p-4">
+                <div className="h-4 bg-gray-200 rounded mb-2 animate-pulse"></div>
+                <div className="h-4 w-1/2 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error && productsToShow.length === 0 ? (
+        <div className="text-center py-10">
+          <h3 className="text-xl font-medium mb-2">Error loading products</h3>
+          <p className="text-gray-500">{error.message}</p>
+        </div>
+      ) : productsToShow.length === 0 ? (
+        <div className="text-center py-10">
+          <h3 className="text-xl font-medium mb-2">No products found</h3>
+          <p className="text-gray-500">
+            {searchQuery 
+              ? `No results for "${searchQuery}". Try different keywords.` 
+              : "Try adjusting your filters or check back later for new arrivals."}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {productCards}
+          </div>
+          <PaginationControls />
+        </>
+      )}
     </div>
   );
 }, (prevProps, nextProps) => {
