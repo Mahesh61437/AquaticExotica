@@ -44,50 +44,49 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   };
 
   return (
-    <Link href={generateProductUrl(product)} className="block">
-      <div className="product-card group">
-        <div className="product-image">
-          {/* Using CachedImage component for better performance */}
+    <div className="group bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden">
+      <Link href={generateProductUrl(product)} className="block">
+        <div className="relative aspect-[3/4] overflow-hidden">
           <CachedImage 
             src={displayImage}
             alt={product.name}
-            className="w-full h-full aspect-[3/4]"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
             size="medium"
             quality={85}
             objectFit="cover"
             fallbackSrc={product.imageUrl}
           />
           
-          {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
+          {/* Priority Badge */}
           {(() => {
             if (product.isFeatured) {
               return (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge className="bg-purple-600 hover:bg-purple-700 text-white font-semibold">
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-purple-600 text-white text-xs font-semibold">
                     FEATURED
                   </Badge>
                 </div>
               );
             } else if (product.isTrending) {
               return (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge className="bg-orange-600 hover:bg-orange-700 text-white font-semibold">
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-orange-600 text-white text-xs font-semibold">
                     TRENDING
                   </Badge>
                 </div>
               );
             } else if (product.isNew) {
               return (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge className="bg-green-600 hover:bg-green-700 text-white font-semibold">
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-green-600 text-white text-xs font-semibold">
                     NEW
                   </Badge>
                 </div>
               );
             } else if (product.isSale) {
               return (
-                <div className="absolute top-2 left-2 z-10">
-                  <Badge className="bg-red-600 hover:bg-red-700 text-white font-semibold">
+                <div className="absolute top-3 left-3">
+                  <Badge className="bg-red-600 text-white text-xs font-semibold">
                     SALE
                   </Badge>
                 </div>
@@ -97,91 +96,81 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
           })()}
           
           {/* Quick Actions */}
-          <div className="quick-actions">
-            <Button 
-              className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
-              onClick={handleAddToCart}
-              disabled={product.stock <= 0}
-              title={product.stock <= 0 ? "Out of stock" : ""}
-            >
-              {isAdded ? (
-                <>
-                  <Check className="h-4 w-4 mr-1" /> Added
-                </>
-              ) : product.stock <= 0 ? (
-                <>
-                  <Package className="h-4 w-4 mr-1" /> Out of Stock
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="h-4 w-4 mr-1" /> Add to Cart
-                </>
-              )}
-            </Button>
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-end justify-center pb-4">
+            <div className="transform translate-y-full group-hover:translate-y-0 transition-transform duration-300">
+              <Button 
+                className={`bg-white text-gray-900 hover:bg-gray-100 ${isAdded ? 'bg-green-600 hover:bg-green-700 text-white' : ''}`}
+                onClick={handleAddToCart}
+                disabled={product.stock <= 0}
+                title={product.stock <= 0 ? "Out of stock" : ""}
+                size="sm"
+              >
+                {isAdded ? (
+                  <>
+                    <Check className="h-4 w-4 mr-2" /> Added
+                  </>
+                ) : product.stock <= 0 ? (
+                  <>
+                    <Package className="h-4 w-4 mr-2" /> Out of Stock
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="h-4 w-4 mr-2" /> Add to Cart
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
         
         <div className="p-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-medium">{product.name}</h3>
-              <div className="flex items-center mt-1">
-                {product.compareAtPrice ? (
-                  <>
-                    <span className="text-accent font-semibold">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="ml-2 text-gray-400 line-through text-sm">
-                      {formatPrice(product.compareAtPrice)}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-dark font-semibold">
+          <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">{product.name}</h3>
+          
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center space-x-2">
+              {product.compareAtPrice ? (
+                <>
+                  <span className="text-lg font-bold text-gray-900">
                     {formatPrice(product.price)}
                   </span>
-                )}
-              </div>
-              
-              {/* Stock Indicator */}
-              {(() => {
-                const stockInfo = getStockStatus(product.stock);
-                return (
-                  <div className="mt-2">
-                    <Badge className={`${stockInfo.color}`} variant="outline">
-                      <Package className="h-3 w-3 mr-1" />
-                      {stockInfo.text}
-                    </Badge>
-                    {product.stock <= 5 && product.stock > 0 && (
-                      <p className="text-xs mt-1 text-amber-600 font-medium">Only {product.stock} left!</p>
-                    )}
-                  </div>
-                );
-              })()}
-              
+                  <span className="text-sm text-gray-500 line-through">
+                    {formatPrice(product.compareAtPrice)}
+                  </span>
+                </>
+              ) : (
+                <span className="text-lg font-bold text-gray-900">
+                  {formatPrice(product.price)}
+                </span>
+              )}
             </div>
+            
             <div className="flex text-yellow-400 text-sm" 
               dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>
             </div>
           </div>
+          
+          {/* Stock Status */}
+          {(() => {
+            const stockInfo = getStockStatus(product.stock);
+            return (
+              <div className="flex items-center justify-between">
+                <Badge className={`${stockInfo.color} text-xs`} variant="outline">
+                  <Package className="h-3 w-3 mr-1" />
+                  {stockInfo.text}
+                </Badge>
+                {product.stock <= 5 && product.stock > 0 && (
+                  <span className="text-xs text-amber-600 font-medium">
+                    Only {product.stock} left!
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function - only re-render if product data actually changed
-  const prev = prevProps.product;
-  const next = nextProps.product;
-  
-  return (
-    prev.id === next.id &&
-    prev.name === next.name &&
-    prev.price === next.price &&
-    prev.stock === next.stock &&
-    prev.imageUrl === next.imageUrl &&
-    prev.thumbnailUrl === next.thumbnailUrl &&
-    prev.isNew === next.isNew &&
-    prev.isSale === next.isSale &&
-    prev.isFeatured === next.isFeatured &&
-    prev.isTrending === next.isTrending
-  );
+  return prevProps.product.id === nextProps.product.id;
 });
+ 
