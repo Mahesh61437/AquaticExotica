@@ -1,13 +1,13 @@
 import { Link } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Category } from "@/types";
 import { apiCache } from "@/lib/api-cache";
-import { CachedImage } from "@/components/ui/cached-image";
-import React from "react";
 
-export const FeaturedCategories = React.memo(() => {
+export default function FeaturedCategories() {
   const [isLoading, setIsLoading] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
+  const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
   
   // Function to get gradient based on category name
   const getCategoryGradient = (name: string): string => {
@@ -30,6 +30,13 @@ export const FeaturedCategories = React.memo(() => {
         // Try to get categories from cache first (30 minute cache time)
         const data = await apiCache.get<Category[]>('/api/categories/', undefined, 30 * 60 * 1000);
         setCategories(data);
+        
+        // Initialize image loading states
+        const initialLoadedState: Record<number, boolean> = {};
+        data.forEach(cat => {
+          initialLoadedState[cat.id] = false;
+        });
+        setLoadedImages(initialLoadedState);
       } catch (error) {
         console.error('Failed to load categories:', error);
       } finally {
@@ -39,6 +46,58 @@ export const FeaturedCategories = React.memo(() => {
     
     loadData();
   }, []);
+
+  // Intersection Observer for lazy loading images
+  useEffect(() => {
+    if (isLoading || categories.length === 0) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            const categoryId = Number(img.dataset.categoryId);
+            
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.onload = () => {
+                setLoadedImages(prev => ({
+                  ...prev,
+                  [categoryId]: true
+                }));
+              };
+              img.onerror = () => {
+                // On error, mark as loaded but use gradient background
+                setLoadedImages(prev => ({
+                  ...prev,
+                  [categoryId]: false
+                }));
+              };
+              
+              // Remove data-src to avoid setting the src again
+              img.removeAttribute('data-src');
+            }
+            
+            observer.unobserve(img);
+          }
+        });
+      },
+      {
+        rootMargin: '200px 0px',
+        threshold: 0.01
+      }
+    );
+    
+    Object.entries(imageRefs.current).forEach(([categoryId, imgRef]) => {
+      if (imgRef) {
+        observer.observe(imgRef);
+      }
+    });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [isLoading, categories]);
 
   if (isLoading) {
     return (
@@ -67,37 +126,39 @@ export const FeaturedCategories = React.memo(() => {
               href={`/shop/${category.slug}`} 
               className="group relative overflow-hidden rounded-lg aspect-square"
             >
-              {/* Gradient background (shows when image fails to load) */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(category.name)} z-0`}></div>
+              {/* Gradient background (shows when image fails to load or while loading) */}
+              <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(category.name)} transition-opacity duration-300 ${
+                loadedImages[category.id] ? 'opacity-0' : 'opacity-100'
+              }`}></div>
               
-              {/* Category image with caching */}
-              <CachedImage 
-                src={category.imageUrl}
+              {/* Category image with lazy loading */}
+              <img 
+                ref={(el) => imageRefs.current[category.id] = el}
+                data-src={category.imageUrl}
+                data-category-id={category.id}
                 alt={`${category.name} Category`}
-                className="relative z-10 object-cover w-full h-full transform group-hover:scale-105 transition duration-300"
-                size="large"
-                objectFit="cover"
-                fallbackSrc=""
+                className={`object-cover w-full h-full transform group-hover:scale-105 transition duration-300 ${
+                  loadedImages[category.id] ? 'opacity-100' : 'opacity-0'
+                }`}
+                src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
               />
               
               {/* Category name overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4 z-20">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
                 <span className="text-white font-heading font-semibold text-xl">
                   {category.name}
                 </span>
               </div>
               
               {/* Hover Effect */}
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/10 transition duration-300 z-30"></div>
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-black/10 transition duration-300"></div>
             </Link>
           ))}
         </div>
       </div>
     </section>
   );
-}, (prevProps, nextProps) => {
-  // No props to compare, so always return true to prevent re-renders
-  return true;
-});
+}
 
-FeaturedCategories.displayName = 'FeaturedCategories';
+// For backwards compatibility
+export { FeaturedCategories }

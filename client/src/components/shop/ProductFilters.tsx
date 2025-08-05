@@ -48,9 +48,9 @@ export function ProductFilters({
   const categories: Category[] = React.useMemo(() => {
     if (!categoriesResponse) return [];
     
-    // Check if response is paginated with {count, next, previous, results}
-    if (categoriesResponse && typeof categoriesResponse === 'object' && 'results' in categoriesResponse) {
-      return (categoriesResponse as any).results || [];
+    // Check if response is paginated
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
+      return (categoriesResponse as any).data || [];
     }
     
     // Check if response is a direct array

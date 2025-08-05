@@ -3,14 +3,14 @@ import { Product } from "@/types";
 import { Link } from "wouter";
 import { formatPrice, generateStarRating } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { apiCache } from "@/lib/api-cache";
-import { CachedImage } from "@/components/ui/cached-image";
-import React from "react";
 
-export const TrendingProducts = React.memo(() => {
+export function TrendingProducts() {
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
   const [isClientLoading, setIsClientLoading] = useState(true);
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
+  const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
   
   // Use React Query for cache invalidation
   const { data: allProducts = [] } = useQuery<Product[]>({
@@ -28,6 +28,13 @@ export const TrendingProducts = React.memo(() => {
         // Filter trending products
         const trendingData = productsData.filter(product => product.isTrending);
         setLocalProducts(trendingData);
+        
+        // Initialize image loading states
+        const initialLoadedState: Record<number, boolean> = {};
+        trendingData.forEach(product => {
+          initialLoadedState[product.id] = false;
+        });
+        setLoadedImages(initialLoadedState);
       } catch (error) {
         console.error('Failed to load trending products:', error);
       } finally {
@@ -44,8 +51,58 @@ export const TrendingProducts = React.memo(() => {
       // Filter trending products
       const trendingData = allProducts.filter(product => product.isTrending);
       setLocalProducts(trendingData);
+      
+      // Initialize image loading states
+      const initialLoadedState: Record<number, boolean> = {};
+      trendingData.forEach(product => {
+        initialLoadedState[product.id] = false;
+      });
+      setLoadedImages(initialLoadedState);
     }
   }, [allProducts]);
+  
+  // Intersection Observer for lazy loading images
+  useEffect(() => {
+    if (localProducts.length === 0) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            const productId = Number(img.dataset.productId);
+            
+            if (img.dataset.src) {
+              img.src = img.dataset.src;
+              img.onload = () => {
+                setLoadedImages(prev => ({
+                  ...prev,
+                  [productId]: true
+                }));
+              };
+              img.removeAttribute('data-src');
+            }
+            
+            observer.unobserve(img);
+          }
+        });
+      },
+      {
+        rootMargin: '100px 0px',
+        threshold: 0.01
+      }
+    );
+    
+    Object.entries(imageRefs.current).forEach(([productId, imgRef]) => {
+      if (imgRef) {
+        observer.observe(imgRef);
+      }
+    });
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [localProducts]);
 
   return (
     <section className="py-12 bg-white">
@@ -74,12 +131,19 @@ export const TrendingProducts = React.memo(() => {
                 className="bg-gray-50 p-4 rounded-lg flex items-center gap-4 hover:shadow-md transition"
               >
                 <div className="relative w-24 h-24">
-                  <CachedImage 
-                    src={product.imageUrl}
-                    alt={product.name}
-                    className="w-24 h-24 rounded-md"
-                    size="small"
-                    objectFit="cover"
+                  <div className={`absolute inset-0 bg-gray-200 rounded-md transition-opacity duration-300 ${
+                    loadedImages[product.id] ? 'opacity-0' : 'opacity-100'
+                  }`}></div>
+                  
+                  <img 
+                    ref={(el) => imageRefs.current[product.id] = el}
+                    data-src={product.imageUrl}
+                    data-product-id={product.id}
+                    alt={product.name} 
+                    className={`w-24 h-24 object-cover rounded-md transition-opacity duration-300 ${
+                      loadedImages[product.id] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="
                   />
                 </div>
                 
@@ -112,9 +176,4 @@ export const TrendingProducts = React.memo(() => {
       </div>
     </section>
   );
-}, (prevProps, nextProps) => {
-  // No props to compare, so always return true to prevent re-renders
-  return true;
-});
-
-TrendingProducts.displayName = 'TrendingProducts';
+}

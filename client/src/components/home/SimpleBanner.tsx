@@ -1,21 +1,17 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import heroImage from "@assets/akva_4.jpeg";
-import { CachedImage } from "@/components/ui/cached-image";
-import React from "react";
 
-export const SimpleBanner = React.memo(() => {
+export function SimpleBanner() {
   return (
     <div className="relative w-full h-[60vh] flex items-center">
-      <div className="absolute inset-0">
-        <CachedImage 
-          src={heroImage}
-          alt="Premium Aquatic Products"
-          className="w-full h-full object-cover"
-          size="large"
-          objectFit="cover"
-          priority={true}
-        />
+      <div 
+        className="absolute inset-0 bg-cover bg-center" 
+        style={{ 
+          backgroundImage: `url(${heroImage})`,
+          backgroundSize: 'cover',
+        }}
+      >
         {/* Overlay for better text readability */}
         <div className="absolute inset-0 bg-black bg-opacity-50"></div>
       </div>
@@ -35,9 +31,4 @@ export const SimpleBanner = React.memo(() => {
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // No props to compare, so always return true to prevent re-renders
-  return true;
-});
-
-SimpleBanner.displayName = 'SimpleBanner';
+}
