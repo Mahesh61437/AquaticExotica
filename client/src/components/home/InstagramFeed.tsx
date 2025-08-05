@@ -1,7 +1,4 @@
-import { CachedImage } from "@/components/ui/cached-image";
-import React from "react";
-
-export const InstagramFeed = React.memo(() => {
+export function InstagramFeed() {
   const instagramPosts = [
     {
       id: 1,
@@ -55,12 +52,10 @@ export const InstagramFeed = React.memo(() => {
               className="relative group overflow-hidden aspect-square"
               aria-label={`View our Instagram post: ${post.alt}`}
             >
-              <CachedImage 
+              <img 
                 src={post.imageUrl} 
                 alt={post.alt} 
                 className="w-full h-full object-cover transition duration-300 group-hover:scale-110"
-                size="medium"
-                objectFit="cover"
               />
               <div className="absolute inset-0 bg-dark bg-opacity-20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition duration-300">
                 <i className="fa-brands fa-instagram text-white text-2xl"></i>
@@ -71,9 +66,4 @@ export const InstagramFeed = React.memo(() => {
       </div>
     </section>
   );
-}, (prevProps, nextProps) => {
-  // No props to compare, so always return true to prevent re-renders
-  return true;
-});
-
-InstagramFeed.displayName = 'InstagramFeed';
+}
