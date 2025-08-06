@@ -143,6 +143,13 @@ export default function OrderManagement() {
     queryFn: async () => {
       console.log('📦 OrderManagement API call:', buildOrdersEndpoint(currentPage));
       const response = await apiRequest(buildOrdersEndpoint(currentPage));
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return response || [];
     },
   });
@@ -189,7 +196,14 @@ export default function OrderManagement() {
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildOrdersEndpoint(page));
-      const pageData = response || [];
+      
+      // Handle new pagination format: { count, next, previous, results }
+      let pageData;
+      if (response && typeof response === 'object' && 'results' in response) {
+        pageData = response.results || [];
+      } else {
+        pageData = response || [];
+      }
       
       setAllOrders(prev => {
         const newOrders = [...prev];

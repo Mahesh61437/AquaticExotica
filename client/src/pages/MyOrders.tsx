@@ -89,7 +89,10 @@ interface NewOrder {
 
 // Define paginated response type
 interface PaginatedResponse<T> {
-  data?: T[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 export default function MyOrders() {
@@ -107,9 +110,14 @@ export default function MyOrders() {
         
         // Handle different response formats
         let ordersData: NewOrder[] = [];
-        if (response && typeof response === 'object' && 'data' in response) {
-          ordersData = (response as PaginatedResponse<NewOrder>).data || [];
+        if (response && typeof response === 'object' && 'results' in response) {
+          // New pagination format: { count, next, previous, results }
+          ordersData = (response as PaginatedResponse<NewOrder>).results || [];
+        } else if (response && typeof response === 'object' && 'data' in response) {
+          // Old pagination format: { data }
+          ordersData = (response as any).data || [];
         } else if (Array.isArray(response)) {
+          // Direct array format
           ordersData = response;
         }
         

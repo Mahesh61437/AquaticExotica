@@ -148,6 +148,13 @@ export default function ProductDetail() {
       console.log('🏷️ Fetching tags');
       const response = await apiRequest("/api/tags/");
       console.log('🏷️ Tags response:', response);
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
   });
@@ -160,6 +167,13 @@ export default function ProductDetail() {
       console.log('📂 Fetching categories');
       const response = await apiRequest("/api/categories/");
       console.log('📂 Categories response:', response);
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
   });
@@ -173,6 +187,13 @@ export default function ProductDetail() {
       console.log('🔄 Fetching related products');
       const response = await apiRequest(`/api/products/${productId}/related`);
       console.log('🔄 Related products response:', response);
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
   });
