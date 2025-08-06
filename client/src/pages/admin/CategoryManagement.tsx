@@ -67,6 +67,13 @@ export default function CategoryManagement() {
     queryFn: async () => {
       console.log('📂 CategoryManagement API call:', buildCategoriesEndpoint(currentPage));
       const response = await apiRequest(buildCategoriesEndpoint(currentPage));
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return response || [];
     },
   });
@@ -113,7 +120,14 @@ export default function CategoryManagement() {
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildCategoriesEndpoint(page));
-      const pageData = response || [];
+      
+      // Handle new pagination format: { count, next, previous, results }
+      let pageData;
+      if (response && typeof response === 'object' && 'results' in response) {
+        pageData = response.results || [];
+      } else {
+        pageData = response || [];
+      }
       
       setAllCategories(prev => {
         const newCategories = [...prev];

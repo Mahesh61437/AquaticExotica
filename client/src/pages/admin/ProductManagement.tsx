@@ -238,6 +238,13 @@ export default function ProductManagement() {
     queryFn: async () => {
       console.log('🛍️ Admin ProductManagement API call:', buildProductsEndpoint(currentPage));
       const response = await apiRequest(buildProductsEndpoint(currentPage));
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return response || [];
     },
   });
@@ -246,7 +253,15 @@ export default function ProductManagement() {
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/categories/"],
     queryFn: async () => {
-      return await apiRequest("/api/categories/");
+      const response = await apiRequest("/api/categories/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
     },
   });
   
@@ -254,7 +269,15 @@ export default function ProductManagement() {
   const { data: tagsResponse, isLoading: tagsLoading, error: tagsError } = useQuery({
     queryKey: ["/api/tags/"],
     queryFn: async () => {
-      return await apiRequest("/api/tags/");
+      const response = await apiRequest("/api/tags/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
     },
   });
   
@@ -300,7 +323,14 @@ export default function ProductManagement() {
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildProductsEndpoint(page));
-      const pageData = response || [];
+      
+      // Handle new pagination format: { count, next, previous, results }
+      let pageData;
+      if (response && typeof response === 'object' && 'results' in response) {
+        pageData = response.results || [];
+      } else {
+        pageData = response || [];
+      }
       
       setAllProducts(prev => {
         const newProducts = [...prev];
@@ -346,8 +376,8 @@ export default function ProductManagement() {
     if (!categoriesResponse) return [];
     
     // Check if response is paginated
-    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
-      return (categoriesResponse as any).data || [];
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'results' in categoriesResponse) {
+      return (categoriesResponse as any).results || [];
     }
     
     // Check if response is a direct array
@@ -363,8 +393,8 @@ export default function ProductManagement() {
     if (!tagsResponse) return [];
     
     // Check if response is paginated
-    if (tagsResponse && typeof tagsResponse === 'object' && 'data' in tagsResponse) {
-      return (tagsResponse as any).data || [];
+    if (tagsResponse && typeof tagsResponse === 'object' && 'results' in tagsResponse) {
+      return (tagsResponse as any).results || [];
     }
     
     // Check if response is a direct array

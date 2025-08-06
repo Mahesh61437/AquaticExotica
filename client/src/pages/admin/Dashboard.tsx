@@ -69,11 +69,22 @@ export default function AdminDashboard() {
       try {
         const getCount = (response: any): number => {
           if (!response) return 0;
+          
+          // Handle new pagination format: { count, next, previous, results }
+          if (response && typeof response === 'object' && 'count' in response) {
+            return response.count || 0;
+          }
+          
+          // Handle array format (fallback)
           if (Array.isArray(response)) {
             return response.length;
-          } else if (response && typeof response === 'object' && 'data' in response) {
+          }
+          
+          // Handle old format with data property
+          if (response && typeof response === 'object' && 'data' in response) {
             return Array.isArray(response.data) ? response.data.length : 0;
           }
+          
           return 0;
         };
         

@@ -70,6 +70,13 @@ export default function TagManagement() {
     queryFn: async () => {
       console.log('🏷️ TagManagement API call:', buildTagsEndpoint(currentPage));
       const response = await apiRequest(buildTagsEndpoint(currentPage));
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return response || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -117,7 +124,14 @@ export default function TagManagement() {
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildTagsEndpoint(page));
-      const pageData = response || [];
+      
+      // Handle new pagination format: { count, next, previous, results }
+      let pageData;
+      if (response && typeof response === 'object' && 'results' in response) {
+        pageData = response.results || [];
+      } else {
+        pageData = response || [];
+      }
       
       setAllTags(prev => {
         const newTags = [...prev];

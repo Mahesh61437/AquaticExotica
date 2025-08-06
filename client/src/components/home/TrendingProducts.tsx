@@ -5,6 +5,7 @@ import { formatPrice, generateStarRating } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useEffect, useRef } from "react";
 import { apiCache } from "@/lib/api-cache";
+import { apiRequest } from "@/lib/queryClient";
 
 export function TrendingProducts() {
   const [localProducts, setLocalProducts] = useState<Product[]>([]);
@@ -13,10 +14,24 @@ export function TrendingProducts() {
   const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
   
   // Use React Query for cache invalidation
-  const { data: allProducts = [] } = useQuery<Product[]>({
+  const { data: allProductsResponse } = useQuery({
     queryKey: ["/api/products/"],
     staleTime: 60 * 1000, // 1 minute
+    queryFn: async () => {
+      const response = await apiRequest("/api/products/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
+    },
   });
+  
+  // Extract products array from response
+  const allProducts = allProductsResponse || [];
   
   // Fast client-side data loading with apiCache
   useEffect(() => {

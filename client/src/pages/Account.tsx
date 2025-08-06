@@ -535,7 +535,15 @@ export default function Account() {
   const { data: ordersResponse, isLoading: ordersLoading, error: ordersError } = useQuery({
     queryKey: ["/api/orders/"],
     queryFn: async () => {
-      return await apiRequest("/api/orders/");
+      const response = await apiRequest("/api/orders/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
     },
     enabled: !!currentUser, // Only fetch if user is logged in
   });
@@ -544,9 +552,9 @@ export default function Account() {
   const orders = React.useMemo(() => {
     if (!ordersResponse) return [];
     
-    // Check if response is paginated
-    if (ordersResponse && typeof ordersResponse === 'object' && 'data' in ordersResponse) {
-      return (ordersResponse as any).data || [];
+    // Check if response is paginated with new format
+    if (ordersResponse && typeof ordersResponse === 'object' && 'results' in ordersResponse) {
+      return (ordersResponse as any).results || [];
     }
     
     // Check if response is a direct array

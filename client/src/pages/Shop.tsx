@@ -9,6 +9,7 @@ import { ProductFilters } from "@/components/shop/ProductFilters";
 import { generateMetaDescription } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@/types";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
@@ -30,9 +31,20 @@ export default function Shop() {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Fetch all categories for slug-to-id mapping
-  const { data: categoriesResponse } = useQuery<Category[]>({
+  const { data: categoriesResponse } = useQuery({
     queryKey: ["/api/categories/"],
     staleTime: 5 * 60 * 1000,
+    queryFn: async () => {
+      const response = await apiRequest("/api/categories/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
+    },
   });
   const categories: Category[] = Array.isArray(categoriesResponse) ? categoriesResponse : [];
 

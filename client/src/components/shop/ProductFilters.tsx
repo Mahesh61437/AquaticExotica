@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 import { Category } from "@/types";
 import { useState, useEffect } from "react";
 import React from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ProductFiltersProps {
   onCategoryChange: (categoryIds: number[]) => void;
@@ -42,15 +43,26 @@ export function ProductFilters({
   // Fetch categories from API
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
     queryKey: ["/api/categories/"],
+    queryFn: async () => {
+      const response = await apiRequest("/api/categories/");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
+    },
   });
 
   // Extract categories array from response
   const categories: Category[] = React.useMemo(() => {
     if (!categoriesResponse) return [];
     
-    // Check if response is paginated
-    if (categoriesResponse && typeof categoriesResponse === 'object' && 'data' in categoriesResponse) {
-      return (categoriesResponse as any).data || [];
+    // Check if response is paginated with new format
+    if (categoriesResponse && typeof categoriesResponse === 'object' && 'results' in categoriesResponse) {
+      return (categoriesResponse as any).results || [];
     }
     
     // Check if response is a direct array
