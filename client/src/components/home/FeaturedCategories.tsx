@@ -1,13 +1,32 @@
 import { Link } from "wouter";
 import { useState, useEffect, useRef } from "react";
 import { Category } from "@/types";
-import { apiCache } from "@/lib/api-cache";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function FeaturedCategories() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
+  
+  // Fetch categories with new pagination format
+  const { data: categoriesResponse, isLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const response = await apiRequest('/api/categories/');
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
+    },
+    staleTime: 30 * 60 * 1000, // 30 minutes
+  });
+
+  // Extract categories from response
+  const categories = categoriesResponse || [];
   
   // Function to get gradient based on category name
   const getCategoryGradient = (name: string): string => {
@@ -22,30 +41,16 @@ export default function FeaturedCategories() {
     return "from-blue-500 to-cyan-600";
   };
 
+  // Initialize image loading states when categories change
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      
-      try {
-        // Try to get categories from cache first (30 minute cache time)
-        const data = await apiCache.get<Category[]>('/api/categories/', undefined, 30 * 60 * 1000);
-        setCategories(data);
-        
-        // Initialize image loading states
-        const initialLoadedState: Record<number, boolean> = {};
-        data.forEach(cat => {
-          initialLoadedState[cat.id] = false;
-        });
-        setLoadedImages(initialLoadedState);
-      } catch (error) {
-        console.error('Failed to load categories:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
+    if (categories.length > 0) {
+      const initialLoadedState: Record<number, boolean> = {};
+      categories.forEach((cat: Category) => {
+        initialLoadedState[cat.id] = false;
+      });
+      setLoadedImages(initialLoadedState);
+    }
+  }, [categories]);
 
   // Intersection Observer for lazy loading images
   useEffect(() => {
@@ -120,7 +125,7 @@ export default function FeaturedCategories() {
         <h2 className="text-3xl font-heading font-bold text-center mb-8">Shop By Category</h2>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {categories.map((category) => (
+          {categories.map((category: Category) => (
             <Link 
               key={category.id} 
               href={`/shop/${category.slug}`} 

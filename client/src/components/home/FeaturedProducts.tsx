@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ProductCard } from "@/components/shop/ProductCard";
 import { Product } from "@/types";
 import { Link } from "wouter";
-import { apiCache } from "@/lib/api-cache";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function FeaturedProducts() {
@@ -42,44 +41,6 @@ export default function FeaturedProducts() {
   // Extract products array from response
   const allProducts = allProductsResponse || [];
 
-  // Fast client-side data loading with our apiCache
-  useEffect(() => {
-    // Load data immediately from cache or make the requests
-    const loadData = async () => {
-      try {
-        setIsClientLoading(true);
-        
-        // Get all products from the main endpoint
-        const productsData = await apiCache.get<Product[]>('/api/products/');
-        
-        // Filter products based on flags
-        const featuredData = productsData.filter(product => product.isFeatured);
-        const newData = productsData.filter(product => product.isNew);
-        const saleData = productsData.filter(product => product.isSale);
-        
-        // Calculate best sellers (sort by rating)
-        const bestData = [...featuredData].sort((a, b) => {
-          const ratingA = typeof a.rating === 'string' ? parseFloat(a.rating) : a.rating;
-          const ratingB = typeof b.rating === 'string' ? parseFloat(b.rating) : b.rating;
-          return ratingB - ratingA;
-        });
-        
-        setLocalProducts({
-          featured: featuredData,
-          new: newData,
-          sale: saleData,
-          best: bestData
-        });
-      } catch (error) {
-        console.error('Failed to load products:', error);
-      } finally {
-        setIsClientLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-  
   // Update local state when React Query data changes
   useEffect(() => {
     if (allProducts.length > 0) {

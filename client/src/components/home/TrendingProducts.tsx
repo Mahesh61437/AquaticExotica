@@ -33,33 +33,6 @@ export function TrendingProducts() {
   // Extract products array from response
   const allProducts = allProductsResponse || [];
   
-  // Fast client-side data loading with apiCache
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        setIsClientLoading(true);
-        const productsData = await apiCache.get<Product[]>('/api/products/');
-        
-        // Filter trending products
-        const trendingData = productsData.filter(product => product.isTrending);
-        setLocalProducts(trendingData);
-        
-        // Initialize image loading states
-        const initialLoadedState: Record<number, boolean> = {};
-        trendingData.forEach(product => {
-          initialLoadedState[product.id] = false;
-        });
-        setLoadedImages(initialLoadedState);
-      } catch (error) {
-        console.error('Failed to load trending products:', error);
-      } finally {
-        setIsClientLoading(false);
-      }
-    };
-    
-    loadData();
-  }, []);
-  
   // Update local state when React Query data changes
   useEffect(() => {
     if (allProducts.length > 0) {
