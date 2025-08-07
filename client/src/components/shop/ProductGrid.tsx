@@ -187,6 +187,16 @@ export const ProductGrid = React.memo(({
     }
   };
 
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    console.log('🔄 Filters changed, resetting to page 1');
+    if (onPageChange) {
+      onPageChange(1);
+    } else {
+      setUncontrolledPage(1);
+    }
+  }, [category, activeCategoryIds, activePriceRange, activeInStock, searchQuery, onPageChange]);
+
   // Convert ApiProduct to Product for ProductCard
   const productCards = React.useMemo(() => {
     return products.map((apiProduct: ApiProduct) => {

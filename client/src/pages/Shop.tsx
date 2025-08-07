@@ -92,6 +92,12 @@ export default function Shop() {
     }
   }, [urlCategoryId, activeCategoryIds.length]);
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    console.log('🏪 Shop: Filters changed, resetting to page 1');
+    setCurrentPage(1);
+  }, [activeCategoryIds, activePriceRange, activeInStock, searchQuery]);
+
   // When filters are cleared, reset currentPage to 1
   const handleClearFilters = () => {
     setActiveCategoryIds([]);
