@@ -80,10 +80,10 @@ interface NewOrder {
 }
 
 interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  pageSize: number;
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 export default function OrderDetail() {
@@ -104,10 +104,16 @@ export default function OrderDetail() {
       
       // Handle different response formats
       let orderData: NewOrder | null = null;
-      if (response && typeof response === 'object' && 'data' in response) {
-        const data = (response as PaginatedResponse<NewOrder>).data;
+      if (response && typeof response === 'object' && 'results' in response) {
+        // New pagination format: { count, next, previous, results }
+        const results = (response as PaginatedResponse<NewOrder>).results;
+        orderData = Array.isArray(results) && results.length > 0 ? results[0] : null;
+      } else if (response && typeof response === 'object' && 'data' in response) {
+        // Old pagination format: { data }
+        const data = (response as any).data;
         orderData = Array.isArray(data) && data.length > 0 ? data[0] : null;
       } else if (response && typeof response === 'object' && 'id' in response) {
+        // Direct order object
         orderData = response as NewOrder;
       }
       

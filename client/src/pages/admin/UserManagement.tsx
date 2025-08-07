@@ -75,6 +75,13 @@ export default function UserManagement() {
     queryFn: async () => {
       console.log('👥 UserManagement API call:', buildUsersEndpoint(currentPage));
       const response = await apiRequest(buildUsersEndpoint(currentPage));
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
       return response || [];
     },
   });
@@ -121,7 +128,14 @@ export default function UserManagement() {
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildUsersEndpoint(page));
-      const pageData = response || [];
+      
+      // Handle new pagination format: { count, next, previous, results }
+      let pageData;
+      if (response && typeof response === 'object' && 'results' in response) {
+        pageData = response.results || [];
+      } else {
+        pageData = response || [];
+      }
       
       setAllUsers(prev => {
         const newUsers = [...prev];
