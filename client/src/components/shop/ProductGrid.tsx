@@ -83,6 +83,15 @@ export const ProductGrid = React.memo(({
   const [uncontrolledPage, setUncontrolledPage] = React.useState(initialPage);
   const currentPage = controlledPage !== undefined ? controlledPage : uncontrolledPage;
   const [itemsPerPage, setItemsPerPage] = React.useState(initialLimit);
+  
+  // Track previous filter values to detect actual changes
+  const prevFiltersRef = React.useRef({
+    category,
+    activeCategoryIds: JSON.stringify(activeCategoryIds),
+    activePriceRange: JSON.stringify(activePriceRange),
+    activeInStock,
+    searchQuery
+  });
 
   // Build the API endpoint with query parameters
   const buildEndpoint = React.useCallback((page: number) => {
@@ -187,13 +196,39 @@ export const ProductGrid = React.memo(({
     }
   };
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters actually change
   React.useEffect(() => {
-    console.log('🔄 Filters changed, resetting to page 1');
-    if (onPageChange) {
-      onPageChange(1);
-    } else {
-      setUncontrolledPage(1);
+    const currentFilters = {
+      category,
+      activeCategoryIds: JSON.stringify(activeCategoryIds),
+      activePriceRange: JSON.stringify(activePriceRange),
+      activeInStock,
+      searchQuery
+    };
+    
+    const prevFilters = prevFiltersRef.current;
+    
+    // Check if any filter actually changed
+    const filtersChanged = 
+      prevFilters.category !== currentFilters.category ||
+      prevFilters.activeCategoryIds !== currentFilters.activeCategoryIds ||
+      prevFilters.activePriceRange !== currentFilters.activePriceRange ||
+      prevFilters.activeInStock !== currentFilters.activeInStock ||
+      prevFilters.searchQuery !== currentFilters.searchQuery;
+    
+    if (filtersChanged) {
+      console.log('🔄 Filters actually changed, resetting to page 1');
+      console.log('🔄 Previous filters:', prevFilters);
+      console.log('🔄 Current filters:', currentFilters);
+      
+      if (onPageChange) {
+        onPageChange(1);
+      } else {
+        setUncontrolledPage(1);
+      }
+      
+      // Update the ref with current filters
+      prevFiltersRef.current = currentFilters;
     }
   }, [category, activeCategoryIds, activePriceRange, activeInStock, searchQuery, onPageChange]);
 
