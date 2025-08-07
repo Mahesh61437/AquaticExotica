@@ -188,7 +188,7 @@ export default function MyOrders() {
           <Skeleton className="h-24 w-full" />
           <Skeleton className="h-24 w-full" />
         </div>
-      ) : orders.length === 0 ? (
+      ) : !Array.isArray(orders) || orders.length === 0 ? (
         <Card className="mt-4">
           <CardContent className="pt-6 text-center">
             <p className="text-lg mb-4">You haven't placed any orders yet.</p>
@@ -209,7 +209,7 @@ export default function MyOrders() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {Array.isArray(orders) && orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">#{order.id}</TableCell>
                   <TableCell>{formatDate(order.createdAt)}</TableCell>

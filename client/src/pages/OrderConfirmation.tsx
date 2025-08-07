@@ -69,7 +69,10 @@ interface NewOrder {
 }
 
 interface PaginatedResponse<T> {
-  data: T[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 export default function OrderConfirmation() {
@@ -87,9 +90,15 @@ export default function OrderConfirmation() {
   const order: NewOrder | null = React.useMemo(() => {
     if (!response) return null;
     
-    // Check if response is paginated
+    // Check if response is paginated with new format: { count, next, previous, results }
+    if (response && typeof response === 'object' && 'results' in response) {
+      const results = (response as PaginatedResponse<NewOrder>).results;
+      return Array.isArray(results) && results.length > 0 ? results[0] : null;
+    }
+    
+    // Check if response is paginated with old format: { data }
     if (response && typeof response === 'object' && 'data' in response) {
-      const data = (response as PaginatedResponse<NewOrder>).data;
+      const data = (response as any).data;
       return Array.isArray(data) && data.length > 0 ? data[0] : null;
     }
     
@@ -218,7 +227,7 @@ export default function OrderConfirmation() {
             
             <h3 className="font-medium mb-3">Order Items</h3>
             <ul className="divide-y">
-              {order.items.map((item, index: number) => (
+              {Array.isArray(order.items) && order.items.map((item, index: number) => (
                 <li key={index} className="py-3 flex items-center">
                   <div className="h-16 w-16 bg-gray-100 rounded overflow-hidden">
                     <img

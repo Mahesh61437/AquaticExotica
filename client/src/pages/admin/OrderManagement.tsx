@@ -484,7 +484,7 @@ export default function OrderManagement() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {selectedOrder.items.map((item) => (
+                    {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                         <img 
                           src={item.product.imageUrl} 

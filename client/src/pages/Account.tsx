@@ -674,7 +674,7 @@ export default function Account() {
                       Retry
                     </Button>
                   </div>
-                ) : orders.length === 0 ? (
+                ) : !Array.isArray(orders) || orders.length === 0 ? (
                   <div className="bg-gray-100 dark:bg-gray-800 p-8 rounded-lg text-center">
                     <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                     <p className="text-muted-foreground mb-4">You haven't placed any orders yet</p>
@@ -686,7 +686,7 @@ export default function Account() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {orders.slice(0, 3).map((order: any) => (
+                    {Array.isArray(orders) && orders.slice(0, 3).map((order: any) => (
                       <div key={order.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-start">
                           <div>
@@ -707,7 +707,7 @@ export default function Account() {
                         </div>
                       </div>
                     ))}
-                    {orders.length > 3 && (
+                    {Array.isArray(orders) && orders.length > 3 && (
                       <div className="text-center">
                         <Button variant="outline" onClick={() => setLocation("/my-orders")}>
                           View All Orders ({orders.length})

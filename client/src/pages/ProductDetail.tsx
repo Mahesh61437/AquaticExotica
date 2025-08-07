@@ -218,6 +218,7 @@ export default function ProductDetail() {
 
   // Helper function to convert tag objects to tag names
   const convertTagsToNames = (tags: ApiTag[]): string[] => {
+    if (!Array.isArray(tags)) return [];
     return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
@@ -731,14 +732,14 @@ export default function ProductDetail() {
                     updatedAt: new Date().toISOString()
                   },
                   tags: convertTagsToNames(relatedProduct.tagDetails),
-                  tagDetails: relatedProduct.tagDetails.map(tag => ({
+                  tagDetails: Array.isArray(relatedProduct.tagDetails) ? relatedProduct.tagDetails.map(tag => ({
                     id: tag.id,
                     name: tag.name,
                     slug: tag.name.toLowerCase().replace(/\s+/g, '-'),
                     isActive: true,
                     createdAt: tag.createdAt,
                     updatedAt: new Date().toISOString()
-                  })),
+                  })) : [],
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 }} />

@@ -278,7 +278,7 @@ export default function OrderDetail() {
 
               <h3 className="font-medium mb-3">Order Items</h3>
               <div className="space-y-4">
-                {order.items.map((item) => (
+                {Array.isArray(order.items) && order.items.map((item) => (
                   <div key={item.id} className="flex gap-4 pb-4 border-b">
                     <div className="w-16 h-16 rounded overflow-hidden bg-gray-100 flex-shrink-0">
                       <img 
