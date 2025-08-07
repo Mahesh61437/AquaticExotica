@@ -56,14 +56,11 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
       className="product-card group"
     >
       <div className="product-image relative overflow-hidden">
-        {/* Using OptimizedImage component instead of manually handling lazy loading */}
-        <OptimizedImage 
+        {/* Using regular img tag for debugging */}
+        <img 
           src={displayImage}
           alt={product.name}
-          className="w-full h-full aspect-[3/4]"
-          size="medium"
-          quality={85}
-          objectFit="cover"
+          className="w-full h-full aspect-[3/4] object-cover"
           onLoad={() => setImageLoaded(true)}
         />
         
