@@ -43,6 +43,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { CityAutocomplete } from "@/components/ui/city-autocomplete";
 import { ClearableInput } from "@/components/ui/clearable-input";
+import React from "react"; // Added missing import
 
 // Define saved address interface
 interface SavedAddress {
@@ -132,14 +133,39 @@ export function CheckoutForm() {
   });
 
   // Fetch saved addresses
-  const { data: savedAddresses = [], isLoading: addressesLoading } = useQuery({
+  const { data: savedAddressesResponse = [], isLoading: addressesLoading } = useQuery({
     queryKey: ["/api/shippingaddress"],
     queryFn: async () => {
-      return await apiRequest("/api/shippingaddress");
+      const response = await apiRequest("/api/shippingaddress");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
     },
     enabled: !!currentUser, // Only fetch if user is authenticated
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
+
+  // Extract saved addresses from response
+  const savedAddresses = React.useMemo(() => {
+    if (!savedAddressesResponse) return [];
+    
+    // Check if response is paginated with new format
+    if (savedAddressesResponse && typeof savedAddressesResponse === 'object' && 'results' in savedAddressesResponse) {
+      return (savedAddressesResponse as any).results || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(savedAddressesResponse)) {
+      return savedAddressesResponse;
+    }
+    
+    return [];
+  }, [savedAddressesResponse]);
   
   // Update available cities when state changes
   useEffect(() => {
@@ -308,7 +334,7 @@ export function CheckoutForm() {
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
-                      {savedAddresses.map((address: SavedAddress) => (
+                      {Array.isArray(savedAddresses) && savedAddresses.map((address: SavedAddress) => (
                         <div 
                           key={address.id} 
                           className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${

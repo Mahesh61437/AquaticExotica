@@ -65,12 +65,37 @@ function AddressForm() {
   const queryClient = useQueryClient();
 
   // Fetch addresses from API
-  const { data: addresses = [], isLoading: addressesLoading, error: addressesError } = useQuery({
+  const { data: addressesResponse = [], isLoading: addressesLoading, error: addressesError } = useQuery({
     queryKey: ["/api/shippingaddress"],
     queryFn: async () => {
-      return await apiRequest("/api/shippingaddress");
+      const response = await apiRequest("/api/shippingaddress");
+      
+      // Handle new pagination format: { count, next, previous, results }
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      
+      // Fallback to array format
+      return response || [];
     },
   });
+
+  // Extract addresses from response
+  const addresses = React.useMemo(() => {
+    if (!addressesResponse) return [];
+    
+    // Check if response is paginated with new format
+    if (addressesResponse && typeof addressesResponse === 'object' && 'results' in addressesResponse) {
+      return (addressesResponse as any).results || [];
+    }
+    
+    // Check if response is a direct array
+    if (Array.isArray(addressesResponse)) {
+      return addressesResponse;
+    }
+    
+    return [];
+  }, [addressesResponse]);
 
   // Update available cities when state changes
   useEffect(() => {
@@ -255,7 +280,7 @@ function AddressForm() {
         </div>
       ) : (
         <div className="space-y-4">
-          {addresses.map((address: ShippingAddress) => (
+          {Array.isArray(addresses) && addresses.map((address: ShippingAddress) => (
             <div key={address.id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
@@ -400,11 +425,14 @@ function AddressForm() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getAllStates().map((state: { code: string; name: string }) => (
-                            <SelectItem key={state.code} value={state.name}>
-                              {state.name}
-                            </SelectItem>
-                          ))}
+                          {(() => {
+                            const states = getAllStates();
+                            return Array.isArray(states) && states.map((state: { code: string; name: string }) => (
+                              <SelectItem key={state.code} value={state.name}>
+                                {state.name}
+                              </SelectItem>
+                            ));
+                          })()}
                         </SelectContent>
                       </Select>
                       <FormMessage />
