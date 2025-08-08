@@ -114,11 +114,16 @@ export default function UserManagement() {
   }, [currentPageData, currentPage, itemsPerPage]);
 
   // Reset pagination when search changes
+  const prevSearchEmailRef = React.useRef(debouncedSearchEmail);
   React.useEffect(() => {
-    setAllUsers([]);
-    setFetchedPages(new Set());
-    setHasMorePages(true);
-    setCurrentPage(1);
+    // Only reset if the search query actually changed to a different value
+    if (prevSearchEmailRef.current !== debouncedSearchEmail) {
+      setAllUsers([]);
+      setFetchedPages(new Set());
+      setHasMorePages(true);
+      setCurrentPage(1);
+      prevSearchEmailRef.current = debouncedSearchEmail;
+    }
   }, [debouncedSearchEmail]);
 
   // Function to fetch a specific page

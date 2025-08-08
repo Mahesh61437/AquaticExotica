@@ -110,11 +110,16 @@ export default function TagManagement() {
   }, [currentPageData, currentPage, itemsPerPage]);
 
   // Reset pagination when search changes
+  const prevSearchQueryRef = React.useRef(debouncedSearchQuery);
   React.useEffect(() => {
-    setAllTags([]);
-    setFetchedPages(new Set());
-    setHasMorePages(true);
-    setCurrentPage(1);
+    // Only reset if the search query actually changed to a different value
+    if (prevSearchQueryRef.current !== debouncedSearchQuery) {
+      setAllTags([]);
+      setFetchedPages(new Set());
+      setHasMorePages(true);
+      setCurrentPage(1);
+      prevSearchQueryRef.current = debouncedSearchQuery;
+    }
   }, [debouncedSearchQuery]);
 
   // Function to fetch a specific page
