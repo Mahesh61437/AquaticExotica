@@ -247,6 +247,8 @@ export default function ProductManagement() {
       // Fallback to array format
       return response || [];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
   
   // Fetch categories for dropdown
@@ -263,6 +265,8 @@ export default function ProductManagement() {
       // Fallback to array format
       return response || [];
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
   
   // Fetch tags for dropdown and suggestions
@@ -279,8 +283,41 @@ export default function ProductManagement() {
       // Fallback to array format
       return response || [];
     },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
   });
   
+  // Initialize component state from React Query cache when component mounts
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      // If we have data in the cache, initialize the component state
+      setAllProducts(prev => {
+        if (prev.length === 0) {
+          // Only initialize if we don't already have data
+          const newProducts = new Array(itemsPerPage * 10).fill(null); // Pre-allocate space
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          
+          // Set the current page data
+          currentPageData.forEach((product: ApiProduct, index: number) => {
+            newProducts[startIndex + index] = product;
+          });
+          
+          return newProducts;
+        }
+        return prev;
+      });
+      
+      setFetchedPages(prev => {
+        if (prev.size === 0) {
+          return new Set([currentPage]);
+        }
+        return prev;
+      });
+      
+      setHasMorePages(true);
+    }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
   // Update all products when current page data changes
   React.useEffect(() => {
     if (currentPageData && currentPageData.length > 0) {

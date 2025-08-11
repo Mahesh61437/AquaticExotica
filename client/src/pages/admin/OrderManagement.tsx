@@ -141,7 +141,7 @@ export default function OrderManagement() {
   const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
-      console.log('📦 OrderManagement API call:', buildOrdersEndpoint(currentPage));
+      console.log('📦 Admin OrderManagement API call:', buildOrdersEndpoint(currentPage));
       const response = await apiRequest(buildOrdersEndpoint(currentPage));
       
       // Handle new pagination format: { count, next, previous, results }
@@ -152,8 +152,41 @@ export default function OrderManagement() {
       // Fallback to array format
       return response || [];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
-  
+
+  // Initialize component state from React Query cache when component mounts
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      // If we have data in the cache, initialize the component state
+      setAllOrders(prev => {
+        if (prev.length === 0) {
+          // Only initialize if we don't already have data
+          const newOrders = new Array(itemsPerPage * 10).fill(null); // Pre-allocate space
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          
+          // Set the current page data
+          currentPageData.forEach((order: NewOrder, index: number) => {
+            newOrders[startIndex + index] = order;
+          });
+          
+          return newOrders;
+        }
+        return prev;
+      });
+      
+      setFetchedPages(prev => {
+        if (prev.size === 0) {
+          return new Set([currentPage]);
+        }
+        return prev;
+      });
+      
+      setHasMorePages(true);
+    }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
   // Update all orders when current page data changes
   React.useEffect(() => {
     if (currentPageData && currentPageData.length > 0) {

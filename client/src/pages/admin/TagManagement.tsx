@@ -68,7 +68,7 @@ export default function TagManagement() {
   const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/tags/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
-      console.log('🏷️ TagManagement API call:', buildTagsEndpoint(currentPage));
+      console.log('🏷️ Admin TagManagement API call:', buildTagsEndpoint(currentPage));
       const response = await apiRequest(buildTagsEndpoint(currentPage));
       
       // Handle new pagination format: { count, next, previous, results }
@@ -80,8 +80,40 @@ export default function TagManagement() {
       return response || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
-  
+
+  // Initialize component state from React Query cache when component mounts
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      // If we have data in the cache, initialize the component state
+      setAllTags(prev => {
+        if (prev.length === 0) {
+          // Only initialize if we don't already have data
+          const newTags = new Array(itemsPerPage * 10).fill(null); // Pre-allocate space
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          
+          // Set the current page data
+          currentPageData.forEach((tag: ApiTag, index: number) => {
+            newTags[startIndex + index] = tag;
+          });
+          
+          return newTags;
+        }
+        return prev;
+      });
+      
+      setFetchedPages(prev => {
+        if (prev.size === 0) {
+          return new Set([currentPage]);
+        }
+        return prev;
+      });
+      
+      setHasMorePages(true);
+    }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
   // Update all tags when current page data changes
   React.useEffect(() => {
     if (currentPageData && currentPageData.length > 0) {

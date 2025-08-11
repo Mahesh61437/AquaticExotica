@@ -65,7 +65,7 @@ export default function CategoryManagement() {
   const { data: currentPageData, isLoading } = useQuery({
     queryKey: ["/api/categories/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
-      console.log('📂 CategoryManagement API call:', buildCategoriesEndpoint(currentPage));
+      console.log('🏷️ Admin CategoryManagement API call:', buildCategoriesEndpoint(currentPage));
       const response = await apiRequest(buildCategoriesEndpoint(currentPage));
       
       // Handle new pagination format: { count, next, previous, results }
@@ -76,8 +76,41 @@ export default function CategoryManagement() {
       // Fallback to array format
       return response || [];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
-  
+
+  // Initialize component state from React Query cache when component mounts
+  React.useEffect(() => {
+    if (currentPageData && currentPageData.length > 0) {
+      // If we have data in the cache, initialize the component state
+      setAllCategories(prev => {
+        if (prev.length === 0) {
+          // Only initialize if we don't already have data
+          const newCategories = new Array(itemsPerPage * 10).fill(null); // Pre-allocate space
+          const startIndex = (currentPage - 1) * itemsPerPage;
+          
+          // Set the current page data
+          currentPageData.forEach((category: Category, index: number) => {
+            newCategories[startIndex + index] = category;
+          });
+          
+          return newCategories;
+        }
+        return prev;
+      });
+      
+      setFetchedPages(prev => {
+        if (prev.size === 0) {
+          return new Set([currentPage]);
+        }
+        return prev;
+      });
+      
+      setHasMorePages(true);
+    }
+  }, [currentPageData, currentPage, itemsPerPage]);
+
   // Update all categories when current page data changes
   React.useEffect(() => {
     if (currentPageData && currentPageData.length > 0) {
