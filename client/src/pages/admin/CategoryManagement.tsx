@@ -62,7 +62,7 @@ export default function CategoryManagement() {
   };
 
   // Fetch current page of categories
-  const { data: currentPageData, isLoading } = useQuery({
+  const { data: currentPageResponse, isLoading } = useQuery({
     queryKey: ["/api/categories/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
       console.log('🏷️ Admin CategoryManagement API call:', buildCategoriesEndpoint(currentPage));
@@ -70,15 +70,24 @@ export default function CategoryManagement() {
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
+        return response;
       }
       
       // Fallback to array format
-      return response || [];
+      return {
+        count: response?.length || 0,
+        next: null,
+        previous: null,
+        results: response || []
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  // Extract data from response
+  const currentPageData = currentPageResponse?.results || [];
+  const totalCount = currentPageResponse?.count || 0;
 
   // Initialize component state from React Query cache when component mounts
   React.useEffect(() => {
@@ -192,11 +201,8 @@ export default function CategoryManagement() {
     }
   };
 
-  // Calculate total pages based on fetched data
-  const totalPages = Math.max(
-    Math.ceil(allCategories.length / itemsPerPage),
-    Math.max(...Array.from(fetchedPages), 0)
-  );
+  // Calculate total pages based on API response count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Get categories for current page
   const categories: Category[] = allCategories.slice(
@@ -446,7 +452,7 @@ export default function CategoryManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: allCategories.length,
+            totalCount: totalCount,
             totalPages: totalPages
           }}
           isLoading={isLoading}

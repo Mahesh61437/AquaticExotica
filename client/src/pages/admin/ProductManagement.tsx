@@ -233,7 +233,7 @@ export default function ProductManagement() {
   };
 
   // Fetch current page of products
-  const { data: currentPageData, isLoading } = useQuery({
+  const { data: currentPageResponse, isLoading } = useQuery({
     queryKey: ["/api/products/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
       console.log('🛍️ Admin ProductManagement API call:', buildProductsEndpoint(currentPage));
@@ -241,15 +241,24 @@ export default function ProductManagement() {
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
+        return response;
       }
       
       // Fallback to array format
-      return response || [];
+      return {
+        count: response?.length || 0,
+        next: null,
+        previous: null,
+        results: response || []
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
   });
+
+  // Extract data from response
+  const currentPageData = currentPageResponse?.results || [];
+  const totalCount = currentPageResponse?.count || 0;
   
   // Fetch categories for dropdown
   const { data: categoriesResponse, isLoading: categoriesLoading } = useQuery({
@@ -335,15 +344,14 @@ export default function ProductManagement() {
       
       setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
       
-      // Check if we have more pages
-      if (currentPageData.length < itemsPerPage) {
-        setHasMorePages(false);
-      }
+      // Check if we have more pages based on totalCount
+      const totalPages = Math.ceil(totalCount / itemsPerPage);
+      setHasMorePages(currentPage < totalPages);
     } else if (currentPageData && currentPageData.length === 0) {
       // No more data
       setHasMorePages(false);
     }
-  }, [currentPageData, currentPage, itemsPerPage]);
+  }, [currentPageData, currentPage, itemsPerPage, totalCount]);
 
   // Reset pagination when search changes
   const prevSearchQueryRef = React.useRef(debouncedSearchQuery);
@@ -388,9 +396,16 @@ export default function ProductManagement() {
       
       setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
       
-      // Check if we have more pages
-      if (pageData.length < itemsPerPage) {
-        setHasMorePages(false);
+      // Check if we have more pages based on API response
+      if (response && typeof response === 'object' && 'count' in response) {
+        const totalCount = response.count || 0;
+        const totalPages = Math.ceil(totalCount / itemsPerPage);
+        setHasMorePages(page < totalPages);
+      } else {
+        // Fallback: check if we have more pages
+        if (pageData.length < itemsPerPage) {
+          setHasMorePages(false);
+        }
       }
     } catch (error) {
       console.error('Error fetching page:', page, error);
@@ -399,11 +414,8 @@ export default function ProductManagement() {
     }
   };
 
-  // Calculate total pages based on fetched data
-  const totalPages = Math.max(
-    Math.ceil(allProducts.length / itemsPerPage),
-    Math.max(...Array.from(fetchedPages), 0)
-  );
+  // Calculate total pages based on API response count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Get products for current page
   const products: ApiProduct[] = allProducts.slice(
@@ -840,7 +852,7 @@ export default function ProductManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: allProducts.length,
+            totalCount: totalCount,
             totalPages: totalPages
           }}
           isLoading={isLoading}

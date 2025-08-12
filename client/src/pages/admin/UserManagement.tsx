@@ -70,7 +70,7 @@ export default function UserManagement() {
   };
 
   // Fetch current page of users
-  const { data: currentPageData, isLoading } = useQuery({
+  const { data: currentPageResponse, isLoading } = useQuery({
     queryKey: ["/api/users/", currentPage, itemsPerPage, debouncedSearchEmail],
     queryFn: async () => {
       console.log('👥 Admin UserManagement API call:', buildUsersEndpoint(currentPage));
@@ -78,15 +78,24 @@ export default function UserManagement() {
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
+        return response;
       }
       
       // Fallback to array format
-      return response || [];
+      return {
+        count: response?.length || 0,
+        next: null,
+        previous: null,
+        results: response || []
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  // Extract data from response
+  const currentPageData = currentPageResponse?.results || [];
+  const totalCount = currentPageResponse?.count || 0;
 
   // Initialize component state from React Query cache when component mounts
   React.useEffect(() => {
@@ -200,11 +209,8 @@ export default function UserManagement() {
     }
   };
 
-  // Calculate total pages based on fetched data
-  const totalPages = Math.max(
-    Math.ceil(allUsers.length / itemsPerPage),
-    Math.max(...Array.from(fetchedPages), 0)
-  );
+  // Calculate total pages based on API response count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Get users for current page
   const users: ApiUser[] = allUsers.slice(
@@ -374,7 +380,7 @@ export default function UserManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: allUsers.length,
+            totalCount: totalCount,
             totalPages: totalPages
           }}
           isLoading={isLoading}

@@ -65,7 +65,7 @@ export default function TagManagement() {
   };
 
   // Fetch current page of tags
-  const { data: currentPageData, isLoading } = useQuery({
+  const { data: currentPageResponse, isLoading } = useQuery({
     queryKey: ["/api/tags/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
       console.log('🏷️ Admin TagManagement API call:', buildTagsEndpoint(currentPage));
@@ -73,15 +73,24 @@ export default function TagManagement() {
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
+        return response;
       }
       
       // Fallback to array format
-      return response || [];
+      return {
+        count: response?.length || 0,
+        next: null,
+        previous: null,
+        results: response || []
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  // Extract data from response
+  const currentPageData = currentPageResponse?.results || [];
+  const totalCount = currentPageResponse?.count || 0;
 
   // Initialize component state from React Query cache when component mounts
   React.useEffect(() => {
@@ -195,11 +204,8 @@ export default function TagManagement() {
     }
   };
 
-  // Calculate total pages based on fetched data
-  const totalPages = Math.max(
-    Math.ceil(allTags.length / itemsPerPage),
-    Math.max(...Array.from(fetchedPages), 0)
-  );
+  // Calculate total pages based on API response count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Get tags for current page
   const tags: ApiTag[] = allTags.slice(
@@ -411,7 +417,7 @@ export default function TagManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: allTags.length,
+            totalCount: totalCount,
             totalPages: totalPages
           }}
           isLoading={isLoading}

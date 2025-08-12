@@ -138,7 +138,7 @@ export default function OrderManagement() {
   };
 
   // Fetch current page of orders
-  const { data: currentPageData, isLoading } = useQuery({
+  const { data: currentPageResponse, isLoading } = useQuery({
     queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery],
     queryFn: async () => {
       console.log('📦 Admin OrderManagement API call:', buildOrdersEndpoint(currentPage));
@@ -146,15 +146,24 @@ export default function OrderManagement() {
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
+        return response;
       }
       
       // Fallback to array format
-      return response || [];
+      return {
+        count: response?.length || 0,
+        next: null,
+        previous: null,
+        results: response || []
+      };
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes
   });
+
+  // Extract data from response
+  const currentPageData = currentPageResponse?.results || [];
+  const totalCount = currentPageResponse?.count || 0;
 
   // Initialize component state from React Query cache when component mounts
   React.useEffect(() => {
@@ -268,11 +277,8 @@ export default function OrderManagement() {
     }
   };
 
-  // Calculate total pages based on fetched data
-  const totalPages = Math.max(
-    Math.ceil(allOrders.length / itemsPerPage),
-    Math.max(...Array.from(fetchedPages), 0)
-  );
+  // Calculate total pages based on API response count
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Get orders for current page
   const orders: NewOrder[] = allOrders.slice(
@@ -447,7 +453,7 @@ export default function OrderManagement() {
           pagination={{
             page: currentPage,
             limit: itemsPerPage,
-            totalCount: allOrders.length,
+            totalCount: totalCount,
             totalPages: totalPages
           }}
           isLoading={isLoading}
