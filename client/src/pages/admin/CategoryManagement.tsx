@@ -87,7 +87,7 @@ export default function CategoryManagement() {
 
   // Extract data from response
   const currentPageData = currentPageResponse?.results || [];
-  const totalCount = currentPageResponse?.count || 0;
+  const totalCount = currentPageResponse?.count || currentPageData.length || 0;
 
   // Initialize component state from React Query cache when component mounts
   React.useEffect(() => {
@@ -201,8 +201,8 @@ export default function CategoryManagement() {
     }
   };
 
-  // Calculate total pages based on API response count
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  // Calculate total pages based on API response count (minimum 1 page)
+  const totalPages = Math.max(1, Math.ceil(totalCount / itemsPerPage));
 
   // Get categories for current page
   const categories: Category[] = allCategories.slice(

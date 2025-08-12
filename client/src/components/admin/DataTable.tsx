@@ -50,6 +50,12 @@ export function DataTable<T>({
   searchField,
 }: DataTableProps<T>) {
   const { page, limit, totalCount, totalPages } = pagination;
+  
+  // Ensure we always have valid pagination values
+  const safePage = Math.max(1, page || 1);
+  const safeLimit = Math.max(1, limit || 10);
+  const safeTotalCount = Math.max(0, totalCount || 0);
+  const safeTotalPages = Math.max(1, totalPages || 1);
 
   return (
     <div className="space-y-4">
@@ -113,83 +119,81 @@ export function DataTable<T>({
           </Table>
           
           {/* Pagination Controls */}
-          {totalPages > 1 && (
-            <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-2 border-t">
-              <div className="flex items-center gap-2 mb-4 sm:mb-0">
-                <Label htmlFor="itemsPerPage">Show</Label>
-                <Select
-                  value={limit.toString()}
-                  onValueChange={(value) => onLimitChange(Number(value))}
-                >
-                  <SelectTrigger className="w-[80px]">
-                    <SelectValue placeholder={limit.toString()} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="5">5</SelectItem>
-                    <SelectItem value="10">10</SelectItem>
-                    <SelectItem value="25">25</SelectItem>
-                    <SelectItem value="50">50</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="text-sm text-muted-foreground">
-                  of {totalCount} entries
-                </span>
+          <div className="flex flex-col sm:flex-row items-center justify-between py-4 px-2 border-t">
+            <div className="flex items-center gap-2 mb-4 sm:mb-0">
+              <Label htmlFor="itemsPerPage">Show</Label>
+              <Select
+                value={safeLimit.toString()}
+                onValueChange={(value) => onLimitChange(Number(value))}
+              >
+                <SelectTrigger className="w-[80px]">
+                  <SelectValue placeholder={safeLimit.toString()} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                of {safeTotalCount} entries
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(1)}
+                disabled={safePage === 1}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(safePage - 1)}
+                disabled={safePage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: safeTotalPages }, (_, i) => {
+                  const pageNum = i + 1;
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === safePage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => onPageChange(pageNum)}
+                      className="w-8 h-8 p-0"
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
               </div>
               
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(1)}
-                  disabled={page === 1}
-                >
-                  <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(page - 1)}
-                  disabled={page === 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Button
-                        key={pageNum}
-                        variant={pageNum === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => onPageChange(pageNum)}
-                        className="w-8 h-8 p-0"
-                      >
-                        {pageNum}
-                      </Button>
-                    );
-                  })}
-                </div>
-                
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(page + 1)}
-                  disabled={page === totalPages || totalPages === 0}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(totalPages)}
-                  disabled={page === totalPages || totalPages === 0}
-                >
-                  <ChevronsRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(safePage + 1)}
+                disabled={safePage === safeTotalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onPageChange(safeTotalPages)}
+                disabled={safePage === safeTotalPages}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
