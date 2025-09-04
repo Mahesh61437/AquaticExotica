@@ -144,6 +144,11 @@ export default function ProductManagement() {
         console.log(`  category_ids validation:`, { value, isValid });
         return isValid;
       }
+      if (field === 'tags') {
+        const isValid = Array.isArray(value);
+        console.log(`  tags validation:`, { value, isValid });
+        return isValid;
+      }
       if (field === 'stock') {
         const isValid = typeof value === 'number' && value >= 0;
         console.log(`  stock validation:`, { value, type: typeof value, isValid });
@@ -164,6 +169,8 @@ export default function ProductManagement() {
       let isValid = false;
       if (field === 'category_ids') {
         isValid = Array.isArray(value) && value.length > 0;
+      } else if (field === 'tags') {
+        isValid = Array.isArray(value);
       } else if (field === 'stock') {
         isValid = typeof value === 'number' && value >= 0;
       } else {
@@ -186,8 +193,10 @@ export default function ProductManagement() {
       isNumber: typeof value === 'number',
       isGTEZero: typeof value === 'number' && value >= 0,
       isValid: (() => {
-        if (field === 'categoryId') {
-          return Boolean(value && value !== 0);
+        if (field === 'category_ids') {
+          return Array.isArray(value) && value.length > 0;
+        } else if (field === 'tags') {
+          return Array.isArray(value);
         } else if (field === 'stock') {
           return typeof value === 'number' && value >= 0;
         } else {
@@ -201,6 +210,22 @@ export default function ProductManagement() {
   useEffect(() => {
     console.log('📝 Form data changed:', formData);
   }, [formData]);
+
+  // Synchronize formData.category_ids with selectedCategoryIds
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      category_ids: selectedCategoryIds
+    }));
+  }, [selectedCategoryIds]);
+
+  // Synchronize formData.tags with selectedTagIds
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      tags: selectedTagIds
+    }));
+  }, [selectedTagIds]);
   
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -1331,16 +1356,16 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={{
                   ...editingProduct,
-                  category: editingProduct.categories && editingProduct.categories.length > 0 ? {
-                    id: editingProduct.categories[0].id,
-                    name: editingProduct.categories[0].name,
-                    slug: editingProduct.categories[0].slug,
-                    description: editingProduct.categories[0].description,
-                    imageUrl: editingProduct.categories[0].imageUrl,
+                  categories: editingProduct.categories && editingProduct.categories.length > 0 ? editingProduct.categories.map(cat => ({
+                    id: cat.id,
+                    name: cat.name,
+                    slug: cat.slug,
+                    description: cat.description,
+                    imageUrl: cat.imageUrl,
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
-                  } : {
+                  })) : [{
                     id: 0,
                     name: 'Uncategorized',
                     slug: 'uncategorized',
@@ -1349,7 +1374,7 @@ export default function ProductManagement() {
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
-                  },
+                  }],
                   tags: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => tag.name) : [],
                   tagDetails: editingProduct.tagDetails ? editingProduct.tagDetails.map(tag => ({
                     id: tag.id,
