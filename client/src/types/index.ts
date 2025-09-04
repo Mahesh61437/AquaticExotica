@@ -7,7 +7,7 @@ export interface Product {
   compareAtPrice: string;
   discountPercentage: number;
   stock: number;
-  category: Category;
+  categories: Category[];
   tags: string[];
   tagDetails?: Tag[];
   rating: string;

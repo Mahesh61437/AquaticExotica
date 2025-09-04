@@ -17,13 +17,13 @@ interface ApiProduct {
   compareAtPrice: string;
   discountPercentage: number;
   stock: number;
-  category: {
+  categories: {
     id: number;
     name: string;
     slug: string;
     description: string | null;
     imageUrl: string;
-  } | null;
+  }[];
   tags: number[]; // Tag IDs for API operations
   tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
@@ -243,12 +243,12 @@ export const ProductGrid = React.memo(({
         compareAtPrice: apiProduct.compareAtPrice,
         discountPercentage: apiProduct.discountPercentage,
         stock: apiProduct.stock,
-        category: apiProduct.category ? {
-          id: apiProduct.category.id,
-          name: apiProduct.category.name,
-          slug: apiProduct.category.slug,
-          description: apiProduct.category.description,
-          imageUrl: apiProduct.category.imageUrl,
+        category: apiProduct.categories && apiProduct.categories.length > 0 ? {
+          id: apiProduct.categories[0].id,
+          name: apiProduct.categories[0].name,
+          slug: apiProduct.categories[0].slug,
+          description: apiProduct.categories[0].description,
+          imageUrl: apiProduct.categories[0].imageUrl,
           isActive: true,
           createdAt: '',
           updatedAt: ''

@@ -65,13 +65,13 @@ interface ApiProduct {
   compareAtPrice: string;
   discountPercentage: number;
   stock: number;
-  category: {
+  categories: {
     id: number;
     name: string;
     slug: string;
     description: string | null;
     imageUrl: string;
-  } | null;
+  }[];
   tags: number[]; // Tag IDs for API operations
   tagDetails: ApiTag[]; // Tag objects for display
   rating: string;
@@ -313,7 +313,7 @@ export default function ProductDetail() {
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       stock: product.stock,
-      categoryId: product.category?.id || 0,
+              categoryId: product.categories && product.categories.length > 0 ? product.categories[0].id : 0,
       rating: product.rating,
       isNew: product.isNew,
       isSale: product.isSale,
@@ -341,7 +341,7 @@ export default function ProductDetail() {
         price: editFormData.price || product.price,
         compareAtPrice: editFormData.compareAtPrice || product.compareAtPrice,
         stock: editFormData.stock || product.stock,
-        categoryId: editFormData.categoryId || product.category?.id || 0,
+        categoryId: editFormData.categoryId || (product.categories && product.categories.length > 0 ? product.categories[0].id : 0),
         tags: selectedTagIds,
         rating: editFormData.rating || product.rating,
         isNew: editFormData.isNew ?? product.isNew,
@@ -400,7 +400,7 @@ export default function ProductDetail() {
       <Helmet>
         <title>{product?.name || 'Product'} - Aquatic Exotica</title>
         <meta name="description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
-        <meta name="keywords" content={`${product?.name || 'product'}, aquatic plants, aquascaping, aquarium supplies, ${product?.category?.name || 'aquatic'}, aquatic exotica, india`} />
+        <meta name="keywords" content={`${product?.name || 'product'}, aquatic plants, aquascaping, aquarium supplies, ${product?.categories && product.categories.length > 0 ? product.categories[0].name : 'aquatic'}, aquatic exotica, india`} />
         <meta property="og:title" content={`${product?.name || 'Product'} - Aquatic Exotica`} />
         <meta property="og:description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
         <meta property="og:image" content={product?.imageUrl || ''} />
@@ -432,7 +432,7 @@ export default function ProductDetail() {
               "@type": "Brand",
               "name": "Aquatic Exotica"
             },
-            "category": product?.category?.name || "Aquatic Plants"
+            "category": product?.categories && product.categories.length > 0 ? product.categories[0].name : "Aquatic Plants"
           })}
         </script>
       </Helmet>
@@ -443,11 +443,11 @@ export default function ProductDetail() {
           <a href="/home" className="hover:text-primary">Home</a>
           <ChevronRight className="h-4 w-4 mx-2" />
           <a href="/shop" className="hover:text-primary">Shop</a>
-          {product.category && (
+          {product.categories && product.categories.length > 0 && (
             <>
               <ChevronRight className="h-4 w-4 mx-2" />
-              <a href={`/shop/${product.category.slug || product.category.name?.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-primary">
-                {product.category.name || 'Category'}
+              <a href={`/shop/${product.categories[0].slug || product.categories[0].name?.toLowerCase().replace(/\s+/g, '-')}`} className="hover:text-primary">
+                {product.categories[0].name || 'Category'}
               </a>
             </>
           )}
@@ -647,7 +647,7 @@ export default function ProductDetail() {
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
                     <ul className="list-disc list-inside space-y-1">
-                      <li>Category: {product.category?.name || 'N/A'}</li>
+                      <li>Categories: {product.categories && product.categories.length > 0 ? product.categories.map(cat => cat.name).join(', ') : 'N/A'}</li>
                       <li>Tags: {convertTagsToNames(product.tagDetails).join(', ')}</li>
                       {product.isNew && <li>New arrival</li>}
                     </ul>
@@ -712,12 +712,12 @@ export default function ProductDetail() {
               {relatedProducts.map((relatedProduct: ApiProduct) => (
                 <ProductCard key={`related-${relatedProduct.id}`} product={{
                   ...relatedProduct,
-                  category: relatedProduct.category ? {
-                    id: relatedProduct.category.id,
-                    name: relatedProduct.category.name,
-                    slug: relatedProduct.category.slug,
-                    description: relatedProduct.category.description,
-                    imageUrl: relatedProduct.category.imageUrl,
+                  category: relatedProduct.categories && relatedProduct.categories.length > 0 ? {
+                    id: relatedProduct.categories[0].id,
+                    name: relatedProduct.categories[0].name,
+                    slug: relatedProduct.categories[0].slug,
+                    description: relatedProduct.categories[0].description,
+                    imageUrl: relatedProduct.categories[0].imageUrl,
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()

@@ -47,13 +47,13 @@ interface ApiProduct {
   compareAtPrice: string;
   discountPercentage: number;
   stock: number;
-  category: {
+  categories: {
     id: number;
     name: string;
     slug: string;
     description: string | null;
     imageUrl: string;
-  } | null;
+  }[];
   tags: number[]; // Tag IDs for API operations
   tagDetails: TagItem[]; // Tag objects for display
   rating: string;
@@ -82,7 +82,7 @@ interface ProductWithTagIds {
   compareAtPrice?: string;
   discountPercentage?: number;
   stock: number;
-  categoryId: number;
+  category_ids: number[];
   tags: number[];
   rating: string;
   isActive?: boolean;
@@ -105,7 +105,7 @@ export default function ProductManagement() {
     compareAtPrice: "",
     imageUrl: "",
     thumbnailUrl: "",
-    categoryId: 0,
+    category_ids: [],
     tags: [],
     rating: "0",
     stock: 0,
@@ -116,6 +116,7 @@ export default function ProductManagement() {
   });
   const [tagInput, setTagInput] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -129,7 +130,7 @@ export default function ProductManagement() {
     'description',
     'price',
     'stock',
-    'categoryId',
+    'category_ids',
     'imageUrl',
   ];
   // Simplified validation for debugging
@@ -138,9 +139,9 @@ export default function ProductManagement() {
       const value = formData[field as keyof typeof formData];
       console.log(`Validating ${field}:`, { value, type: typeof value });
       
-      if (field === 'categoryId') {
-        const isValid = value && value !== 0;
-        console.log(`  categoryId validation:`, { value, isValid });
+      if (field === 'category_ids') {
+        const isValid = Array.isArray(value) && value.length > 0;
+        console.log(`  category_ids validation:`, { value, isValid });
         return isValid;
       }
       if (field === 'stock') {
@@ -161,8 +162,8 @@ export default function ProductManagement() {
     fieldChecks: requiredFields.map(field => {
       const value = formData[field as keyof typeof formData];
       let isValid = false;
-      if (field === 'categoryId') {
-        isValid = Boolean(value && value !== 0);
+      if (field === 'category_ids') {
+        isValid = Array.isArray(value) && value.length > 0;
       } else if (field === 'stock') {
         isValid = typeof value === 'number' && value >= 0;
       } else {
@@ -573,7 +574,7 @@ export default function ProductManagement() {
       compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
       thumbnailUrl: product.thumbnailUrl,
-      categoryId: product.category?.id || 0,
+      category_ids: product.categories?.map(cat => cat.id) || [],
       tags: [],
       rating: product.rating,
       stock: product.stock,
@@ -596,6 +597,10 @@ export default function ProductManagement() {
     }
     setSelectedTagIds(tagIds);
     
+    // Set selected category IDs
+    const categoryIds = product.categories?.map(cat => cat.id) || [];
+    setSelectedCategoryIds(categoryIds);
+    
     setIsOpen(true);
   };
 
@@ -609,7 +614,7 @@ export default function ProductManagement() {
     e.preventDefault();
     setFormError(null);
     // Validate all required fields
-    if (!formData.name || !formData.description || !formData.price || !formData.stock || !formData.categoryId || !formData.imageUrl) {
+    if (!formData.name || !formData.description || !formData.price || !formData.stock || !formData.category_ids || formData.category_ids.length === 0 || !formData.imageUrl) {
       setFormError("Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.");
       toast({
         title: "Error",
@@ -647,7 +652,7 @@ export default function ProductManagement() {
       price: formData.price || '',
       compareAtPrice: formData.compareAtPrice || '',
       stock: formData.stock || 0,
-      categoryId: formData.categoryId || 0,
+      category_ids: selectedCategoryIds || [],
       tags: selectedTagIds || [],
       rating: formData.rating || '0',
       isNew: formData.isNew || false,
@@ -678,7 +683,7 @@ export default function ProductManagement() {
       compareAtPrice: "",
       imageUrl: "",
       thumbnailUrl: "",
-      categoryId: 0,
+      category_ids: [],
       tags: [],
       rating: "0",
       stock: 0,
@@ -690,6 +695,7 @@ export default function ProductManagement() {
     setEditingProduct(null);
     setTagInput("");
     setSelectedTagIds([]);
+    setSelectedCategoryIds([]);
   };
 
   const handleAddTag = () => {
@@ -796,8 +802,20 @@ export default function ProductManagement() {
               )
             },
             {
-              header: "Category",
-              accessor: (product: ApiProduct) => product.category?.name || "N/A"
+              header: "Categories",
+              accessor: (product: ApiProduct) => (
+                <div className="flex flex-wrap gap-1">
+                  {product.categories && product.categories.length > 0 ? (
+                    product.categories.map((category) => (
+                      <Badge key={category.id} variant="outline" className="text-xs">
+                        {category.name}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-muted-foreground">N/A</span>
+                  )}
+                </div>
+              )
             },
             {
               header: "Stock",
@@ -897,36 +915,63 @@ export default function ProductManagement() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select
-                  value={formData.categoryId?.toString() || ""}
-                  onValueChange={(value) => {
-                    if (value !== "no-categories") {
-                      setFormData({ ...formData, categoryId: parseInt(value) });
-                    }
-                  }}
-                  required
-                >
-                  <SelectTrigger id="category" className={formData.categoryId && formData.categoryId !== 0 ? 'border-green-500' : 'border-red-500'}>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoriesLoading ? (
-                      <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </div>
-                    ) : categories && categories.length > 0 ? (
-                      categories.map((category: { id: number; name: string }) => (
-                        <SelectItem key={category.id} value={category.id.toString()}>
-                          {category.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="no-categories" disabled>No categories found</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-                {formData.categoryId && formData.categoryId !== 0 ? (
+                <Label htmlFor="categories">Categories *</Label>
+                <div className="space-y-2">
+                  {/* Selected categories display */}
+                  {selectedCategoryIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {selectedCategoryIds.map((categoryId) => {
+                        const category = categories.find(cat => cat.id === categoryId);
+                        return category ? (
+                          <Badge key={categoryId} variant="secondary" className="gap-1">
+                            {category.name}
+                            <button 
+                              type="button" 
+                              onClick={() => setSelectedCategoryIds(prev => prev.filter(id => id !== categoryId))}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
+                              &times;
+                            </button>
+                          </Badge>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Category selection */}
+                  <div className="flex gap-2">
+                    <Select
+                      value=""
+                      onValueChange={(value) => {
+                        if (value && !selectedCategoryIds.includes(parseInt(value))) {
+                          setSelectedCategoryIds(prev => [...prev, parseInt(value)]);
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Add a category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriesLoading ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          </div>
+                        ) : categories && categories.length > 0 ? (
+                          categories
+                            .filter(category => !selectedCategoryIds.includes(category.id))
+                            .map((category: { id: number; name: string }) => (
+                              <SelectItem key={category.id} value={category.id.toString()}>
+                                {category.name}
+                              </SelectItem>
+                            ))
+                        ) : (
+                          <SelectItem value="no-categories" disabled>No categories found</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                {selectedCategoryIds.length > 0 ? (
                   <span className="text-xs text-green-600">✅ Valid</span>
                 ) : (
                   <span className="text-xs text-red-600">❌ Required</span>
@@ -1032,7 +1077,7 @@ export default function ProductManagement() {
                     const stockValue = value === '' ? 0 : parseInt(value) || 0;
                     setFormData({ ...formData, stock: stockValue });
                   }}
-                  min={1}
+                  min={0}
                   required
                   className={typeof formData.stock === 'number' && formData.stock >= 0 ? 'border-green-500' : 'border-red-500'}
                 />
@@ -1253,9 +1298,11 @@ export default function ProductManagement() {
                     description: "Test description",
                     price: "100",
                     stock: 10,
-                    categoryId: categories?.[0]?.id || 1,
                     imageUrl: "https://placehold.co/600x800/e6e6e6/999999?text=Test+Image"
                   });
+                  if (categories && categories.length > 0) {
+                    setSelectedCategoryIds([categories[0].id]);
+                  }
                 }}
                 className="mt-2"
               >
@@ -1284,12 +1331,12 @@ export default function ProductManagement() {
               <StockNotifier 
                 product={{
                   ...editingProduct,
-                  category: editingProduct.category ? {
-                    id: editingProduct.category.id,
-                    name: editingProduct.category.name,
-                    slug: editingProduct.category.slug,
-                    description: editingProduct.category.description,
-                    imageUrl: editingProduct.category.imageUrl,
+                  category: editingProduct.categories && editingProduct.categories.length > 0 ? {
+                    id: editingProduct.categories[0].id,
+                    name: editingProduct.categories[0].name,
+                    slug: editingProduct.categories[0].slug,
+                    description: editingProduct.categories[0].description,
+                    imageUrl: editingProduct.categories[0].imageUrl,
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()

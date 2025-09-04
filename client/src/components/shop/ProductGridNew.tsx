@@ -70,7 +70,7 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
     }
     
     return products.map(product => {
-      const cat = product.category as Partial<Category>;
+      const cat = product.categories && product.categories.length > 0 ? product.categories[0] as Partial<Category> : null;
       const safeCategory: Category = cat ? {
         id: cat.id ?? 0,
         name: cat.name ?? 'Uncategorized',
@@ -83,7 +83,7 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
       } : {
         id: 0,
         name: 'Uncategorized',
-        slug: 'uncategorized',
+        slug: 'Uncategorized',
         description: null,
         imageUrl: '',
         isActive: true,
@@ -106,7 +106,7 @@ export const ProductGridNew: React.FC<ProductGridNewProps> = ({
         ...product,
         tags: Array.isArray(product.tags) ? product.tags.map(String) : [],
         tagDetails: safeTagDetails,
-        category: safeCategory,
+        categories: [safeCategory],
         createdAt: product.createdAt || '',
         updatedAt: product.updatedAt || ''
       };

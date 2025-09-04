@@ -15,13 +15,13 @@ export interface ApiProduct {
   compareAtPrice: string;
   discountPercentage: number;
   stock: number;
-  category: {
+  categories: {
     id: number;
     name: string;
     slug: string;
     description: string | null;
     imageUrl: string;
-  } | null;
+  }[];
   tags: number[];
   tagDetails: ApiTag[];
   rating: string;
