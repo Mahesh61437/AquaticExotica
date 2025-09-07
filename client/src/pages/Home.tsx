@@ -3,62 +3,15 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import heroImage from "@assets/akva_4.jpeg";
 import { PromotionalBanner } from "@/components/home/PromotionalBanner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Suspense, lazy } from "react";
+import React from "react";
 import { generateMetaDescription } from "@/lib/utils";
 
-// Lazy loaded components
-const FeaturedCategories = lazy(() => import("@/components/home/FeaturedCategories"));
+// Direct imports to avoid lazy loading issues
+import FeaturedCategories from "@/components/home/FeaturedCategories";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
+import { TrendingProducts } from "@/components/home/TrendingProducts";
 
-// Simple fallback component
-function SectionPlaceholder({ title, height, bgColor = "bg-white" }: { title: string; height: string; bgColor?: string }) {
-  return (
-    <section className={`py-12 ${bgColor}`}>
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-heading font-bold mb-8">{title}</h2>
-        <div className={`w-full animate-pulse`} style={{ height }}>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 h-full">
-            {[...Array(4)].map((_, index) => (
-              <Skeleton key={index} className="w-full h-full rounded-lg" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
 
-// Simple Hero Banner Component (inlined to avoid import errors)
-function SimpleBanner() {
-  return (
-    <div className="relative w-full h-[60vh] flex items-center">
-      <div 
-        className="absolute inset-0 bg-cover bg-center" 
-        style={{ 
-          backgroundImage: `url(${heroImage})`,
-          backgroundSize: 'cover',
-        }}
-      >
-        {/* Overlay for better text readability */}
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div>
-      </div>
-      
-      <div className="container mx-auto px-4 relative z-10 text-white">
-        <h1 className="text-4xl md:text-6xl font-heading font-bold max-w-xl leading-tight">
-          Premium Aquatic Products for Your Aquarium
-        </h1>
-        <p className="mt-4 max-w-xl text-lg">
-          Discover our wide selection of aquatic plants, rare fish species, and professional equipment. Free delivery on orders over ₹2000.
-        </p>
-        <Button asChild className="mt-8 px-8 py-6 text-base">
-          <Link href="/shop">
-            Shop Now
-          </Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export default function Home() {
   return (
@@ -105,14 +58,139 @@ export default function Home() {
       </Helmet>
 
       {/* Simple Hero Banner */}
-      <SimpleBanner />
+      <div className="relative w-full h-[60vh] flex items-center">
+        <div 
+          className="absolute inset-0 bg-cover bg-center" 
+          style={{ 
+            backgroundImage: `url(${heroImage})`,
+            backgroundSize: 'cover',
+          }}
+        >
+          {/* Overlay for better text readability */}
+          <div className="absolute inset-0 bg-black bg-opacity-50"></div>
+        </div>
+        
+        <div className="container mx-auto px-4 relative z-10 text-white">
+          <h1 className="text-4xl md:text-6xl font-heading font-bold max-w-xl leading-tight">
+            Premium Aquatic Products for Your Aquarium
+          </h1>
+          <p className="mt-4 max-w-xl text-lg">
+            Discover our wide selection of aquatic plants, rare fish species, and professional equipment. Free delivery on orders over ₹2000.
+          </p>
+          <Button asChild className="mt-8 px-8 py-6 text-base">
+            <Link href="/shop">
+              Shop Now
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       {/* Featured Categories */}
-      <Suspense fallback={<SectionPlaceholder title="Featured Categories" height="12rem" />}>
-        <FeaturedCategories />
-      </Suspense>
+      <FeaturedCategories />
 
-      {/* Promotional Banner instead of Featured Products */}
+      {/* Trending Products */}
+      <TrendingProducts />
+
+      {/* Featured Products */}
+      <FeaturedProducts />
+
+      {/* Company Stats Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-cyan-500 text-white">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div className="p-4 rounded-lg">
+              <div className="space-y-2">
+                <div className="text-4xl md:text-5xl font-bold">500+</div>
+                <div className="text-blue-100">Happy Customers</div>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg">
+              <div className="space-y-2">
+                <div className="text-4xl md:text-5xl font-bold">1000+</div>
+                <div className="text-blue-100">Products Sold</div>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg">
+              <div className="space-y-2">
+                <div className="text-4xl md:text-5xl font-bold">50+</div>
+                <div className="text-blue-100">Aquatic Species</div>
+              </div>
+            </div>
+            <div className="p-4 rounded-lg">
+              <div className="space-y-2">
+                <div className="text-4xl md:text-5xl font-bold">24/7</div>
+                <div className="text-blue-100">Customer Support</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Customer Testimonials */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <h2 className="text-3xl font-heading font-bold text-center mb-12">What Our Customers Say</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="flex text-yellow-400 mb-4">
+                ⭐⭐⭐⭐⭐
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Amazing quality aquatic plants! My aquarium has never looked better. The delivery was fast and packaging was perfect."
+              </p>
+              <div className="font-semibold">- Priya Sharma</div>
+              <div className="text-sm text-gray-500">Mumbai</div>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="flex text-yellow-400 mb-4">
+                ⭐⭐⭐⭐⭐
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Excellent customer service and premium quality fish. They helped me set up my first aquarium perfectly!"
+              </p>
+              <div className="font-semibold">- Rajesh Kumar</div>
+              <div className="text-sm text-gray-500">Delhi</div>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="flex text-yellow-400 mb-4">
+                ⭐⭐⭐⭐⭐
+              </div>
+              <p className="text-gray-700 mb-4">
+                "Best place to buy aquarium equipment in India. Great prices and everything arrived in perfect condition."
+              </p>
+              <div className="font-semibold">- Anjali Patel</div>
+              <div className="text-sm text-gray-500">Bangalore</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Signup */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-3xl font-heading font-bold mb-4">Stay Updated</h2>
+            <p className="text-gray-600 mb-8">
+              Get the latest updates on new aquatic species, special offers, and aquarium care tips delivered to your inbox.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <Button className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white">
+                Subscribe
+              </Button>
+            </div>
+            <p className="text-sm text-gray-500 mt-4">
+              We respect your privacy. Unsubscribe at any time.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Promotional Banner */}
       <PromotionalBanner />
     </>
   );

@@ -19,7 +19,7 @@ export function PromotionalBanner() {
               <Button 
                 asChild 
                 variant="secondary" 
-                className="group bg-white text-blue-600 hover:bg-gray-100 inline-flex items-center px-6 py-3 text-base font-medium"
+                className="group bg-white text-blue-600 hover:bg-gray-100 inline-flex items-center px-6 py-3 text-base font-medium transition-all duration-300 hover:scale-105 hover:shadow-lg"
               >
                 <Link href="/shop">
                   Browse All Products
