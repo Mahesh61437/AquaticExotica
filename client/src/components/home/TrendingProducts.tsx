@@ -13,12 +13,12 @@ export function TrendingProducts() {
   const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   const imageRefs = useRef<Record<number, HTMLImageElement | null>>({});
   
-  // Use React Query for cache invalidation
-  const { data: allProductsResponse } = useQuery({
-    queryKey: ["/api/products/"],
+  // Use React Query for trending products
+  const { data: trendingProductsResponse } = useQuery({
+    queryKey: ["/api/products/trending"],
     staleTime: 60 * 1000, // 1 minute
     queryFn: async () => {
-      const response = await apiRequest("/api/products/");
+      const response = await apiRequest("/api/products/trending");
       
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
@@ -30,24 +30,19 @@ export function TrendingProducts() {
     },
   });
   
-  // Extract products array from response
-  const allProducts = allProductsResponse || [];
-  
   // Update local state when React Query data changes
   useEffect(() => {
-    if (allProducts.length > 0) {
-      // Filter trending products
-      const trendingData = allProducts.filter(product => product.isTrending);
-      setLocalProducts(trendingData);
+    if (trendingProductsResponse && trendingProductsResponse.length > 0) {
+      setLocalProducts(trendingProductsResponse);
       
       // Initialize image loading states
       const initialLoadedState: Record<number, boolean> = {};
-      trendingData.forEach(product => {
+      trendingProductsResponse.forEach(product => {
         initialLoadedState[product.id] = false;
       });
       setLoadedImages(initialLoadedState);
     }
-  }, [allProducts]);
+  }, [trendingProductsResponse]);
   
   // Intersection Observer for lazy loading images
   useEffect(() => {

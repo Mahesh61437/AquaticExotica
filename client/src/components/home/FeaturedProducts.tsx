@@ -21,49 +21,63 @@ export default function FeaturedProducts() {
     best: []
   });
   
-  // Use the main products endpoint and filter client-side
-  const { data: allProductsResponse } = useQuery({
-    queryKey: ["/api/products/"],
-    staleTime: 60 * 1000, // 1 minute
+  // Use specific endpoints for each product type
+  const { data: featuredResponse } = useQuery({
+    queryKey: ["/api/products/featured"],
+    staleTime: 60 * 1000,
     queryFn: async () => {
-      const response = await apiRequest("/api/products/");
-      
-      // Handle new pagination format: { count, next, previous, results }
+      const response = await apiRequest("/api/products/featured");
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
-      // Fallback to array format
       return response || [];
     },
   });
 
-  // Extract products array from response
-  const allProducts = allProductsResponse || [];
+  const { data: newResponse } = useQuery({
+    queryKey: ["/api/products/new"],
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const response = await apiRequest("/api/products/new");
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      return response || [];
+    },
+  });
+
+  const { data: saleResponse } = useQuery({
+    queryKey: ["/api/products/sale"],
+    staleTime: 60 * 1000,
+    queryFn: async () => {
+      const response = await apiRequest("/api/products/sale");
+      if (response && typeof response === 'object' && 'results' in response) {
+        return response.results || [];
+      }
+      return response || [];
+    },
+  });
 
   // Update local state when React Query data changes
   useEffect(() => {
-    if (allProducts.length > 0) {
-      // Filter products based on flags
-      const featuredData = allProducts.filter(product => product.isFeatured);
-      const newData = allProducts.filter(product => product.isNew);
-      const saleData = allProducts.filter(product => product.isSale);
-      
-      // Calculate best sellers (sort by rating)
-      const bestData = [...featuredData].sort((a, b) => {
-        const ratingA = typeof a.rating === 'string' ? parseFloat(a.rating) : a.rating;
-        const ratingB = typeof b.rating === 'string' ? parseFloat(b.rating) : b.rating;
-        return ratingB - ratingA;
-      });
-      
-      setLocalProducts({
-        featured: featuredData,
-        new: newData,
-        sale: saleData,
-        best: bestData
-      });
-    }
-  }, [allProducts]);
+    const featuredData = featuredResponse || [];
+    const newData = newResponse || [];
+    const saleData = saleResponse || [];
+    
+    // For best sellers, we'll use featured products sorted by rating
+    const bestData = [...featuredData].sort((a, b) => {
+      const ratingA = typeof a.rating === 'string' ? parseFloat(a.rating) : a.rating;
+      const ratingB = typeof b.rating === 'string' ? parseFloat(b.rating) : b.rating;
+      return ratingB - ratingA;
+    });
+    
+    setLocalProducts({
+      featured: featuredData,
+      new: newData,
+      sale: saleData,
+      best: bestData
+    });
+  }, [featuredResponse, newResponse, saleResponse]);
 
   // Determine which products to show based on active category
   let displayProducts: Product[] = [];
