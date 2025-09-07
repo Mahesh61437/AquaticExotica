@@ -77,6 +77,11 @@ export default function FeaturedProducts() {
       sale: saleData,
       best: bestData
     });
+    
+    // Set loading to false once we have any data
+    if (featuredResponse !== undefined || newResponse !== undefined || saleResponse !== undefined) {
+      setIsClientLoading(false);
+    }
   }, [featuredResponse, newResponse, saleResponse]);
 
   // Determine which products to show based on active category

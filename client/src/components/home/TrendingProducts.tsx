@@ -32,8 +32,9 @@ export function TrendingProducts() {
   
   // Update local state when React Query data changes
   useEffect(() => {
-    if (trendingProductsResponse && trendingProductsResponse.length > 0) {
+    if (trendingProductsResponse) {
       setLocalProducts(trendingProductsResponse);
+      setIsClientLoading(false);
       
       // Initialize image loading states
       const initialLoadedState: Record<number, boolean> = {};
