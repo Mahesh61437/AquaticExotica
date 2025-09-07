@@ -7,7 +7,7 @@ import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
 export default function FeaturedProducts() {
-  const [activeCategory, setActiveCategory] = useState<string>("all");
+  const [activeCategory, setActiveCategory] = useState<string>("sale");
   const [isClientLoading, setIsClientLoading] = useState(true);
   const [localProducts, setLocalProducts] = useState<{
     featured: Product[];
@@ -87,6 +87,9 @@ export default function FeaturedProducts() {
   // Determine which products to show based on active category
   let displayProducts: Product[] = [];
   switch (activeCategory) {
+    case "all":
+      displayProducts = localProducts.featured;
+      break;
     case "new":
       displayProducts = localProducts.new;
       break;
@@ -97,7 +100,7 @@ export default function FeaturedProducts() {
       displayProducts = localProducts.best;
       break;
     default:
-      displayProducts = localProducts.featured;
+      displayProducts = localProducts.sale;
   }
 
   return (
