@@ -124,12 +124,12 @@ export default function FeaturedCategories() {
       <div className="container mx-auto px-4">
         <h2 className="text-3xl font-heading font-bold text-center mb-8">Shop By Category</h2>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {categories.map((category: Category) => (
             <Link 
               key={category.id} 
               href={`/shop/${category.slug}`} 
-              className="group relative overflow-hidden rounded-lg aspect-square"
+              className="group relative overflow-hidden rounded-lg aspect-[4/3]"
             >
               {/* Gradient background (shows when image fails to load or while loading) */}
               <div className={`absolute inset-0 bg-gradient-to-br ${getCategoryGradient(category.name)} transition-opacity duration-300 ${
@@ -149,8 +149,8 @@ export default function FeaturedCategories() {
               />
               
               {/* Category name overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-4">
-                <span className="text-white font-heading font-semibold text-xl">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end p-2">
+                <span className="text-white font-heading font-semibold text-sm">
                   {category.name}
                 </span>
               </div>
