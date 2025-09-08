@@ -14,6 +14,7 @@ import { ShoppingCart } from "@/components/layout/ShoppingCart";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Shop from "@/pages/Shop";
+import SearchResults from "@/pages/SearchResults";
 import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
@@ -142,6 +143,7 @@ function Router() {
           <Route path="/" component={HomeRedirect} />
           <Route path="/shop" component={Shop} />
           <Route path="/shop/:category" component={Shop} />
+          <Route path="/search" component={SearchResults} />
           <Route path="/product/:slug" component={ProductDetail} />
           <Route path="/checkout" component={() => (
             <ProtectedRoute requireAuth={true}>

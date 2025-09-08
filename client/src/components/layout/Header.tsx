@@ -6,6 +6,7 @@ import { useCart } from "@/hooks/use-cart";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard } from "lucide-react"; 
 import { useAuth } from "@/context/AuthContext";
+import { SearchDropdown } from "@/components/search/SearchDropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,18 +21,10 @@ export function Header() {
   const { currentUser, signOut } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   
   const handleSignOut = async () => {
     await signOut();
     setLocation("/home");
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery)}`;
-    }
   };
 
   return (
@@ -243,23 +236,13 @@ export function Header() {
           </div>
         </div>
         
-        {/* Search Bar (expandable) */}
-        {isSearchOpen && (
-          <div className="py-3 border-t">
-            <form onSubmit={handleSearch} className="max-w-3xl mx-auto flex">
-              <Input
-                type="text"
-                placeholder="Search for products..."
-                className="rounded-r-none"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <Button type="submit" className="rounded-l-none">
-                <Search size={18} />
-              </Button>
-            </form>
-          </div>
-        )}
+        {/* Search Dropdown */}
+        <div className="relative">
+          <SearchDropdown 
+            isOpen={isSearchOpen} 
+            onClose={() => setIsSearchOpen(false)} 
+          />
+        </div>
       </div>
     </header>
   );
