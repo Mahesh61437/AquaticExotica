@@ -25,7 +25,7 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
     queryFn: async () => {
       if (!searchQuery.trim()) return { results: [], count: 0 };
       
-      const response = await apiRequest(`/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=1&page_size=6`);
+      const response = await apiRequest(`/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=1&page_size=5`);
       
       // Handle pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
@@ -194,7 +194,7 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
             </div>
 
             {/* View All Results Button */}
-            {totalCount > results.length && (
+            {totalCount > 5 && (
               <div className="p-4 border-t border-gray-100">
                 <Button
                   onClick={handleViewAllResults}

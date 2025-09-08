@@ -16,12 +16,14 @@ export default function SearchResults() {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
 
-  // Extract search query from URL
+  // Extract search query and page from URL
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const query = urlParams.get("q") || "";
+    const page = parseInt(urlParams.get("page") || "1");
     setSearchQuery(query);
     setSearchInput(query);
+    setCurrentPage(page);
   }, []);
 
   // Fetch search results with pagination
@@ -32,9 +34,11 @@ export default function SearchResults() {
         return { results: [], count: 0, next: null, previous: null };
       }
       
-      const response = await apiRequest(
-        `/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=${currentPage}&page_size=12`
-      );
+      const searchUrl = `/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=${currentPage}&page_size=12`;
+      console.log('🔍 SearchResults: Fetching from URL:', searchUrl);
+      
+      const response = await apiRequest(searchUrl);
+      console.log('🔍 SearchResults: API Response:', response);
       
       // Handle pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
