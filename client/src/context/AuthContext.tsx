@@ -56,7 +56,39 @@ const removeStoredToken = (): void => {
   console.log('🗑️ removeStoredToken called');
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
-  console.log('🗑️ Tokens removed from localStorage');
+  localStorage.removeItem('aquaticexotica_user_data');
+  console.log('🗑️ Tokens and user data removed from localStorage');
+};
+
+const setStoredUserData = (user: User): void => {
+  if (typeof window === 'undefined') return;
+  console.log('💾 setStoredUserData called with user:', user);
+  localStorage.setItem('aquaticexotica_user_data', JSON.stringify(user));
+  console.log('💾 User data stored in localStorage');
+};
+
+// Helper to check if token is likely expired (basic JWT expiration check)
+const isTokenLikelyExpired = (token: string): boolean => {
+  try {
+    // JWT tokens have 3 parts separated by dots
+    const parts = token.split('.');
+    if (parts.length !== 3) return true;
+    
+    // Decode the payload (second part)
+    const payload = JSON.parse(atob(parts[1]));
+    const exp = payload.exp;
+    
+    if (!exp) return true;
+    
+    // Check if token is expired (with 5 minute buffer)
+    const now = Math.floor(Date.now() / 1000);
+    const buffer = 5 * 60; // 5 minutes in seconds
+    
+    return exp < (now + buffer);
+  } catch (error) {
+    console.log('❌ Error checking token expiration:', error);
+    return true; // If we can't parse it, assume it's expired
+  }
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -70,18 +102,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const token = getStoredToken();
         if (!token) {
+          console.log('🔍 No token found, user not authenticated');
           setLoading(false);
           return;
         }
 
-        // Try to get user info with stored token
-        const user = await apiRequest<User>('/api/auth/me');
-        setCurrentUser(user);
+        // Check if token is likely expired
+        if (isTokenLikelyExpired(token)) {
+          console.log('⏰ Token appears to be expired, clearing auth state');
+          removeStoredToken();
+          setCurrentUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // First, try to restore user from stored data for immediate UI update
+        const storedUserData = localStorage.getItem('aquaticexotica_user_data');
+        if (storedUserData) {
+          try {
+            const userData = JSON.parse(storedUserData);
+            console.log('🔄 Restoring user from stored data for immediate UI update:', userData);
+            setCurrentUser(userData);
+            setLoading(false); // Set loading to false immediately for better UX
+          } catch (parseError) {
+            console.log('❌ Failed to parse stored user data');
+          }
+        }
+
+        // Then verify token with server in the background (only if token seems valid)
+        console.log('🔍 Token appears valid, verifying with server in background...');
+        
+        try {
+          const user = await apiRequest<User>('/api/auth/me/');
+          console.log('✅ Token verification successful, user:', user);
+          
+          // Update with fresh user data from server
+          setStoredUserData(user);
+          setCurrentUser(user);
+        } catch (verifyError: any) {
+          console.log('❌ Token verification failed:', verifyError.message);
+          
+          // Check if it's a 401 (unauthorized) error
+          if (verifyError.message.includes('401') || verifyError.message.includes('Unauthorized')) {
+            console.log('🔒 Token expired or invalid, clearing auth state');
+            removeStoredToken();
+            setCurrentUser(null);
+          }
+          // For other errors (404, network issues), keep the user logged in with stored data
+          // The user is already set from stored data above, so no need to change anything
+          else {
+            console.log('⚠️ Server verification failed, but keeping user logged in with stored data');
+          }
+        }
       } catch (error) {
-        // Token might be expired, clear it
+        console.error('❌ Auth check failed:', error);
+        // Only clear auth state if it's a critical error
         removeStoredToken();
-        console.log('Not authenticated or token expired');
-      } finally {
+        setCurrentUser(null);
         setLoading(false);
       }
     };
@@ -164,6 +241,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       
       console.log('👤 Created user object:', user);
+      
+      // Store user data for fallback
+      setStoredUserData(user);
       
       setCurrentUser(user);
       

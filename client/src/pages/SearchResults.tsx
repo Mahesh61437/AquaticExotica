@@ -34,7 +34,7 @@ export default function SearchResults() {
         return { results: [], count: 0, next: null, previous: null };
       }
       
-      const searchUrl = `/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=${currentPage}&page_size=12`;
+      const searchUrl = `/api/products/search/?q=${encodeURIComponent(searchQuery)}&page=${currentPage}&page_size=10`;
       console.log('🔍 SearchResults: Fetching from URL:', searchUrl);
       
       const response = await apiRequest(searchUrl);
@@ -66,7 +66,7 @@ export default function SearchResults() {
   const totalCount = searchResponse?.count || 0;
   const hasNext = !!searchResponse?.next;
   const hasPrevious = !!searchResponse?.previous;
-  const totalPages = Math.ceil(totalCount / 12);
+  const totalPages = Math.ceil(totalCount / 10);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,7 +186,7 @@ export default function SearchResults() {
         {/* Results */}
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {[...Array(12)].map((_, index) => (
+            {[...Array(10)].map((_, index) => (
               <div key={index} className="bg-white rounded-lg overflow-hidden shadow-sm">
                 <div className="aspect-[3/4] bg-gray-200 animate-pulse"></div>
                 <div className="p-4">
