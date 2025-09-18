@@ -639,7 +639,7 @@ export default function ProductManagement() {
     e.preventDefault();
     setFormError(null);
     // Validate all required fields
-    if (!formData.name || !formData.description || !formData.price || !formData.stock || !formData.category_ids || formData.category_ids.length === 0 || !formData.imageUrl) {
+    if (!formData.name || !formData.description || !formData.price || formData.stock === undefined || formData.stock === null || !formData.category_ids || formData.category_ids.length === 0 || !formData.imageUrl) {
       setFormError("Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.");
       toast({
         title: "Error",
