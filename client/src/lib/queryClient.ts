@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+// import { trackApiError, trackApiSuccess, trackApiPerformance } from "./analytics";
 
 // API base URL - set via environment variable VITE_API_BASE
 const API_BASE = import.meta.env.VITE_API_BASE || 'https://web-production-b3867.up.railway.app';
@@ -150,6 +151,33 @@ export async function apiRequest<T = any>(
     console.log('📡 Response headers:', Object.fromEntries(res.headers.entries()));
     console.log('⏱️ Request duration:', `${duration}ms`);
 
+    // Track API performance
+    const endpoint = url.replace(/^\/api\//, '').replace(/\/$/, '');
+    const method = options?.method || 'GET';
+    
+    // Get response size
+    const contentLength = res.headers.get('content-length');
+    const responseSize = contentLength ? parseInt(contentLength) : 0;
+
+    // Track API success
+    // trackApiSuccess({
+    //   endpoint,
+    //   method,
+    //   statusCode: res.status,
+    //   responseTime: duration,
+    //   responseSize,
+    //   userId: token ? 'authenticated' : 'anonymous'
+    // });
+
+    // Track API performance
+    // trackApiPerformance({
+    //   endpoint,
+    //   method,
+    //   responseTime: duration,
+    //   responseSize,
+    //   cacheHit: res.headers.get('x-cache') === 'HIT'
+    // });
+
     // Handle 204 No Content responses (common for DELETE operations)
     if (res.status === 204) {
       console.log('✅ 204 No Content - Operation successful');
@@ -184,6 +212,22 @@ export async function apiRequest<T = any>(
       duration: `${duration}ms`,
       error: error
     });
+
+    // Track API error
+    // const endpoint = url.replace(/^\/api\//, '').replace(/\/$/, '');
+    // const method = options?.method || 'GET';
+    
+    // trackApiError({
+    //   endpoint,
+    //   method,
+    //   statusCode: (error as any)?.status || 0,
+    //   statusText: (error as any)?.statusText || 'Unknown Error',
+    //   errorMessage: (error as Error)?.message || 'Unknown error occurred',
+    //   responseTime: duration,
+    //   requestBody: options?.body,
+    //   userAgent: navigator.userAgent,
+    //   userId: token ? 'authenticated' : 'anonymous'
+    // });
     
     throw error;
   }

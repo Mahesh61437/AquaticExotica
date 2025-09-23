@@ -7,7 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AuthCartIntegration } from "@/components/auth/AuthCartIntegration";
-import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
+// import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
+// import { PerformanceMonitor } from "@/components/analytics/PerformanceMonitor";
 import { ThemeProvider } from "next-themes";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -140,6 +141,7 @@ function Router() {
       <main className="flex-1">
         {/* This component handles cart merging when users log in */}
         <AuthCartIntegration />
+        {/* <PerformanceMonitor /> */}
         <Switch>
           <Route path="/home" component={Home} />
           <Route path="/" component={HomeRedirect} />
@@ -201,7 +203,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        <AnalyticsProvider>
+        {/* <AnalyticsProvider> */}
           <AuthProvider>
             <CartProvider>
               <TooltipProvider>
@@ -210,7 +212,7 @@ function App() {
               </TooltipProvider>
             </CartProvider>
           </AuthProvider>
-        </AnalyticsProvider>
+        {/* </AnalyticsProvider> */}
       </ThemeProvider>
     </QueryClientProvider>
   );

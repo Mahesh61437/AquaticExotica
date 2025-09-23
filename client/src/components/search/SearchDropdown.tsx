@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Product } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
 import { formatPrice } from "@/lib/utils";
+// import { useAnalytics } from "@/hooks/use-analytics";
 
 interface SearchDropdownProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
   const [isSearching, setIsSearching] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // const { trackSearch, trackUserBehavior } = useAnalytics();
 
   // Fetch search results with debouncing
   const { data: searchResults, isLoading } = useQuery({
@@ -97,6 +99,26 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
 
   const results = searchResults?.results || [];
   const totalCount = searchResults?.count || 0;
+
+  // Track search when results are available
+  // useEffect(() => {
+  //   if (searchQuery.trim().length > 0 && searchResults) {
+  //     trackSearch({
+  //       query: searchQuery,
+  //       resultsCount: totalCount,
+  //       page: 'header_search',
+  //       userId: 'anonymous' // You can get this from auth context if needed
+  //     });
+
+  //     trackUserBehavior({
+  //       action: 'search_performed',
+  //       page: 'header_search',
+  //       element: 'search_dropdown',
+  //       value: totalCount,
+  //       sessionId: sessionStorage.getItem('sessionId') || 'unknown'
+  //     });
+  //   }
+  // }, [searchResults, searchQuery, totalCount, trackSearch, trackUserBehavior]);
 
   return (
     <div 

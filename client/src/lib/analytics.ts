@@ -188,10 +188,25 @@ export const trackPurchase = (transaction: {
 };
 
 // User behavior tracking
-export const trackSearch = (searchTerm: string, resultsCount?: number) => {
+export const trackSearch = (searchDetails: {
+  query: string;
+  resultsCount: number;
+  page: string;
+  filters?: any;
+  userId?: string;
+}) => {
   trackEvent('search', {
-    search_term: searchTerm,
-    results_count: resultsCount,
+    event_category: 'search',
+    event_label: searchDetails.query,
+    value: searchDetails.resultsCount,
+    custom_map: {
+      search_term: searchDetails.query,
+      results_count: searchDetails.resultsCount,
+      page: searchDetails.page,
+      filters: JSON.stringify(searchDetails.filters || {}),
+      user_id: searchDetails.userId || 'anonymous',
+      timestamp: new Date().toISOString(),
+    },
   });
 };
 
@@ -239,6 +254,85 @@ export const trackError = (errorType: string, errorMessage: string, errorLocatio
   });
 };
 
+// API Error tracking
+export const trackApiError = (errorDetails: {
+  endpoint: string;
+  method: string;
+  statusCode?: number;
+  statusText?: string;
+  errorMessage: string;
+  responseTime?: number;
+  requestBody?: any;
+  userAgent?: string;
+  userId?: string;
+}) => {
+  trackEvent('api_error', {
+    event_category: 'api',
+    event_label: `${errorDetails.method} ${errorDetails.endpoint}`,
+    custom_map: {
+      endpoint: errorDetails.endpoint,
+      method: errorDetails.method,
+      status_code: errorDetails.statusCode || 0,
+      status_text: errorDetails.statusText || 'Unknown',
+      error_message: errorDetails.errorMessage,
+      response_time: errorDetails.responseTime || 0,
+      user_id: errorDetails.userId || 'anonymous',
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  // Also track as exception for error monitoring
+  trackError('API_ERROR', `${errorDetails.method} ${errorDetails.endpoint}: ${errorDetails.errorMessage}`, 'api');
+};
+
+// API Success tracking
+export const trackApiSuccess = (successDetails: {
+  endpoint: string;
+  method: string;
+  statusCode: number;
+  responseTime: number;
+  responseSize?: number;
+  userId?: string;
+}) => {
+  trackEvent('api_success', {
+    event_category: 'api',
+    event_label: `${successDetails.method} ${successDetails.endpoint}`,
+    value: successDetails.responseTime,
+    custom_map: {
+      endpoint: successDetails.endpoint,
+      method: successDetails.method,
+      status_code: successDetails.statusCode,
+      response_time: successDetails.responseTime,
+      response_size: successDetails.responseSize || 0,
+      user_id: successDetails.userId || 'anonymous',
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+// API Performance tracking
+export const trackApiPerformance = (performanceDetails: {
+  endpoint: string;
+  method: string;
+  responseTime: number;
+  responseSize?: number;
+  cacheHit?: boolean;
+}) => {
+  trackEvent('api_performance', {
+    event_category: 'performance',
+    event_label: `${performanceDetails.method} ${performanceDetails.endpoint}`,
+    value: performanceDetails.responseTime,
+    custom_map: {
+      endpoint: performanceDetails.endpoint,
+      method: performanceDetails.method,
+      response_time: performanceDetails.responseTime,
+      response_size: performanceDetails.responseSize || 0,
+      cache_hit: performanceDetails.cacheHit || false,
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
 // Performance tracking
 export const trackPerformance = (metricName: string, value: number, unit = 'ms') => {
   trackEvent('timing_complete', {
@@ -246,6 +340,104 @@ export const trackPerformance = (metricName: string, value: number, unit = 'ms')
     value: value,
     event_category: 'performance',
     event_label: unit,
+  });
+};
+
+// User behavior tracking
+export const trackUserBehavior = (behaviorDetails: {
+  action: string;
+  page: string;
+  element?: string;
+  value?: any;
+  userId?: string;
+  sessionId?: string;
+}) => {
+  trackEvent('user_behavior', {
+    event_category: 'behavior',
+    event_label: behaviorDetails.action,
+    value: behaviorDetails.value || 0,
+    custom_map: {
+      action: behaviorDetails.action,
+      page: behaviorDetails.page,
+      element: behaviorDetails.element || 'unknown',
+      user_id: behaviorDetails.userId || 'anonymous',
+      session_id: behaviorDetails.sessionId || 'unknown',
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+// Page performance tracking
+export const trackPagePerformance = (performanceDetails: {
+  page: string;
+  loadTime: number;
+  domContentLoaded?: number;
+  firstContentfulPaint?: number;
+  largestContentfulPaint?: number;
+  cumulativeLayoutShift?: number;
+}) => {
+  trackEvent('page_performance', {
+    event_category: 'performance',
+    event_label: performanceDetails.page,
+    value: performanceDetails.loadTime,
+    custom_map: {
+      page: performanceDetails.page,
+      load_time: performanceDetails.loadTime,
+      dom_content_loaded: performanceDetails.domContentLoaded || 0,
+      first_contentful_paint: performanceDetails.firstContentfulPaint || 0,
+      largest_contentful_paint: performanceDetails.largestContentfulPaint || 0,
+      cumulative_layout_shift: performanceDetails.cumulativeLayoutShift || 0,
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+// Feature usage tracking
+export const trackFeatureUsage = (featureDetails: {
+  feature: string;
+  action: string;
+  success: boolean;
+  duration?: number;
+  userId?: string;
+}) => {
+  trackEvent('feature_usage', {
+    event_category: 'feature',
+    event_label: `${featureDetails.feature}_${featureDetails.action}`,
+    value: featureDetails.duration || 0,
+    custom_map: {
+      feature: featureDetails.feature,
+      action: featureDetails.action,
+      success: featureDetails.success,
+      duration: featureDetails.duration || 0,
+      user_id: featureDetails.userId || 'anonymous',
+      timestamp: new Date().toISOString(),
+    },
+  });
+};
+
+
+// Conversion funnel tracking
+export const trackFunnelStep = (funnelDetails: {
+  funnel: string;
+  step: string;
+  stepNumber: number;
+  totalSteps: number;
+  userId?: string;
+  value?: number;
+}) => {
+  trackEvent('funnel_step', {
+    event_category: 'conversion',
+    event_label: `${funnelDetails.funnel}_${funnelDetails.step}`,
+    value: funnelDetails.value || 0,
+    custom_map: {
+      funnel: funnelDetails.funnel,
+      step: funnelDetails.step,
+      step_number: funnelDetails.stepNumber,
+      total_steps: funnelDetails.totalSteps,
+      completion_rate: (funnelDetails.stepNumber / funnelDetails.totalSteps) * 100,
+      user_id: funnelDetails.userId || 'anonymous',
+      timestamp: new Date().toISOString(),
+    },
   });
 };
 

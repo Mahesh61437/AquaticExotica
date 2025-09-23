@@ -4,13 +4,13 @@
 export const ANALYTICS_CONFIG = {
   // Google Analytics 4 Measurement ID
   // Get this from your GA4 property settings
-  GA4_MEASUREMENT_ID: process.env.REACT_APP_GA4_MEASUREMENT_ID || '',
+  GA4_MEASUREMENT_ID: import.meta.env.VITE_GA4_MEASUREMENT_ID || '',
   
   // Enable/disable analytics
-  ENABLED: process.env.NODE_ENV === 'production' || process.env.REACT_APP_ENABLE_ANALYTICS === 'true',
+  ENABLED: import.meta.env.MODE === 'production' || import.meta.env.VITE_ENABLE_ANALYTICS === 'true',
   
   // Debug mode
-  DEBUG: process.env.NODE_ENV === 'development',
+  DEBUG: import.meta.env.MODE === 'development',
   
   // Custom dimensions (set these up in GA4)
   CUSTOM_DIMENSIONS: {

@@ -15,6 +15,13 @@ import {
   trackCartAbandonment,
   trackCheckoutStep,
   trackError,
+  trackApiError,
+  trackApiSuccess,
+  trackApiPerformance,
+  trackUserBehavior,
+  trackPagePerformance,
+  trackFeatureUsage,
+  trackFunnelStep,
   isGA4Loaded,
   setUserProperties,
   GA4_CONFIG
@@ -126,9 +133,6 @@ export function useAnalytics() {
     }, []),
 
     // User behavior tracking
-    trackSearch: useCallback((searchTerm: string, resultsCount?: number) => {
-      trackSearch(searchTerm, resultsCount);
-    }, []),
 
     trackCategoryView: useCallback((categoryName: string, categoryId?: string) => {
       trackCategoryView(categoryName, categoryId);
@@ -150,6 +154,100 @@ export function useAnalytics() {
     // Error tracking
     trackError: useCallback((errorType: string, errorMessage: string, errorLocation?: string) => {
       trackError(errorType, errorMessage, errorLocation);
+    }, []),
+
+    // API tracking
+    trackApiError: useCallback((errorDetails: {
+      endpoint: string;
+      method: string;
+      statusCode?: number;
+      statusText?: string;
+      errorMessage: string;
+      responseTime?: number;
+      requestBody?: any;
+      userAgent?: string;
+      userId?: string;
+    }) => {
+      trackApiError(errorDetails);
+    }, []),
+
+    trackApiSuccess: useCallback((successDetails: {
+      endpoint: string;
+      method: string;
+      statusCode: number;
+      responseTime: number;
+      responseSize?: number;
+      userId?: string;
+    }) => {
+      trackApiSuccess(successDetails);
+    }, []),
+
+    trackApiPerformance: useCallback((performanceDetails: {
+      endpoint: string;
+      method: string;
+      responseTime: number;
+      responseSize?: number;
+      cacheHit?: boolean;
+    }) => {
+      trackApiPerformance(performanceDetails);
+    }, []),
+
+    // User behavior tracking
+    trackUserBehavior: useCallback((behaviorDetails: {
+      action: string;
+      page: string;
+      element?: string;
+      value?: any;
+      userId?: string;
+      sessionId?: string;
+    }) => {
+      trackUserBehavior(behaviorDetails);
+    }, []),
+
+    // Page performance tracking
+    trackPagePerformance: useCallback((performanceDetails: {
+      page: string;
+      loadTime: number;
+      domContentLoaded?: number;
+      firstContentfulPaint?: number;
+      largestContentfulPaint?: number;
+      cumulativeLayoutShift?: number;
+    }) => {
+      trackPagePerformance(performanceDetails);
+    }, []),
+
+    // Feature usage tracking
+    trackFeatureUsage: useCallback((featureDetails: {
+      feature: string;
+      action: string;
+      success: boolean;
+      duration?: number;
+      userId?: string;
+    }) => {
+      trackFeatureUsage(featureDetails);
+    }, []),
+
+    // Search tracking
+    trackSearch: useCallback((searchDetails: {
+      query: string;
+      resultsCount: number;
+      page: string;
+      filters?: any;
+      userId?: string;
+    }) => {
+      trackSearch(searchDetails);
+    }, []),
+
+    // Funnel tracking
+    trackFunnelStep: useCallback((funnelDetails: {
+      funnel: string;
+      step: string;
+      stepNumber: number;
+      totalSteps: number;
+      userId?: string;
+      value?: number;
+    }) => {
+      trackFunnelStep(funnelDetails);
     }, []),
 
     // Generic event tracking
