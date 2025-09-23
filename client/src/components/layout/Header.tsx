@@ -4,9 +4,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard } from "lucide-react"; 
+import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard, Bell } from "lucide-react"; 
 import { useAuth } from "@/context/AuthContext";
 import { SearchDropdown } from "@/components/search/SearchDropdown";
+import { NotificationDropdown } from "@/components/admin/NotificationDropdown";
+import { useUnreadCount } from "@/hooks/use-notifications";
+import { Logo } from "@/components/ui/Logo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +23,11 @@ export function Header() {
   const { cart, setIsCartOpen } = useCart();
   const { currentUser, signOut } = useAuth();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Get unread count for admin users
+  const { unreadCount } = useUnreadCount();
   
   const handleSignOut = async () => {
     await signOut();
@@ -33,9 +40,7 @@ export function Header() {
         {/* Top Nav */}
         <div className="py-4 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/home" className="text-2xl font-heading font-bold text-primary">
-            AquaticExotica
-          </Link>
+          <Logo size="md" />
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex space-x-8">
@@ -57,6 +62,28 @@ export function Header() {
             >
               <Search size={20} />
             </button>
+            
+            {/* Notifications (Admin only) */}
+            {currentUser?.isAdmin && (
+              <div className="relative">
+                <button 
+                  onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
+                  className="text-gray-600 hover:text-primary transition p-2 relative"
+                  aria-label="Notifications"
+                >
+                  <Bell size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                <NotificationDropdown 
+                  isOpen={isNotificationOpen} 
+                  onClose={() => setIsNotificationOpen(false)} 
+                />
+              </div>
+            )}
             
             {/* User Account */}
             <DropdownMenu>
@@ -142,13 +169,9 @@ export function Header() {
               <SheetContent side="left" className="w-[80vw] sm:max-w-sm">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-center mb-6">
-                    <Link 
-                      href="/home"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="text-2xl font-heading font-bold text-primary"
-                    >
-                      AquaticExotica
-                    </Link>
+                    <div onClick={() => setIsMobileMenuOpen(false)}>
+                      <Logo size="sm" />
+                    </div>
                     <Button 
                       variant="ghost" 
                       size="icon" 

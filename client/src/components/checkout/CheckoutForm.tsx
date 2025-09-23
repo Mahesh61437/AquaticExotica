@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/context/AuthContext";
+import { useCheckoutAnalytics } from "@/hooks/use-analytics";
 import { apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,6 +100,7 @@ export function CheckoutForm() {
   const { toast } = useToast();
   const { cart, clearCart } = useCart();
   const { currentUser } = useAuth();
+  const { trackOrderComplete } = useCheckoutAnalytics();
   
   // Track selected saved address
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<number | null>(null);
@@ -282,6 +284,19 @@ export function CheckoutForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(orderData),
+      });
+
+      // Track purchase completion
+      trackOrderComplete({
+        id: response.id.toString(),
+        total: cart.total,
+        items: cart.items.map(item => ({
+          id: item.id,
+          name: item.name,
+          categories: [{ name: 'Aquatic Products', id: 1 }], // Default category
+          price: item.price.toString(),
+          quantity: item.quantity,
+        })),
       });
 
       // Clear cart after successful order

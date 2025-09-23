@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import heroImage from "@assets/akva_4.jpeg";
 import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import React from "react";
 import { generateMetaDescription } from "@/lib/utils";
+import { useAnalytics } from "@/hooks/use-analytics";
 
 // Direct imports to avoid lazy loading issues
 import FeaturedCategories from "@/components/home/FeaturedCategories";
@@ -14,21 +16,28 @@ import { TrendingProducts } from "@/components/home/TrendingProducts";
 
 
 export default function Home() {
+  const { trackPageView } = useAnalytics();
+
+  // Track page view when component mounts
+  useEffect(() => {
+    trackPageView('/');
+  }, [trackPageView]);
+
   return (
     <>
       <Helmet>
         <title>Aquatic Exotica - Premium Aquarium Products & Aquatic Plants</title>
-        <meta name="description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
+        <meta name="description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Quality aquatic supplies delivered across India.")} />
         <meta name="keywords" content="aquatic plants, aquarium supplies, aquascaping, fish tank, aquatic exotica, india, aquarium equipment, aquatic plants online" />
         <meta property="og:title" content="Aquatic Exotica - Premium Aquarium Products & Aquatic Plants" />
-        <meta property="og:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
+        <meta property="og:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Quality aquatic supplies delivered across India.")} />
         <meta property="og:type" content="website" />
-        <meta property="og:image" content="/images/aquarium_banner.jpeg" />
+        <meta property="og:image" content="https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657" />
         <meta property="og:url" content={window.location.href} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Aquatic Exotica - Premium Aquarium Products & Aquatic Plants" />
-        <meta name="twitter:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Free delivery on orders over ₹2000 across India.")} />
-        <meta name="twitter:image" content="/images/aquarium_banner.jpeg" />
+        <meta name="twitter:description" content={generateMetaDescription("Aquatic Exotica offers premium aquatic plants, rare fish species, and professional aquarium equipment. Quality aquatic supplies delivered across India.")} />
+        <meta name="twitter:image" content="https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657" />
         <link rel="canonical" href={window.location.href} />
         <script type="application/ld+json">
           {JSON.stringify({
@@ -36,7 +45,7 @@ export default function Home() {
             "@type": "Organization",
             "name": "Aquatic Exotica",
             "url": window.location.origin,
-            "logo": `${window.location.origin}/images/aquarium_banner.jpeg`,
+            "logo": "https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657",
             "description": "Premium aquatic plants, rare fish species, and professional aquarium equipment",
             "address": {
               "@type": "PostalAddress",
@@ -84,6 +93,47 @@ export default function Home() {
           </Button>
         </div>
       </div>
+
+      {/* Logo Showcase Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 text-center">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="flex items-center space-x-4">
+              <img 
+                src="https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657" 
+                alt="Aquatic Exotica Logo" 
+                className="h-20 w-20 object-contain"
+              />
+              <div className="text-left">
+                <h2 className="text-3xl font-heading font-bold text-gray-900">
+                  Aquatic Exotica
+                </h2>
+                <p className="text-lg text-gray-600 mt-1">
+                  Premium Aquarium Solutions
+                </p>
+              </div>
+            </div>
+            <p className="max-w-2xl text-gray-600 text-lg leading-relaxed">
+              Your trusted partner for premium aquatic plants, rare fish species, and professional aquarium equipment. 
+              We bring the beauty of underwater ecosystems to your home with quality products and expert guidance.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4 mt-6">
+              <div className="bg-green-50 px-4 py-2 rounded-full">
+                <span className="text-green-700 font-medium">🌿 Premium Plants</span>
+              </div>
+              <div className="bg-blue-50 px-4 py-2 rounded-full">
+                <span className="text-blue-700 font-medium">🐠 Rare Fish</span>
+              </div>
+              <div className="bg-purple-50 px-4 py-2 rounded-full">
+                <span className="text-purple-700 font-medium">⚙️ Professional Equipment</span>
+              </div>
+              <div className="bg-orange-50 px-4 py-2 rounded-full">
+                <span className="text-orange-700 font-medium">🚚 Nationwide Delivery</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Featured Categories */}
       <FeaturedCategories />

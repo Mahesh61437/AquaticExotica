@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AuthCartIntegration } from "@/components/auth/AuthCartIntegration";
+import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
 import { ThemeProvider } from "next-themes";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -28,6 +29,7 @@ import OrderDetail from "./pages/OrderDetail";
 // Admin pages
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminSetup from "./pages/AdminSetup";
+import Notifications from "./pages/admin/Notifications";
 // Information pages
 import Contact from "./pages/Contact";
 import Shipping from "./pages/Shipping";
@@ -173,6 +175,11 @@ function Router() {
               <AdminDashboard />
             </ProtectedRoute>
           )} />
+          <Route path="/admin/notifications" component={() => (
+            <ProtectedRoute requireAuth={true} requireAdmin={true}>
+              <Notifications />
+            </ProtectedRoute>
+          )} />
           <Route path="/admin-setup" component={AdminSetup} />
           <Route path="/contact" component={Contact} />
           <Route path="/shipping" component={Shipping} />
@@ -194,14 +201,16 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        <AuthProvider>
-          <CartProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </CartProvider>
-        </AuthProvider>
+        <AnalyticsProvider>
+          <AuthProvider>
+            <CartProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </CartProvider>
+          </AuthProvider>
+        </AnalyticsProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );

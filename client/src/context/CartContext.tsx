@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { CartItem, Cart } from "@/types";
+import { useCartAnalytics } from "@/hooks/use-analytics";
 
 interface CartContextType {
   cart: Cart;
@@ -36,6 +37,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -71,6 +73,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return { items: newItems, count, total };
     });
 
+    // Track cart interaction
+    trackCartInteraction('add_to_cart', {
+      product_id: product.id,
+      product_name: product.name,
+      quantity: quantity,
+      price: product.price,
+    });
+
     // Only open cart if explicitly requested
     if (openCart) {
       setIsCartOpen(true);
@@ -80,8 +90,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Remove item from cart
   const removeItem = (id: number) => {
     setCart(prevCart => {
+      const itemToRemove = prevCart.items.find(item => item.id === id);
       const newItems = prevCart.items.filter(item => item.id !== id);
       const { count, total } = updateTotals(newItems);
+      
+      // Track cart interaction
+      if (itemToRemove) {
+        trackCartInteraction('remove_from_cart', {
+          product_id: itemToRemove.id,
+          product_name: itemToRemove.name,
+          quantity: itemToRemove.quantity,
+          price: itemToRemove.price,
+        });
+      }
+      
       return { items: newItems, count, total };
     });
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/context/AuthContext";
+import { useProductAnalytics } from "@/hooks/use-analytics";
 import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus, extractProductIdFromSlug, generateMetaDescription, cleanTextForSEO } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
@@ -98,6 +99,7 @@ export default function ProductDetail() {
   const { toast } = useToast();
   const { addItem } = useCart();
   const { currentUser } = useAuth();
+  const { trackProductPageView, trackProductAddToCart } = useProductAnalytics();
   const [quantity, setQuantity] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -222,6 +224,18 @@ export default function ProductDetail() {
     return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
+  // Track product view when product data is loaded
+  useEffect(() => {
+    if (product) {
+      trackProductPageView({
+        id: product.id,
+        name: product.name,
+        categories: product.categories || [],
+        price: product.price,
+      });
+    }
+  }, [product, trackProductPageView]);
+
   // Handle invalid product ID from slug
   if (productId === null) {
     return (
@@ -292,6 +306,15 @@ export default function ProductDetail() {
       imageUrl: product.imageUrl,
       quantity: finalQuantity,
     }, finalQuantity, true); // Open cart when adding from product detail
+    
+    // Track add to cart event
+    trackProductAddToCart({
+      id: product.id,
+      name: product.name,
+      categories: product.categories || [],
+      price: product.price,
+      quantity: finalQuantity,
+    });
     
     toast({
       title: "Added to cart",
@@ -712,7 +735,7 @@ export default function ProductDetail() {
               {relatedProducts.map((relatedProduct: ApiProduct) => (
                 <ProductCard key={`related-${relatedProduct.id}`} product={{
                   ...relatedProduct,
-                  category: relatedProduct.categories && relatedProduct.categories.length > 0 ? {
+                  categories: relatedProduct.categories && relatedProduct.categories.length > 0 ? [{
                     id: relatedProduct.categories[0].id,
                     name: relatedProduct.categories[0].name,
                     slug: relatedProduct.categories[0].slug,
@@ -721,7 +744,7 @@ export default function ProductDetail() {
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
-                  } : {
+                  }] : [{
                     id: 0,
                     name: 'Uncategorized',
                     slug: 'uncategorized',
@@ -730,7 +753,7 @@ export default function ProductDetail() {
                     isActive: true,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
-                  },
+                  }],
                   tags: convertTagsToNames(relatedProduct.tagDetails),
                   tagDetails: Array.isArray(relatedProduct.tagDetails) ? relatedProduct.tagDetails.map(tag => ({
                     id: tag.id,
