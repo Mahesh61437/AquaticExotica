@@ -38,12 +38,14 @@ export function Header() {
     <header className="bg-white shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4">
         {/* Top Nav */}
-        <div className="py-4 flex items-center justify-between">
-          {/* Logo */}
-          <Logo size="md" />
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-8">
+        <div className="py-4">
+          {/* Desktop Layout */}
+          <div className="hidden md:flex items-center justify-between">
+            {/* Logo */}
+            <Logo size="md" />
+            
+            {/* Desktop Navigation */}
+            <nav className="flex space-x-8">
             <Link href="/home" className={`font-medium hover:text-primary transition ${location === '/home' ? 'text-primary' : ''}`}>
               Home
             </Link>
@@ -158,14 +160,126 @@ export function Header() {
                 </span>
               )}
             </button>
+          </div>
+          
+          {/* Mobile Layout */}
+          <div className="md:hidden flex items-center justify-between">
+            {/* Mobile Logo */}
+            <Logo size="sm" />
             
-            {/* Mobile Menu Toggle */}
-            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-              <SheetTrigger asChild>
-                <button className="text-gray-600 md:hidden p-2" aria-label="Menu">
-                  <Menu size={24} />
-                </button>
-              </SheetTrigger>
+            {/* Mobile Actions */}
+            <div className="flex items-center space-x-1">
+              {/* Search */}
+              <button 
+                onClick={() => setIsSearchOpen(!isSearchOpen)} 
+                className="text-gray-600 hover:text-primary transition p-2"
+                aria-label="Search"
+              >
+                <Search size={18} />
+              </button>
+              
+              {/* Notifications (Admin only) */}
+              {currentUser?.isAdmin && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
+                    className="text-gray-600 hover:text-primary transition p-2 relative"
+                    aria-label="Notifications"
+                  >
+                    <Bell size={18} />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+                  <NotificationDropdown 
+                    isOpen={isNotificationOpen} 
+                    onClose={() => setIsNotificationOpen(false)} 
+                  />
+                </div>
+              )}
+              
+              {/* User Account */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-gray-600 hover:text-primary transition p-2" aria-label="User account">
+                    {currentUser ? (
+                      <div className="relative">
+                        <User size={18} />
+                        <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-500 rounded-full"></span>
+                      </div>
+                    ) : (
+                      <User size={18} />
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {currentUser ? (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/account" className="cursor-pointer w-full">
+                          My Account
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-orders" className="cursor-pointer w-full">
+                          My Orders
+                        </Link>
+                      </DropdownMenuItem>
+                      {currentUser.isAdmin && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="cursor-pointer w-full">
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            <span>Admin Dashboard</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sign Out</span>
+                      </DropdownMenuItem>
+                    </>
+                  ) : (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/login" className="cursor-pointer w-full">
+                          <LogIn className="mr-2 h-4 w-4" />
+                          <span>Sign In</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/signup" className="cursor-pointer w-full">
+                          <span>Sign Up</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* Shopping Cart */}
+              <button 
+                onClick={() => setIsCartOpen(true)} 
+                className="relative text-gray-600 hover:text-primary transition p-2"
+                aria-label="Shopping cart"
+              >
+                <ShoppingBag size={18} />
+                {cart.count > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                    {cart.count > 9 ? '9+' : cart.count}
+                  </span>
+                )}
+              </button>
+              
+              {/* Mobile Menu Toggle */}
+              <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <button className="text-gray-600 p-2" aria-label="Menu">
+                    <Menu size={18} />
+                  </button>
+                </SheetTrigger>
               <SheetContent side="left" className="w-[80vw] sm:max-w-sm">
                 <div className="flex flex-col h-full">
                   <div className="flex justify-between items-center mb-6">
@@ -256,7 +370,9 @@ export function Header() {
                 </div>
               </SheetContent>
             </Sheet>
+            </div>
           </div>
+        </div>
         </div>
         
         {/* Search Dropdown */}
