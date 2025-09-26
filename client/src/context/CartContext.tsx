@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { CartItem, Cart } from "@/types";
-import { useCartAnalytics } from "@/hooks/use-analytics";
+// import { useCartAnalytics } from "@/hooks/use-analytics";
 
 interface CartContextType {
   cart: Cart;
@@ -37,7 +37,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
+  // const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -74,12 +74,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
 
     // Track cart interaction
-    trackCartInteraction('add_to_cart', {
-      product_id: product.id,
-      product_name: product.name,
-      quantity: quantity,
-      price: product.price,
-    });
+    // trackCartInteraction('add_to_cart', {
+    //   product_id: product.id,
+    //   product_name: product.name,
+    //   quantity: quantity,
+    //   price: product.price,
+    // });
 
     // Only open cart if explicitly requested
     if (openCart) {
@@ -95,14 +95,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const { count, total } = updateTotals(newItems);
       
       // Track cart interaction
-      if (itemToRemove) {
-        trackCartInteraction('remove_from_cart', {
-          product_id: itemToRemove.id,
-          product_name: itemToRemove.name,
-          quantity: itemToRemove.quantity,
-          price: itemToRemove.price,
-        });
-      }
+      // if (itemToRemove) {
+      //   trackCartInteraction('remove_from_cart', {
+      //     product_id: itemToRemove.id,
+      //     product_name: itemToRemove.name,
+      //     quantity: itemToRemove.quantity,
+      //     price: itemToRemove.price,
+      //   });
+      // }
       
       return { items: newItems, count, total };
     });

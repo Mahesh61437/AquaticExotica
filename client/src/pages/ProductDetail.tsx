@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/context/AuthContext";
-import { useProductAnalytics } from "@/hooks/use-analytics";
+// import { useProductAnalytics } from "@/hooks/use-analytics";
 import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus, extractProductIdFromSlug, generateMetaDescription, cleanTextForSEO } from "@/lib/utils";
 import { ProductCard } from "@/components/shop/ProductCard";
@@ -99,7 +99,7 @@ export default function ProductDetail() {
   const { toast } = useToast();
   const { addItem } = useCart();
   const { currentUser } = useAuth();
-  const { trackProductPageView, trackProductAddToCart } = useProductAnalytics();
+  // const { trackProductPageView, trackProductAddToCart } = useProductAnalytics();
   const [quantity, setQuantity] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   
@@ -225,16 +225,16 @@ export default function ProductDetail() {
   };
 
   // Track product view when product data is loaded
-  useEffect(() => {
-    if (product) {
-      trackProductPageView({
-        id: product.id,
-        name: product.name,
-        categories: product.categories || [],
-        price: product.price,
-      });
-    }
-  }, [product, trackProductPageView]);
+  // useEffect(() => {
+  //   if (product) {
+  //     trackProductPageView({
+  //       id: product.id,
+  //       name: product.name,
+  //       categories: product.categories || [],
+  //       price: product.price,
+  //     });
+  //   }
+  // }, [product, trackProductPageView]);
 
   // Handle invalid product ID from slug
   if (productId === null) {
@@ -308,13 +308,13 @@ export default function ProductDetail() {
     }, finalQuantity, true); // Open cart when adding from product detail
     
     // Track add to cart event
-    trackProductAddToCart({
-      id: product.id,
-      name: product.name,
-      categories: product.categories || [],
-      price: product.price,
-      quantity: finalQuantity,
-    });
+    // trackProductAddToCart({
+    //   id: product.id,
+    //   name: product.name,
+    //   categories: product.categories || [],
+    //   price: product.price,
+    //   quantity: finalQuantity,
+    // });
     
     toast({
       title: "Added to cart",

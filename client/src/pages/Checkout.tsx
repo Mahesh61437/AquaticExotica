@@ -3,7 +3,7 @@ import { Helmet } from "react-helmet";
 import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/context/AuthContext";
 import { CheckoutForm } from "@/components/checkout/CheckoutForm";
-import { useCheckoutAnalytics } from "@/hooks/use-analytics";
+// import { useCheckoutAnalytics } from "@/hooks/use-analytics";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { ShoppingBag } from "lucide-react";
@@ -11,18 +11,18 @@ import { ShoppingBag } from "lucide-react";
 export default function Checkout() {
   const { cart } = useCart();
   const { currentUser } = useAuth();
-  const { trackCheckoutBegin } = useCheckoutAnalytics();
+  // const { trackCheckoutBegin } = useCheckoutAnalytics();
   
   // Track checkout begin when component mounts
-  useEffect(() => {
-    if (cart.items.length > 0) {
-      trackCheckoutBegin({
-        items: cart.items,
-        total: cart.total,
-        item_count: cart.count,
-      });
-    }
-  }, [cart, trackCheckoutBegin]);
+  // useEffect(() => {
+  //   if (cart.items.length > 0) {
+  //     trackCheckoutBegin({
+  //       items: cart.items,
+  //       total: cart.total,
+  //       item_count: cart.count,
+  //     });
+  //   }
+  // }, [cart, trackCheckoutBegin]);
   
   // If cart is empty, show a message
   if (cart.items.length === 0) {
