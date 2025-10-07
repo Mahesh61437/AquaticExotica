@@ -33,6 +33,15 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     refetchIntervalInBackground: false,
   });
 
+  // Debug logging
+  console.log('🔔 useNotifications Debug:', {
+    notificationsResponse,
+    isLoading,
+    isError,
+    error,
+    filters
+  });
+
   // Fetch unread count
   const {
     data: unreadCount = 0,

@@ -41,12 +41,24 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
   // Debug logging
   console.log('🔔 NotificationDropdown Debug:', {
     notifications,
+    notificationsLength: notifications?.length,
     unreadCount,
     isLoading,
     isError,
     error,
     isOpen
   });
+
+  // Temporary test notification for debugging
+  const testNotifications = notifications.length === 0 ? [{
+    id: 999,
+    type: 'user_signup' as const,
+    title: 'Test Notification',
+    message: 'This is a test notification to verify rendering',
+    data: {},
+    is_read: false,
+    created_at: new Date().toISOString()
+  }] : notifications;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -193,7 +205,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
               Try Again
             </Button>
           </div>
-        ) : notifications.length === 0 ? (
+        ) : testNotifications.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <p>No notifications yet</p>
@@ -201,7 +213,8 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
         ) : (
           <ScrollArea className="h-96">
             <div className="divide-y divide-gray-100">
-              {notifications.map((notification) => {
+              {testNotifications.map((notification, index) => {
+                console.log(`🔔 Rendering notification ${index}:`, notification);
                 const typeInfo = getNotificationTypeInfo(notification.type);
                 const isSelected = selectedNotifications.has(notification.id);
                 
@@ -313,7 +326,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
       </div>
 
       {/* Footer */}
-      {notifications.length > 0 && (
+      {testNotifications.length > 0 && (
         <div className="p-3 border-t border-gray-100">
           <Link href="/admin/notifications">
             <Button

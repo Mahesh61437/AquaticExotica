@@ -17,21 +17,42 @@ export class NotificationsAPI {
     console.log('🔔 NotificationsAPI: Fetching notifications from:', endpoint);
     
     const response = await apiRequest(endpoint);
+    console.log('🔔 Raw API Response:', response);
     
-    if (response && typeof response === 'object' && 'results' in response) {
-      // Normalize the response format
-      const normalizedResponse = {
-        ...response,
-        results: response.results.map((notification: any) => ({
-          ...notification,
-          is_read: notification.is_read ?? notification.isRead ?? false,
-          created_at: notification.created_at ?? notification.createdAt ?? '',
-          read_at: notification.read_at ?? notification.readAt ?? null
-        }))
-      };
-      return normalizedResponse as NotificationsResponse;
+    if (response && typeof response === 'object') {
+      // Handle different response formats
+      let results = [];
+      
+      if ('results' in response) {
+        // Standard paginated response
+        results = response.results;
+      } else if (Array.isArray(response)) {
+        // Direct array response
+        results = response;
+      } else if ('data' in response && Array.isArray(response.data)) {
+        // Alternative format with data field
+        results = response.data;
+      }
+      
+      if (Array.isArray(results)) {
+        // Normalize the response format
+        const normalizedResponse = {
+          count: response.count || results.length,
+          next: response.next || null,
+          previous: response.previous || null,
+          results: results.map((notification: any) => ({
+            ...notification,
+            is_read: notification.is_read ?? notification.isRead ?? false,
+            created_at: notification.created_at ?? notification.createdAt ?? '',
+            read_at: notification.read_at ?? notification.readAt ?? null
+          }))
+        };
+        console.log('🔔 Normalized Response:', normalizedResponse);
+        return normalizedResponse as NotificationsResponse;
+      }
     }
     
+    console.error('🔔 Invalid API response format:', response);
     throw new Error('Invalid notifications API response format');
   }
 
