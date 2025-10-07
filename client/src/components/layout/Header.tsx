@@ -161,11 +161,14 @@ export function Header() {
               )}
             </button>
           </div>
+          </div>
           
           {/* Mobile Layout */}
-          <div className="md:hidden flex items-center justify-between">
+          <div className="md:hidden flex items-center justify-between bg-white text-gray-900 border-b border-gray-200 min-h-[60px] px-4">
             {/* Mobile Logo */}
-            <Logo size="sm" />
+            <div className="flex items-center space-x-2">
+              <Logo size="sm" />
+            </div>
             
             {/* Mobile Actions */}
             <div className="flex items-center space-x-1">
@@ -177,28 +180,6 @@ export function Header() {
               >
                 <Search size={18} />
               </button>
-              
-              {/* Notifications (Admin only) */}
-              {currentUser?.isAdmin && (
-                <div className="relative">
-                  <button 
-                    onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
-                    className="text-gray-600 hover:text-primary transition p-2 relative"
-                    aria-label="Notifications"
-                  >
-                    <Bell size={18} />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
-                  </button>
-                  <NotificationDropdown 
-                    isOpen={isNotificationOpen} 
-                    onClose={() => setIsNotificationOpen(false)} 
-                  />
-                </div>
-              )}
               
               {/* User Account */}
               <DropdownMenu>
@@ -373,6 +354,45 @@ export function Header() {
             </div>
           </div>
         </div>
+        
+        {/* Mobile Notifications - Fixed Position (Admin only) */}
+        {currentUser?.isAdmin && (
+          <div className="md:hidden fixed top-16 right-4 z-50">
+            <button 
+              onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
+              className="bg-primary text-white p-3 rounded-full shadow-lg hover:bg-primary/90 transition relative"
+              aria-label="Notifications"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </button>
+            <NotificationDropdown 
+              isOpen={isNotificationOpen} 
+              onClose={() => setIsNotificationOpen(false)} 
+            />
+          </div>
+        )}
+        
+        {/* Debug: Show notification button for all users temporarily */}
+        <div className="md:hidden fixed top-20 right-4 z-50">
+          <button 
+            onClick={() => setIsNotificationOpen(!isNotificationOpen)} 
+            className="bg-red-500 text-white p-3 rounded-full shadow-lg hover:bg-red-600 transition relative"
+            aria-label="Debug Notifications"
+          >
+            <Bell size={20} />
+            <span className="absolute -top-1 -right-1 h-5 w-5 bg-yellow-500 text-black text-xs rounded-full flex items-center justify-center font-bold">
+              !
+            </span>
+          </button>
+          <NotificationDropdown 
+            isOpen={isNotificationOpen} 
+            onClose={() => setIsNotificationOpen(false)} 
+          />
         </div>
         
         {/* Search Dropdown */}

@@ -17,13 +17,23 @@ export const GA4_CONFIG = {
 
 // Initialize Google Analytics
 export const initializeGA4 = (measurementId?: string) => {
-  if (typeof window === 'undefined' || !GA4_CONFIG.ENABLED) return;
+  console.log('🔧 initializeGA4 called with:', { measurementId, GA4_CONFIG });
+  
+  if (typeof window === 'undefined') {
+    console.log('❌ Window is undefined, skipping GA4 initialization');
+    return;
+  }
+  
+  if (!GA4_CONFIG.ENABLED) {
+    console.log('❌ GA4 is disabled, skipping initialization');
+    return;
+  }
 
   const id = measurementId || GA4_CONFIG.MEASUREMENT_ID;
+  console.log('🆔 Using Measurement ID:', id);
+  
   if (!id || id.trim() === '') {
-    if (GA4_CONFIG.DEBUG_MODE) {
-      console.warn('⚠️ GA4 Measurement ID not configured. Please set REACT_APP_GA4_MEASUREMENT_ID in your environment variables.');
-    }
+    console.warn('⚠️ GA4 Measurement ID not configured. Please set VITE_GA4_MEASUREMENT_ID in your environment variables.');
     return;
   }
 
@@ -54,16 +64,30 @@ export const initializeGA4 = (measurementId?: string) => {
 
 // Track page views
 export const trackPageView = (pagePath: string, pageTitle?: string) => {
-  if (!GA4_CONFIG.ENABLED || !GA4_CONFIG.MEASUREMENT_ID || typeof window === 'undefined') return;
+  console.log('📄 trackPageView called with:', { pagePath, pageTitle, GA4_CONFIG });
+  
+  if (!GA4_CONFIG.ENABLED) {
+    console.log('❌ GA4 is disabled, skipping page view tracking');
+    return;
+  }
+  
+  if (!GA4_CONFIG.MEASUREMENT_ID) {
+    console.log('❌ No Measurement ID, skipping page view tracking');
+    return;
+  }
+  
+  if (typeof window === 'undefined') {
+    console.log('❌ Window is undefined, skipping page view tracking');
+    return;
+  }
 
+  console.log('✅ Tracking page view:', { pagePath, pageTitle });
   window.gtag('config', GA4_CONFIG.MEASUREMENT_ID, {
     page_path: pagePath,
     page_title: pageTitle || document.title,
   });
 
-  if (GA4_CONFIG.DEBUG_MODE) {
-    console.log('📄 Page view tracked:', { pagePath, pageTitle });
-  }
+  console.log('📄 Page view tracked:', { pagePath, pageTitle });
 };
 
 // Track custom events

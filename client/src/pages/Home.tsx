@@ -6,7 +6,7 @@ import heroImage from "@assets/akva_4.jpeg";
 import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import React from "react";
 import { generateMetaDescription } from "@/lib/utils";
-// import { useAnalytics } from "@/hooks/use-analytics";
+import { useAnalytics } from "@/hooks/use-analytics";
 
 // Direct imports to avoid lazy loading issues
 import FeaturedCategories from "@/components/home/FeaturedCategories";
@@ -16,12 +16,12 @@ import { TrendingProducts } from "@/components/home/TrendingProducts";
 
 
 export default function Home() {
-  // const { trackPageView } = useAnalytics();
+  const { trackPage } = useAnalytics();
 
   // Track page view when component mounts
-  // useEffect(() => {
-  //   trackPageView('/');
-  // }, [trackPageView]);
+  useEffect(() => {
+    trackPage('/');
+  }, [trackPage]);
 
   return (
     <>

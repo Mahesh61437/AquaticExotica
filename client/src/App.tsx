@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { CartProvider } from "@/context/CartContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { AuthCartIntegration } from "@/components/auth/AuthCartIntegration";
-// import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
+import { AnalyticsProvider } from "@/components/analytics/AnalyticsProvider";
 // import { PerformanceMonitor } from "@/components/analytics/PerformanceMonitor";
 import { ThemeProvider } from "next-themes";
 import { Header } from "@/components/layout/Header";
@@ -203,7 +203,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="light">
-        {/* <AnalyticsProvider> */}
+        <AnalyticsProvider>
           <AuthProvider>
             <CartProvider>
               <TooltipProvider>
@@ -212,7 +212,7 @@ function App() {
               </TooltipProvider>
             </CartProvider>
           </AuthProvider>
-        {/* </AnalyticsProvider> */}
+        </AnalyticsProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
