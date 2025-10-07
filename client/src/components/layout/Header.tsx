@@ -28,6 +28,13 @@ export function Header() {
   
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
+
+  // Debug logging
+  console.log('🔔 Header Debug:', {
+    currentUser,
+    unreadCount,
+    isNotificationOpen
+  });
   
   const handleSignOut = async () => {
     await signOut();
@@ -80,7 +87,7 @@ export function Header() {
                   </span>
                 )}
               </button>
-              {currentUser?.isAdmin ? (
+              {currentUser ? (
                 <NotificationDropdown 
                   isOpen={isNotificationOpen} 
                   onClose={() => setIsNotificationOpen(false)} 
@@ -230,7 +237,7 @@ export function Header() {
                       </Button>
                     </div>
                     
-                    {currentUser?.isAdmin ? (
+                    {currentUser ? (
                       <div className="flex-1 overflow-y-auto">
                         <NotificationDropdown 
                           isOpen={true} 

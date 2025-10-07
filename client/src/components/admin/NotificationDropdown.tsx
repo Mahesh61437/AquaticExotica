@@ -22,6 +22,8 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
     notifications,
     unreadCount,
     isLoading,
+    isError,
+    error,
     markAsRead,
     markAsUnread,
     markAllAsRead,
@@ -34,6 +36,16 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
   } = useNotifications({
     filters: { page_size: 10 },
     autoRefresh: true
+  });
+
+  // Debug logging
+  console.log('🔔 NotificationDropdown Debug:', {
+    notifications,
+    unreadCount,
+    isLoading,
+    isError,
+    error,
+    isOpen
   });
 
   // Close dropdown when clicking outside
@@ -166,6 +178,20 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
           <div className="p-6 text-center text-gray-500">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
             <p>Loading notifications...</p>
+          </div>
+        ) : isError ? (
+          <div className="p-6 text-center text-red-500">
+            <Bell className="h-8 w-8 mx-auto mb-2 text-red-300" />
+            <p>Error loading notifications</p>
+            <p className="text-xs text-gray-500 mt-2">{error?.message || 'Unknown error'}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={refresh}
+              className="mt-3"
+            >
+              Try Again
+            </Button>
           </div>
         ) : notifications.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
