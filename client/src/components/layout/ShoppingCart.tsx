@@ -16,7 +16,7 @@ export function ShoppingCart() {
 
   return (
     <Sheet open={isCartOpen} onOpenChange={setIsCartOpen}>
-      <SheetContent side="right" className="sm:max-w-md w-full">
+      <SheetContent side="right" className="w-[85vw] sm:max-w-md">
         <SheetHeader className="border-b pb-4 mb-4">
           <div className="flex items-center justify-between">
             <SheetTitle className="text-xl font-heading font-bold">Shopping Cart</SheetTitle>

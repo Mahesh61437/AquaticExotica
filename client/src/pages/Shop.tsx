@@ -10,10 +10,13 @@ import { generateMetaDescription } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
+import { DiwaliPopupBanner } from "@/components/ui/DiwaliPopupBanner";
+import { useBannerVisibility } from "@/hooks/use-banner-visibility";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
   const [location] = useLocation();
+  const { shouldShowBanner, markBannerAsSeen } = useBannerVisibility();
   
   // Extract URL parameters using window.location.search
   const urlParams = new URLSearchParams(window.location.search);
@@ -202,6 +205,11 @@ export default function Shop() {
           </div>
         </div>
       </div>
+
+      {/* Diwali Popup Banner */}
+      {shouldShowBanner && (
+        <DiwaliPopupBanner onClose={markBannerAsSeen} />
+      )}
     </>
   );
 }

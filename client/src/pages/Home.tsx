@@ -7,6 +7,8 @@ import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import React from "react";
 import { generateMetaDescription } from "@/lib/utils";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { DiwaliPopupBanner } from "@/components/ui/DiwaliPopupBanner";
+import { useBannerVisibility } from "@/hooks/use-banner-visibility";
 
 // Direct imports to avoid lazy loading issues
 import FeaturedCategories from "@/components/home/FeaturedCategories";
@@ -17,6 +19,7 @@ import { TrendingProducts } from "@/components/home/TrendingProducts";
 
 export default function Home() {
   const { trackPage } = useAnalytics();
+  const { shouldShowBanner, markBannerAsSeen } = useBannerVisibility();
 
   // Track page view when component mounts
   useEffect(() => {
@@ -94,6 +97,7 @@ export default function Home() {
         </div>
       </div>
 
+
       {/* Logo Showcase Section */}
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 text-center">
@@ -136,7 +140,7 @@ export default function Home() {
       </section>
 
       {/* Featured Categories */}
-      <FeaturedCategories />
+        <FeaturedCategories />
 
       {/* Trending Products */}
       <TrendingProducts />
@@ -242,6 +246,11 @@ export default function Home() {
 
       {/* Promotional Banner */}
       <PromotionalBanner />
+
+      {/* Diwali Popup Banner */}
+      {shouldShowBanner && (
+        <DiwaliPopupBanner onClose={markBannerAsSeen} />
+      )}
     </>
   );
 }
