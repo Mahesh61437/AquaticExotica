@@ -14,11 +14,8 @@ export class NotificationsAPI {
     if (filters.page_size) params.append('page_size', filters.page_size.toString());
     
     const endpoint = `/api/app_notifications/?${params.toString()}`;
-    console.log('🔔 NotificationsAPI: Fetching notifications from:', endpoint);
     
     const response = await apiRequest(endpoint);
-    
-    console.log('🔔 NotificationsAPI: Raw response:', response);
     
     if (response && typeof response === 'object') {
       // Handle different response formats

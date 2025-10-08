@@ -8,7 +8,7 @@ import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard, Bel
 import { useAuth } from "@/context/AuthContext";
 import { SearchDropdown } from "@/components/search/SearchDropdown";
 import { NotificationDropdown } from "@/components/admin/NotificationDropdown";
-import { useUnreadCount } from "@/hooks/use-notifications";
+import { useUnreadCount, useNotifications } from "@/hooks/use-notifications";
 import { Logo } from "@/components/ui/Logo";
 import {
   DropdownMenu,
@@ -28,6 +28,12 @@ export function Header() {
   
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
+  
+  // Get notifications for mobile panel
+  const { notifications: mobileNotifications, isLoading: mobileNotificationsLoading } = useNotifications({
+    filters: { page_size: 10 },
+    autoRefresh: true
+  });
 
   
   const handleSignOut = async () => {
@@ -81,13 +87,13 @@ export function Header() {
                   </span>
                 )}
               </button>
-              {currentUser ? (
-                <NotificationDropdown 
-                  isOpen={isNotificationOpen} 
-                  onClose={() => setIsNotificationOpen(false)} 
-                />
-              ) : (
-                isNotificationOpen && (
+              {isNotificationOpen && (
+                currentUser ? (
+                  <NotificationDropdown 
+                    isOpen={isNotificationOpen} 
+                    onClose={() => setIsNotificationOpen(false)} 
+                  />
+                ) : (
                   <div className="absolute top-full right-0 mt-2 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                     <div className="p-4">
                       <div className="flex items-center justify-between mb-4">
@@ -233,10 +239,45 @@ export function Header() {
                     
                     {currentUser ? (
                       <div className="flex-1 overflow-y-auto">
-                        <NotificationDropdown 
-                          isOpen={true} 
-                          onClose={() => setIsNotificationOpen(false)} 
-                        />
+                        {mobileNotificationsLoading ? (
+                          <div className="text-center py-8">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mx-auto mb-2"></div>
+                            <p className="text-gray-500">Loading notifications...</p>
+                          </div>
+                        ) : mobileNotifications.length === 0 ? (
+                          <div className="text-center py-8">
+                            <Bell size={48} className="mx-auto text-gray-400 mb-4" />
+                            <p className="text-gray-600">No notifications yet</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {mobileNotifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className={`p-4 border rounded-lg ${
+                                  !notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                                    <Bell size={16} className="text-primary" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className={`font-medium text-sm ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                                      {notification.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-1">
+                                      {new Date(notification.created_at || notification.createdAt || '').toLocaleDateString()}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex-1 flex flex-col items-center justify-center text-center">
