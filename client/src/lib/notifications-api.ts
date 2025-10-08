@@ -17,7 +17,6 @@ export class NotificationsAPI {
     console.log('🔔 NotificationsAPI: Fetching notifications from:', endpoint);
     
     const response = await apiRequest(endpoint);
-    console.log('🔔 Raw API Response:', response);
     
     if (response && typeof response === 'object') {
       // Handle different response formats
@@ -47,12 +46,10 @@ export class NotificationsAPI {
             read_at: notification.read_at ?? notification.readAt ?? null
           }))
         };
-        console.log('🔔 Normalized Response:', normalizedResponse);
         return normalizedResponse as NotificationsResponse;
       }
     }
     
-    console.error('🔔 Invalid API response format:', response);
     throw new Error('Invalid notifications API response format');
   }
 

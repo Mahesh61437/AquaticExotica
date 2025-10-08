@@ -29,12 +29,6 @@ export function Header() {
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
 
-  // Debug logging
-  console.log('🔔 Header Debug:', {
-    currentUser,
-    unreadCount,
-    isNotificationOpen
-  });
   
   const handleSignOut = async () => {
     await signOut();

@@ -38,27 +38,9 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
     autoRefresh: true
   });
 
-  // Debug logging
-  console.log('🔔 NotificationDropdown Debug:', {
-    notifications,
-    notificationsLength: notifications?.length,
-    unreadCount,
-    isLoading,
-    isError,
-    error,
-    isOpen
-  });
 
-  // Temporary test notification for debugging
-  const testNotifications = notifications.length === 0 ? [{
-    id: 999,
-    type: 'user_signup' as const,
-    title: 'Test Notification',
-    message: 'This is a test notification to verify rendering',
-    data: {},
-    is_read: false,
-    created_at: new Date().toISOString()
-  }] : notifications;
+  // Use real notifications
+  const displayNotifications = notifications;
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -205,16 +187,15 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
               Try Again
             </Button>
           </div>
-        ) : testNotifications.length === 0 ? (
+        ) : displayNotifications.length === 0 ? (
           <div className="p-6 text-center text-gray-500">
             <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
             <p>No notifications yet</p>
           </div>
         ) : (
-          <ScrollArea className="h-96">
+          <div className="max-h-96 overflow-y-auto">
             <div className="divide-y divide-gray-100">
-              {testNotifications.map((notification, index) => {
-                console.log(`🔔 Rendering notification ${index}:`, notification);
+              {displayNotifications.map((notification, index) => {
                 const typeInfo = getNotificationTypeInfo(notification.type);
                 const isSelected = selectedNotifications.has(notification.id);
                 
@@ -227,17 +208,6 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start gap-3">
-                      {/* Selection checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          toggleNotificationSelection(notification.id);
-                        }}
-                        className="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                      />
-                      
                       {/* Notification icon */}
                       <div className={`w-8 h-8 rounded-full ${typeInfo.bgColor} ${typeInfo.borderColor} border flex items-center justify-center shrink-0`}>
                         <span className="text-sm">{typeInfo.icon}</span>
@@ -245,88 +215,27 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
                       
                       {/* Notification content */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h4 className={`font-medium text-sm ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
-                              {notification.title}
-                            </h4>
-                            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-                              {notification.message}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {formatNotificationTime(notification.created_at || notification.createdAt || '')}
-                            </p>
-                          </div>
-                          
-                          {/* Action buttons */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            {notification.is_read ? (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-gray-400 hover:text-blue-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markAsUnread(notification.id);
-                                }}
-                                disabled={isMarkingAsUnread}
-                                title="Mark as unread"
-                              >
-                                <EyeOff className="h-3 w-3" />
-                              </Button>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-gray-400 hover:text-green-600"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  markAsRead(notification.id);
-                                }}
-                                disabled={isMarkingAsRead}
-                                title="Mark as read"
-                              >
-                                <Eye className="h-3 w-3" />
-                              </Button>
-                            )}
-                            <Link href={getNotificationLink(notification)}>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0 text-gray-400 hover:text-gray-600"
-                                onClick={(e) => e.stopPropagation()}
-                                title="View details"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                              </Button>
-                            </Link>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteNotification(notification.id);
-                              }}
-                              disabled={isDeleting}
-                              title="Delete notification"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
+                        <h4 className={`font-medium text-sm ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                          {notification.title}
+                        </h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {notification.message}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatNotificationTime(notification.created_at || notification.createdAt || '')}
+                        </p>
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </ScrollArea>
+          </div>
         )}
       </div>
 
       {/* Footer */}
-      {testNotifications.length > 0 && (
+      {displayNotifications.length > 0 && (
         <div className="p-3 border-t border-gray-100">
           <Link href="/admin/notifications">
             <Button
