@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ export function Header() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
@@ -34,6 +35,18 @@ export function Header() {
     filters: { page_size: 10 },
     autoRefresh: true
   });
+
+  // Check if we're on mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   
   const handleSignOut = async () => {
@@ -210,7 +223,7 @@ export function Header() {
               </button>
               
               {/* Notifications */}
-              <Sheet open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
+              <Sheet open={isNotificationOpen && isMobile} onOpenChange={setIsNotificationOpen}>
                 <SheetTrigger asChild>
                   <button 
                     className="text-gray-600 hover:text-primary transition p-2 relative"
