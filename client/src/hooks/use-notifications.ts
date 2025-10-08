@@ -10,6 +10,8 @@ interface UseNotificationsOptions {
 }
 
 export function useNotifications(options: UseNotificationsOptions = {}) {
+  console.log('🔔 useNotifications hook called with options:', options);
+  
   const {
     filters = {},
     autoRefresh = true,
@@ -17,8 +19,10 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
   } = options;
 
   const queryClient = useQueryClient();
+  console.log('🔔 useNotifications: QueryClient initialized');
 
   // Fetch notifications
+  console.log('🔔 useNotifications: Setting up notifications query with filters:', filters);
   const {
     data: notificationsResponse,
     isLoading,
@@ -27,32 +31,56 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     refetch
   } = useQuery({
     queryKey: ['admin-notifications', filters],
-    queryFn: () => NotificationsAPI.getNotifications(filters),
+    queryFn: () => {
+      console.log('🔔 useNotifications: Executing query function');
+      return NotificationsAPI.getNotifications(filters);
+    },
     staleTime: 5 * 1000, // 5 seconds
     refetchInterval: autoRefresh ? refreshInterval : false,
     refetchIntervalInBackground: false,
   });
+  
+  console.log('🔔 useNotifications: Query result:', {
+    notificationsResponse,
+    isLoading,
+    isError,
+    error: error?.message
+  });
 
 
   // Fetch unread count
+  console.log('🔔 useNotifications: Setting up unread count query');
   const {
     data: unreadCount = 0,
     refetch: refetchUnreadCount
   } = useQuery({
     queryKey: ['admin-notifications-unread-count'],
-    queryFn: NotificationsAPI.getUnreadCount,
+    queryFn: () => {
+      console.log('🔔 useNotifications: Executing unread count query');
+      return NotificationsAPI.getUnreadCount();
+    },
     staleTime: 5 * 1000, // 5 seconds
     refetchInterval: autoRefresh ? refreshInterval : false,
     refetchIntervalInBackground: false,
   });
+  
+  console.log('🔔 useNotifications: Unread count result:', unreadCount);
 
   // Mark as read mutation
+  console.log('🔔 useNotifications: Setting up markAsRead mutation');
   const markAsReadMutation = useMutation({
-    mutationFn: NotificationsAPI.markAsRead,
-    onSuccess: () => {
+    mutationFn: (id: number) => {
+      console.log('🔔 useNotifications: Marking notification as read:', id);
+      return NotificationsAPI.markAsRead(id);
+    },
+    onSuccess: (data, id) => {
+      console.log('🔔 useNotifications: Mark as read success for ID:', id);
       // Invalidate and refetch notifications and unread count
       queryClient.invalidateQueries({ queryKey: ['admin-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['admin-notifications-unread-count'] });
+    },
+    onError: (error, id) => {
+      console.error('🔔 useNotifications: Mark as read error for ID:', id, error);
     },
   });
 

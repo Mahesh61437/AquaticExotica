@@ -15,9 +15,7 @@ import { Link } from 'wouter';
 export default function Notifications() {
   console.log('🔔 Notifications page loaded');
   
-  // Add more detailed logging
-  console.log('🔔 About to initialize state...');
-  
+  console.log('🔔 Initializing state...');
   const [filters, setFilters] = useState({
     type: '',
     is_read: undefined as boolean | undefined,
@@ -26,8 +24,32 @@ export default function Notifications() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedNotifications, setSelectedNotifications] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
-  
-  console.log('🔔 State initialized, about to call useNotifications...');
+  console.log('🔔 State initialized successfully');
+
+  console.log('🔔 About to call useNotifications hook...');
+  let notificationsData;
+  try {
+    notificationsData = useNotifications({
+      filters: {
+        ...filters,
+        page: currentPage,
+        page_size: 20
+      },
+      autoRefresh: true
+    });
+    console.log('🔔 useNotifications hook called successfully');
+    console.log('🔔 Notifications data:', {
+      notificationsCount: notificationsData.notifications?.length || 0,
+      totalCount: notificationsData.totalCount,
+      unreadCount: notificationsData.unreadCount,
+      isLoading: notificationsData.isLoading,
+      isError: notificationsData.isError,
+      error: notificationsData.error
+    });
+  } catch (error) {
+    console.error('🔔 Error calling useNotifications hook:', error);
+    throw error;
+  }
 
   const {
     notifications = [],
@@ -47,83 +69,122 @@ export default function Notifications() {
     isMarkingAsUnread = false,
     isMarkingAllAsRead = false,
     isDeleting = false
-  } = useNotifications({
-    filters: {
-      ...filters,
-      page: currentPage,
-      page_size: 20
-    },
-    autoRefresh: true
-  });
-  
-  console.log('🔔 useNotifications hook called successfully');
+  } = notificationsData;
 
   const handleFilterChange = (key: string, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPage(1);
+    console.log('🔔 Filter change:', { key, value });
+    try {
+      setFilters(prev => ({ ...prev, [key]: value }));
+      setCurrentPage(1);
+      console.log('🔔 Filter updated successfully');
+    } catch (error) {
+      console.error('🔔 Error updating filter:', error);
+    }
   };
 
   const handleSearch = (searchTerm: string) => {
-    setFilters(prev => ({ ...prev, search: searchTerm }));
-    setCurrentPage(1);
+    console.log('🔔 Search term:', searchTerm);
+    try {
+      setFilters(prev => ({ ...prev, search: searchTerm }));
+      setCurrentPage(1);
+      console.log('🔔 Search updated successfully');
+    } catch (error) {
+      console.error('🔔 Error updating search:', error);
+    }
   };
 
   const handleSelectAll = (checked: boolean) => {
-    setSelectAll(checked);
-    if (checked) {
-      setSelectedNotifications(new Set(notifications.map(n => n.id)));
-    } else {
-      setSelectedNotifications(new Set());
+    console.log('🔔 Select all:', checked);
+    try {
+      setSelectAll(checked);
+      if (checked) {
+        setSelectedNotifications(new Set(notifications.map(n => n.id)));
+      } else {
+        setSelectedNotifications(new Set());
+      }
+      console.log('🔔 Select all updated successfully');
+    } catch (error) {
+      console.error('🔔 Error updating select all:', error);
     }
   };
 
   const toggleNotificationSelection = (notificationId: number) => {
-    const newSelected = new Set(selectedNotifications);
-    if (newSelected.has(notificationId)) {
-      newSelected.delete(notificationId);
-    } else {
-      newSelected.add(notificationId);
+    console.log('🔔 Toggle notification selection:', notificationId);
+    try {
+      const newSelected = new Set(selectedNotifications);
+      if (newSelected.has(notificationId)) {
+        newSelected.delete(notificationId);
+      } else {
+        newSelected.add(notificationId);
+      }
+      setSelectedNotifications(newSelected);
+      
+      // Update select all state
+      setSelectAll(newSelected.size === notifications.length && notifications.length > 0);
+      console.log('🔔 Notification selection updated successfully');
+    } catch (error) {
+      console.error('🔔 Error toggling notification selection:', error);
     }
-    setSelectedNotifications(newSelected);
-    
-    // Update select all state
-    setSelectAll(newSelected.size === notifications.length && notifications.length > 0);
   };
 
   const handleMarkSelectedAsRead = () => {
-    selectedNotifications.forEach(id => {
-      const notification = notifications.find(n => n.id === id);
-      if (notification && !notification.is_read) {
-        markAsRead(id);
-      }
-    });
-    setSelectedNotifications(new Set());
-    setSelectAll(false);
+    console.log('🔔 Mark selected as read:', Array.from(selectedNotifications));
+    try {
+      selectedNotifications.forEach(id => {
+        const notification = notifications.find(n => n.id === id);
+        if (notification && !notification.is_read) {
+          markAsRead(id);
+        }
+      });
+      setSelectedNotifications(new Set());
+      setSelectAll(false);
+      console.log('🔔 Mark selected as read completed');
+    } catch (error) {
+      console.error('🔔 Error marking selected as read:', error);
+    }
   };
 
   const handleMarkSelectedAsUnread = () => {
-    selectedNotifications.forEach(id => {
-      const notification = notifications.find(n => n.id === id);
-      if (notification && notification.is_read) {
-        markAsUnread(id);
-      }
-    });
-    setSelectedNotifications(new Set());
-    setSelectAll(false);
+    console.log('🔔 Mark selected as unread:', Array.from(selectedNotifications));
+    try {
+      selectedNotifications.forEach(id => {
+        const notification = notifications.find(n => n.id === id);
+        if (notification && notification.is_read) {
+          markAsUnread(id);
+        }
+      });
+      setSelectedNotifications(new Set());
+      setSelectAll(false);
+      console.log('🔔 Mark selected as unread completed');
+    } catch (error) {
+      console.error('🔔 Error marking selected as unread:', error);
+    }
   };
 
   const handleDeleteSelected = () => {
-    selectedNotifications.forEach(id => {
-      deleteNotification(id);
-    });
-    setSelectedNotifications(new Set());
-    setSelectAll(false);
+    console.log('🔔 Delete selected:', Array.from(selectedNotifications));
+    try {
+      selectedNotifications.forEach(id => {
+        deleteNotification(id);
+      });
+      setSelectedNotifications(new Set());
+      setSelectAll(false);
+      console.log('🔔 Delete selected completed');
+    } catch (error) {
+      console.error('🔔 Error deleting selected:', error);
+    }
   };
 
   const handleMarkAllAsRead = () => {
-    markAllAsRead();
-    setSelectedNotifications(new Set());
-    setSelectAll(false);
+    console.log('🔔 Mark all as read');
+    try {
+      markAllAsRead();
+      setSelectedNotifications(new Set());
+      setSelectAll(false);
+      console.log('🔔 Mark all as read completed');
+    } catch (error) {
+      console.error('🔔 Error marking all as read:', error);
+    }
   };
 
   const getNotificationLink = (notification: Notification): string => {
@@ -142,8 +203,20 @@ export default function Notifications() {
   };
 
   const totalPages = Math.ceil(totalCount / 20);
+  console.log('🔔 Render data:', {
+    notificationsCount: notifications.length,
+    totalCount,
+    unreadCount,
+    isLoading,
+    isError,
+    error: error?.message,
+    totalPages,
+    selectedCount: selectedNotifications.size
+  });
 
-  return (
+  console.log('🔔 About to render component...');
+  try {
+    return (
     <>
       <Helmet>
         <title>Notifications - Admin Dashboard</title>
@@ -171,7 +244,10 @@ export default function Notifications() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
-              onClick={refresh}
+              onClick={() => {
+                console.log('🔔 Refresh button clicked');
+                refresh();
+              }}
               disabled={isLoading}
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -179,7 +255,10 @@ export default function Notifications() {
             </Button>
             {unreadCount > 0 && (
               <Button
-                onClick={handleMarkAllAsRead}
+                onClick={() => {
+                  console.log('🔔 Mark all as read button clicked');
+                  handleMarkAllAsRead();
+                }}
                 disabled={isMarkingAllAsRead}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -364,7 +443,10 @@ export default function Notifications() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => markAsUnread(notification.id)}
+                                    onClick={() => {
+                                      console.log('🔔 Mark as unread clicked:', notification.id);
+                                      markAsUnread(notification.id);
+                                    }}
                                     disabled={isMarkingAsUnread}
                                     className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                     title="Mark as unread"
@@ -375,7 +457,10 @@ export default function Notifications() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => markAsRead(notification.id)}
+                                    onClick={() => {
+                                      console.log('🔔 Mark as read clicked:', notification.id);
+                                      markAsRead(notification.id);
+                                    }}
                                     disabled={isMarkingAsRead}
                                     className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                     title="Mark as read"
@@ -396,7 +481,10 @@ export default function Notifications() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => deleteNotification(notification.id)}
+                                  onClick={() => {
+                                    console.log('🔔 Delete notification clicked:', notification.id);
+                                    deleteNotification(notification.id);
+                                  }}
                                   disabled={isDeleting}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                   title="Delete notification"
@@ -450,4 +538,14 @@ export default function Notifications() {
       </div>
     </>
   );
+  } catch (error) {
+    console.error('🔔 Error rendering component:', error);
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
+        <p className="text-red-600">Error rendering notifications: {error instanceof Error ? error.message : 'Unknown error'}</p>
+        <p className="text-sm text-gray-500 mt-2">Check console for detailed error logs</p>
+      </div>
+    );
+  }
 }

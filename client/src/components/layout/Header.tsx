@@ -57,7 +57,9 @@ export function Header() {
   // Check if we're on mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const isMobileDevice = window.innerWidth < 768;
+      console.log('🔔 Mobile check:', { windowWidth: window.innerWidth, isMobileDevice });
+      setIsMobile(isMobileDevice);
     };
     
     checkMobile();
@@ -65,6 +67,11 @@ export function Header() {
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Debug notification state changes
+  useEffect(() => {
+    console.log('🔔 Notification state changed:', { isNotificationOpen, isMobile, shouldShowSheet: isNotificationOpen && isMobile });
+  }, [isNotificationOpen, isMobile]);
 
   
   const handleSignOut = async () => {
@@ -272,6 +279,7 @@ export function Header() {
               
               {/* Notifications */}
               <Sheet open={isNotificationOpen && isMobile} onOpenChange={(open) => {
+                console.log('🔔 Sheet onOpenChange:', { open, isNotificationOpen, isMobile, shouldOpen: isNotificationOpen && isMobile });
                 // Only close if explicitly setting to false, not when actions are performed inside
                 if (!open) {
                   setIsNotificationOpen(false);
@@ -279,6 +287,10 @@ export function Header() {
               }}>
                 <SheetTrigger asChild>
                   <button 
+                    onClick={() => {
+                      console.log('🔔 Mobile notification button clicked, isMobile:', isMobile);
+                      setIsNotificationOpen(true);
+                    }}
                     className="text-gray-600 hover:text-primary transition p-2 relative"
                     aria-label="Notifications"
                   >
