@@ -278,13 +278,17 @@ export function Header() {
               </button>
               
               {/* Notifications */}
-              <Sheet open={isNotificationOpen && isMobile} onOpenChange={(open) => {
-                console.log('🔔 Sheet onOpenChange:', { open, isNotificationOpen, isMobile, shouldOpen: isNotificationOpen && isMobile });
-                // Only close if explicitly setting to false, not when actions are performed inside
-                if (!open) {
-                  setIsNotificationOpen(false);
-                }
-              }}>
+              <Sheet 
+                open={isNotificationOpen && isMobile} 
+                onOpenChange={(open) => {
+                  console.log('🔔 Sheet onOpenChange:', { open, isNotificationOpen, isMobile, shouldOpen: isNotificationOpen && isMobile });
+                  // Only allow closing if explicitly setting to false AND it's not from an internal action
+                  if (!open && isNotificationOpen) {
+                    console.log('🔔 Sheet closing - setting isNotificationOpen to false');
+                    setIsNotificationOpen(false);
+                  }
+                }}
+              >
                 <SheetTrigger asChild>
                   <button 
                     onClick={() => {
@@ -302,8 +306,28 @@ export function Header() {
                     )}
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[85vw] sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-                  <div className="flex flex-col h-full">
+                <SheetContent 
+                  side="right" 
+                  className="w-[85vw] sm:max-w-md" 
+                  onPointerDownOutside={(e) => {
+                    console.log('🔔 Pointer down outside prevented');
+                    e.preventDefault();
+                  }}
+                  onEscapeKeyDown={(e) => {
+                    console.log('🔔 Escape key pressed');
+                    e.preventDefault();
+                  }}
+                  onInteractOutside={(e) => {
+                    console.log('🔔 Interact outside prevented');
+                    e.preventDefault();
+                  }}
+                >
+                  <div 
+                    className="flex flex-col h-full"
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
                     {/* Header with actions */}
                     <div className="flex flex-col gap-4 mb-6">
                       <div className="flex justify-between items-center">
@@ -326,7 +350,12 @@ export function Header() {
                       </div>
                       
                       {/* Action buttons */}
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div 
+                        className="flex items-center gap-2 flex-wrap"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onTouchStart={(e) => e.stopPropagation()}
+                      >
                         <Button
                           variant="ghost"
                           size="sm"
@@ -386,7 +415,12 @@ export function Header() {
                             <p className="text-gray-600">No notifications yet</p>
                           </div>
                         ) : (
-                          <div className="space-y-3">
+                          <div 
+                            className="space-y-3"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
+                          >
                             {/* Select all checkbox */}
                             <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                               <input
@@ -417,6 +451,9 @@ export function Header() {
                                   className={`p-4 border rounded-lg ${
                                     !notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                                   } ${isSelected ? 'bg-blue-100 border-blue-300' : ''}`}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onTouchStart={(e) => e.stopPropagation()}
                                 >
                                   <div className="flex items-start gap-3">
                                     {/* Selection checkbox */}
@@ -452,7 +489,12 @@ export function Header() {
                                     </div>
                                     
                                     {/* Action buttons */}
-                                    <div className="flex items-center gap-1 shrink-0">
+                                    <div 
+                                      className="flex items-center gap-1 shrink-0"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onMouseDown={(e) => e.stopPropagation()}
+                                      onTouchStart={(e) => e.stopPropagation()}
+                                    >
                                       {!notification.is_read ? (
                                         <Button
                                           variant="ghost"
