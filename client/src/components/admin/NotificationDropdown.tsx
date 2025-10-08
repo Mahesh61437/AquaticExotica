@@ -15,6 +15,7 @@ interface NotificationDropdownProps {
 export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [selectedNotifications, setSelectedNotifications] = useState<Set<number>>(new Set());
+  const [processingNotification, setProcessingNotification] = useState<number | null>(null);
 
   // Fetch recent notifications (last 10)
   const {
@@ -242,43 +243,70 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              markAsRead(notification.id);
+                              setProcessingNotification(notification.id);
+                              try {
+                                await markAsRead(notification.id);
+                              } finally {
+                                setProcessingNotification(null);
+                              }
                             }}
-                            disabled={isMarkingAsRead}
+                            disabled={processingNotification === notification.id}
                             className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                             title="Mark as read"
                           >
-                            <Eye className="h-4 w-4" />
+                            {processingNotification === notification.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
                           </Button>
                         ) : (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
+                            onClick={async (e) => {
                               e.stopPropagation();
-                              markAsUnread(notification.id);
+                              setProcessingNotification(notification.id);
+                              try {
+                                await markAsUnread(notification.id);
+                              } finally {
+                                setProcessingNotification(null);
+                              }
                             }}
-                            disabled={isMarkingAsUnread}
+                            disabled={processingNotification === notification.id}
                             className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             title="Mark as unread"
                           >
-                            <EyeOff className="h-4 w-4" />
+                            {processingNotification === notification.id ? (
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                            ) : (
+                              <EyeOff className="h-4 w-4" />
+                            )}
                           </Button>
                         )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            deleteNotification(notification.id);
+                            setProcessingNotification(notification.id);
+                            try {
+                              await deleteNotification(notification.id);
+                            } finally {
+                              setProcessingNotification(null);
+                            }
                           }}
-                          disabled={isDeleting}
+                          disabled={processingNotification === notification.id}
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                           title="Delete notification"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {processingNotification === notification.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </div>
                     </div>

@@ -133,6 +133,11 @@ export async function apiRequest<T = any>(
     headers['Authorization'] = `Bearer ${token}`;
   }
   
+  // Add Content-Type header for JSON requests
+  if (options?.body && typeof options.body === 'string') {
+    headers['Content-Type'] = 'application/json';
+  }
+  
   const fullUrl = buildUrl(url);
   console.log('🌐 Making request to:', fullUrl);
   console.log('📋 Request headers:', headers);

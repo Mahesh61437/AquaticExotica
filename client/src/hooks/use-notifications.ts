@@ -88,19 +88,19 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
 
   // Helper functions
   const markAsRead = (notificationId: number) => {
-    markAsReadMutation.mutate(notificationId);
+    return markAsReadMutation.mutateAsync(notificationId);
   };
 
   const markAsUnread = (notificationId: number) => {
-    markAsUnreadMutation.mutate(notificationId);
+    return markAsUnreadMutation.mutateAsync(notificationId);
   };
 
   const markAllAsRead = () => {
-    markAllAsReadMutation.mutate();
+    return markAllAsReadMutation.mutateAsync();
   };
 
   const deleteNotification = (notificationId: number) => {
-    deleteNotificationMutation.mutate(notificationId);
+    return deleteNotificationMutation.mutateAsync(notificationId);
   };
 
   const refresh = () => {

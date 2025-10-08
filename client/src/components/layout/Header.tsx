@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard, Bell } from "lucide-react"; 
+import { Search, User, ShoppingBag, Menu, X, LogIn, LogOut, LayoutDashboard, Bell, RefreshCw, Check, Trash2, Eye, EyeOff } from "lucide-react"; 
 import { useAuth } from "@/context/AuthContext";
 import { SearchDropdown } from "@/components/search/SearchDropdown";
 import { NotificationDropdown } from "@/components/admin/NotificationDropdown";
@@ -26,12 +26,27 @@ export function Header() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [selectedMobileNotifications, setSelectedMobileNotifications] = useState<Set<number>>(new Set());
+  const [processingMobileNotification, setProcessingMobileNotification] = useState<number | null>(null);
   
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
   
   // Get notifications for mobile panel
-  const { notifications: mobileNotifications, isLoading: mobileNotificationsLoading } = useNotifications({
+  const { 
+    notifications: mobileNotifications, 
+    isLoading: mobileNotificationsLoading,
+    unreadCount: mobileUnreadCount,
+    markAsRead: mobileMarkAsRead,
+    markAsUnread: mobileMarkAsUnread,
+    markAllAsRead: mobileMarkAllAsRead,
+    deleteNotification: mobileDeleteNotification,
+    refresh: mobileRefresh,
+    isMarkingAsRead: mobileIsMarkingAsRead,
+    isMarkingAsUnread: mobileIsMarkingAsUnread,
+    isMarkingAllAsRead: mobileIsMarkingAllAsRead,
+    isDeleting: mobileIsDeleting
+  } = useNotifications({
     filters: { page_size: 10 },
     autoRefresh: true
   });
@@ -52,6 +67,36 @@ export function Header() {
   const handleSignOut = async () => {
     await signOut();
     setLocation("/home");
+  };
+
+  // Mobile notification helper functions
+  const handleMobileSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedMobileNotifications(new Set(mobileNotifications.map(n => n.id)));
+    } else {
+      setSelectedMobileNotifications(new Set());
+    }
+  };
+
+  const handleMobileDeleteSelected = async () => {
+    const deletePromises = Array.from(selectedMobileNotifications).map(id => mobileDeleteNotification(id));
+    await Promise.all(deletePromises);
+    setSelectedMobileNotifications(new Set());
+  };
+
+  const handleMobileMarkAllAsRead = async () => {
+    await mobileMarkAllAsRead();
+    setSelectedMobileNotifications(new Set());
+  };
+
+  const toggleMobileNotificationSelection = (notificationId: number) => {
+    const newSelected = new Set(selectedMobileNotifications);
+    if (newSelected.has(notificationId)) {
+      newSelected.delete(notificationId);
+    } else {
+      newSelected.add(notificationId);
+    }
+    setSelectedMobileNotifications(newSelected);
   };
 
   return (
@@ -239,15 +284,64 @@ export function Header() {
                 </SheetTrigger>
                 <SheetContent side="right" className="w-[85vw] sm:max-w-md">
                   <div className="flex flex-col h-full">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-semibold">Notifications</h2>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => setIsNotificationOpen(false)}
-                      >
-                        <X size={24} />
-                      </Button>
+                    {/* Header with actions */}
+                    <div className="flex flex-col gap-4 mb-6">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Bell className="h-5 w-5 text-gray-600" />
+                          <h2 className="text-xl font-semibold">Notifications</h2>
+                          {mobileUnreadCount > 0 && (
+                            <span className="bg-red-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
+                              {mobileUnreadCount}
+                            </span>
+                          )}
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => setIsNotificationOpen(false)}
+                        >
+                          <X size={24} />
+                        </Button>
+                      </div>
+                      
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={mobileRefresh}
+                          disabled={mobileNotificationsLoading}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-1 ${mobileNotificationsLoading ? 'animate-spin' : ''}`} />
+                          Refresh
+                        </Button>
+                        {mobileUnreadCount > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleMobileMarkAllAsRead}
+                            disabled={mobileIsMarkingAllAsRead}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Mark All Read
+                          </Button>
+                        )}
+                        {selectedMobileNotifications.size > 0 && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleMobileDeleteSelected}
+                            disabled={mobileIsDeleting}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Delete ({selectedMobileNotifications.size})
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     
                     {currentUser ? (
@@ -263,32 +357,137 @@ export function Header() {
                             <p className="text-gray-600">No notifications yet</p>
                           </div>
                         ) : (
-                          <div className="space-y-2">
-                            {mobileNotifications.map((notification) => (
-                              <div
-                                key={notification.id}
-                                className={`p-4 border rounded-lg ${
-                                  !notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                                }`}
-                              >
-                                <div className="flex items-start gap-3">
-                                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                                    <Bell size={16} className="text-primary" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <h4 className={`font-medium text-sm ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
-                                      {notification.title}
-                                    </h4>
-                                    <p className="text-sm text-gray-600 mt-1">
-                                      {notification.message}
-                                    </p>
-                                    <p className="text-xs text-gray-400 mt-1">
-                                      {new Date(notification.created_at || notification.createdAt || '').toLocaleDateString()}
-                                    </p>
+                          <div className="space-y-3">
+                            {/* Select all checkbox */}
+                            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
+                              <input
+                                type="checkbox"
+                                checked={selectedMobileNotifications.size === mobileNotifications.length && mobileNotifications.length > 0}
+                                onChange={(e) => handleMobileSelectAll(e.target.checked)}
+                                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                              />
+                              <span className="text-sm text-gray-600">
+                                Select all ({mobileNotifications.length})
+                              </span>
+                            </div>
+                            
+                            {/* Notifications list */}
+                            {mobileNotifications.map((notification) => {
+                              const isSelected = selectedMobileNotifications.has(notification.id);
+                              const isProcessing = processingMobileNotification === notification.id;
+                              
+                              return (
+                                <div
+                                  key={notification.id}
+                                  className={`p-4 border rounded-lg ${
+                                    !notification.is_read ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                                  } ${isSelected ? 'bg-blue-100 border-blue-300' : ''}`}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    {/* Selection checkbox */}
+                                    <div className="flex items-center pt-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => toggleMobileNotificationSelection(notification.id)}
+                                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                                      />
+                                    </div>
+                                    
+                                    {/* Notification icon */}
+                                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                                      <Bell size={16} className="text-primary" />
+                                    </div>
+                                    
+                                    {/* Notification content */}
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className={`font-medium text-sm ${!notification.is_read ? 'text-gray-900' : 'text-gray-700'}`}>
+                                        {notification.title}
+                                      </h4>
+                                      <p className="text-sm text-gray-600 mt-1">
+                                        {notification.message}
+                                      </p>
+                                      <p className="text-xs text-gray-400 mt-1">
+                                        {new Date(notification.created_at || notification.createdAt || '').toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      {!notification.is_read ? (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setProcessingMobileNotification(notification.id);
+                                            try {
+                                              await mobileMarkAsRead(notification.id);
+                                            } finally {
+                                              setProcessingMobileNotification(null);
+                                            }
+                                          }}
+                                          disabled={isProcessing}
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                          title="Mark as read"
+                                        >
+                                          {isProcessing ? (
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                          ) : (
+                                            <Eye className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={async (e) => {
+                                            e.stopPropagation();
+                                            setProcessingMobileNotification(notification.id);
+                                            try {
+                                              await mobileMarkAsUnread(notification.id);
+                                            } finally {
+                                              setProcessingMobileNotification(null);
+                                            }
+                                          }}
+                                          disabled={isProcessing}
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                          title="Mark as unread"
+                                        >
+                                          {isProcessing ? (
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                          ) : (
+                                            <EyeOff className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      )}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          setProcessingMobileNotification(notification.id);
+                                          try {
+                                            await mobileDeleteNotification(notification.id);
+                                          } finally {
+                                            setProcessingMobileNotification(null);
+                                          }
+                                        }}
+                                        disabled={isProcessing}
+                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                        title="Delete notification"
+                                      >
+                                        {isProcessing ? (
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                                        ) : (
+                                          <Trash2 className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
