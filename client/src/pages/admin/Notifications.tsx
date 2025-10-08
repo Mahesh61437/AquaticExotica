@@ -15,6 +15,9 @@ import { Link } from 'wouter';
 export default function Notifications() {
   console.log('🔔 Notifications page loaded');
   
+  // Add more detailed logging
+  console.log('🔔 About to initialize state...');
+  
   const [filters, setFilters] = useState({
     type: '',
     is_read: undefined as boolean | undefined,
@@ -23,25 +26,27 @@ export default function Notifications() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedNotifications, setSelectedNotifications] = useState<Set<number>>(new Set());
   const [selectAll, setSelectAll] = useState(false);
+  
+  console.log('🔔 State initialized, about to call useNotifications...');
 
   const {
-    notifications,
-    totalCount,
-    hasNext,
-    hasPrevious,
-    unreadCount,
-    isLoading,
-    isError,
-    error,
+    notifications = [],
+    totalCount = 0,
+    hasNext = false,
+    hasPrevious = false,
+    unreadCount = 0,
+    isLoading = false,
+    isError = false,
+    error = null,
     markAsRead,
     markAsUnread,
     markAllAsRead,
     deleteNotification,
     refresh,
-    isMarkingAsRead,
-    isMarkingAsUnread,
-    isMarkingAllAsRead,
-    isDeleting
+    isMarkingAsRead = false,
+    isMarkingAsUnread = false,
+    isMarkingAllAsRead = false,
+    isDeleting = false
   } = useNotifications({
     filters: {
       ...filters,
@@ -50,6 +55,8 @@ export default function Notifications() {
     },
     autoRefresh: true
   });
+  
+  console.log('🔔 useNotifications hook called successfully');
 
   const handleFilterChange = (key: string, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));

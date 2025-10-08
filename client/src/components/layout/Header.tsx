@@ -27,7 +27,10 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [selectedMobileNotifications, setSelectedMobileNotifications] = useState<Set<number>>(new Set());
-  const [processingMobileNotification, setProcessingMobileNotification] = useState<number | null>(null);
+  const [processingMobileNotification, setProcessingMobileNotification] = useState<{
+    id: number;
+    action: 'read' | 'unread' | 'delete';
+  } | null>(null);
   
   // Get unread count for admin users
   const { unreadCount } = useUnreadCount();
@@ -268,7 +271,12 @@ export function Header() {
               </button>
               
               {/* Notifications */}
-              <Sheet open={isNotificationOpen && isMobile} onOpenChange={setIsNotificationOpen}>
+              <Sheet open={isNotificationOpen && isMobile} onOpenChange={(open) => {
+                // Only close if explicitly setting to false, not when actions are performed inside
+                if (!open) {
+                  setIsNotificationOpen(false);
+                }
+              }}>
                 <SheetTrigger asChild>
                   <button 
                     className="text-gray-600 hover:text-primary transition p-2 relative"
@@ -282,7 +290,7 @@ export function Header() {
                     )}
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-[85vw] sm:max-w-md">
+                <SheetContent side="right" className="w-[85vw] sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
                   <div className="flex flex-col h-full">
                     {/* Header with actions */}
                     <div className="flex flex-col gap-4 mb-6">
@@ -310,7 +318,10 @@ export function Header() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={mobileRefresh}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            mobileRefresh();
+                          }}
                           disabled={mobileNotificationsLoading}
                           className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                         >
@@ -321,7 +332,10 @@ export function Header() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={handleMobileMarkAllAsRead}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMobileMarkAllAsRead();
+                            }}
                             disabled={mobileIsMarkingAllAsRead}
                             className="text-green-600 hover:text-green-700 hover:bg-green-50"
                           >
@@ -333,7 +347,10 @@ export function Header() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={handleMobileDeleteSelected}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleMobileDeleteSelected();
+                            }}
                             disabled={mobileIsDeleting}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
@@ -363,7 +380,11 @@ export function Header() {
                               <input
                                 type="checkbox"
                                 checked={selectedMobileNotifications.size === mobileNotifications.length && mobileNotifications.length > 0}
-                                onChange={(e) => handleMobileSelectAll(e.target.checked)}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleMobileSelectAll(e.target.checked);
+                                }}
+                                onClick={(e) => e.stopPropagation()}
                                 className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                               />
                               <span className="text-sm text-gray-600">
@@ -374,7 +395,9 @@ export function Header() {
                             {/* Notifications list */}
                             {mobileNotifications.map((notification) => {
                               const isSelected = selectedMobileNotifications.has(notification.id);
-                              const isProcessing = processingMobileNotification === notification.id;
+                              const isProcessingRead = processingMobileNotification?.id === notification.id && processingMobileNotification?.action === 'read';
+                              const isProcessingUnread = processingMobileNotification?.id === notification.id && processingMobileNotification?.action === 'unread';
+                              const isProcessingDelete = processingMobileNotification?.id === notification.id && processingMobileNotification?.action === 'delete';
                               
                               return (
                                 <div
@@ -389,7 +412,11 @@ export function Header() {
                                       <input
                                         type="checkbox"
                                         checked={isSelected}
-                                        onChange={() => toggleMobileNotificationSelection(notification.id)}
+                                        onChange={(e) => {
+                                          e.stopPropagation();
+                                          toggleMobileNotificationSelection(notification.id);
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
                                         className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
                                       />
                                     </div>
@@ -420,18 +447,18 @@ export function Header() {
                                           size="sm"
                                           onClick={async (e) => {
                                             e.stopPropagation();
-                                            setProcessingMobileNotification(notification.id);
+                                            setProcessingMobileNotification({ id: notification.id, action: 'read' });
                                             try {
                                               await mobileMarkAsRead(notification.id);
                                             } finally {
                                               setProcessingMobileNotification(null);
                                             }
                                           }}
-                                          disabled={isProcessing}
+                                          disabled={isProcessingRead || isProcessingUnread || isProcessingDelete}
                                           className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                                           title="Mark as read"
                                         >
-                                          {isProcessing ? (
+                                          {isProcessingRead ? (
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
                                           ) : (
                                             <Eye className="h-4 w-4" />
@@ -443,18 +470,18 @@ export function Header() {
                                           size="sm"
                                           onClick={async (e) => {
                                             e.stopPropagation();
-                                            setProcessingMobileNotification(notification.id);
+                                            setProcessingMobileNotification({ id: notification.id, action: 'unread' });
                                             try {
                                               await mobileMarkAsUnread(notification.id);
                                             } finally {
                                               setProcessingMobileNotification(null);
                                             }
                                           }}
-                                          disabled={isProcessing}
+                                          disabled={isProcessingRead || isProcessingUnread || isProcessingDelete}
                                           className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                           title="Mark as unread"
                                         >
-                                          {isProcessing ? (
+                                          {isProcessingUnread ? (
                                             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                           ) : (
                                             <EyeOff className="h-4 w-4" />
@@ -466,18 +493,18 @@ export function Header() {
                                         size="sm"
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          setProcessingMobileNotification(notification.id);
+                                          setProcessingMobileNotification({ id: notification.id, action: 'delete' });
                                           try {
                                             await mobileDeleteNotification(notification.id);
                                           } finally {
                                             setProcessingMobileNotification(null);
                                           }
                                         }}
-                                        disabled={isProcessing}
+                                        disabled={isProcessingRead || isProcessingUnread || isProcessingDelete}
                                         className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                         title="Delete notification"
                                       >
-                                        {isProcessing ? (
+                                        {isProcessingDelete ? (
                                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
                                         ) : (
                                           <Trash2 className="h-4 w-4" />
