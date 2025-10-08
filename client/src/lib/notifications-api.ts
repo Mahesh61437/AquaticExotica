@@ -18,6 +18,8 @@ export class NotificationsAPI {
     
     const response = await apiRequest(endpoint);
     
+    console.log('🔔 NotificationsAPI: Raw response:', response);
+    
     if (response && typeof response === 'object') {
       // Handle different response formats
       let results = [];

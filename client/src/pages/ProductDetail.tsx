@@ -588,32 +588,32 @@ export default function ProductDetail() {
             
             <div className="mt-8 border-t border-b py-4">
               <div className="flex items-center mb-4">
-                <span className="text-gray-700 mr-4">Quantity:</span>
-                <div className="flex items-center border rounded-md">
+                <span className="text-gray-700 mr-4 text-sm sm:text-base">Quantity:</span>
+                <div className="flex items-center border-2 border-gray-200 rounded-lg shadow-sm">
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 p-0"
+                    className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity - 1)}
                     disabled={quantity <= 1}
                   >
-                    <span className="text-lg">-</span>
+                    <span className="text-lg font-medium">-</span>
                   </Button>
-                  <span className="px-4 py-1 border-x min-w-[40px] text-center">{quantity}</span>
+                  <span className="px-4 py-2 border-x border-gray-200 min-w-[50px] text-center font-semibold text-gray-900">{quantity}</span>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 p-0"
+                    className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity + 1)}
                   >
-                    <span className="text-lg">+</span>
+                    <span className="text-lg font-medium">+</span>
                   </Button>
                 </div>
                 {(() => {
                   const stockInfo = getStockStatus(product.stock);
                   return (
-                    <div className="ml-4">
-                      <Badge className={`${stockInfo.color}`} variant="outline">
+                    <div className="ml-4 flex-1">
+                      <Badge className={`${stockInfo.color} px-3 py-1 text-xs sm:text-sm font-medium`} variant="outline">
                         <Package className="h-3 w-3 mr-1" />
                         {stockInfo.text} ({product.stock} available)
                       </Badge>
@@ -628,11 +628,12 @@ export default function ProductDetail() {
               <div className="flex flex-col sm:flex-row gap-3">
                 {product.stock > 0 ? (
                   <Button 
-                    className="flex-1"
+                    className="flex-1 h-12 sm:h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                     size="lg"
                     onClick={handleAddToCart}
                   >
-                    <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
+                    <ShoppingCart className="mr-2 h-5 w-5" /> 
+                    <span className="text-base sm:text-sm">Add to Cart</span>
                   </Button>
                 ) : (
                   <div className="w-full">

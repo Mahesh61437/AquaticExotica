@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, X, Check, Trash2, ExternalLink, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/hooks/use-notifications';
 import { getNotificationTypeInfo, formatNotificationTime } from '@/lib/notifications-api';
 import { Notification } from '@/types/notifications';
@@ -41,6 +40,18 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
 
   // Use real notifications
   const displayNotifications = notifications;
+  
+  // Debug logging
+  console.log('🔔 NotificationDropdown Debug:', {
+    notifications,
+    displayNotifications,
+    unreadCount,
+    isLoading,
+    isError,
+    error,
+    notificationsLength: notifications?.length || 0,
+    displayNotificationsLength: displayNotifications?.length || 0
+  });
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -198,6 +209,17 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
               {displayNotifications.map((notification, index) => {
                 const typeInfo = getNotificationTypeInfo(notification.type);
                 const isSelected = selectedNotifications.has(notification.id);
+                
+                // Debug each notification
+                console.log('🔔 Rendering notification:', {
+                  index,
+                  notification,
+                  typeInfo,
+                  hasTitle: !!notification.title,
+                  hasMessage: !!notification.message,
+                  title: notification.title,
+                  message: notification.message
+                });
                 
                 return (
                   <div

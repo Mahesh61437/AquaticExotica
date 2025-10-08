@@ -108,6 +108,16 @@ export function useNotifications(options: UseNotificationsOptions = {}) {
     refetchUnreadCount();
   };
 
+  // Debug logging
+  console.log('🔔 useNotifications Debug:', {
+    notificationsResponse,
+    notifications: notificationsResponse?.results || [],
+    unreadCount,
+    isLoading,
+    isError,
+    error
+  });
+
   return {
     // Data
     notifications: notificationsResponse?.results || [],
