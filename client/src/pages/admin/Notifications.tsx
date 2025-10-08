@@ -13,6 +13,8 @@ import { Notification } from '@/types/notifications';
 import { Link } from 'wouter';
 
 export default function Notifications() {
+  console.log('🔔 Notifications page loaded');
+  
   const [filters, setFilters] = useState({
     type: '',
     is_read: undefined as boolean | undefined,

@@ -202,12 +202,22 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
                 return (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    className={`p-4 hover:bg-gray-50 transition-colors ${
                       !notification.is_read ? 'bg-blue-50/50' : ''
                     } ${isSelected ? 'bg-blue-100' : ''}`}
-                    onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="flex items-start gap-3">
+                      {/* Checkbox for selection */}
+                      <div className="flex items-center pt-1">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleNotificationSelection(notification.id)}
+                          className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                      
                       {/* Notification icon */}
                       <div className={`w-8 h-8 rounded-full ${typeInfo.bgColor} ${typeInfo.borderColor} border flex items-center justify-center shrink-0`}>
                         <span className="text-sm">{typeInfo.icon}</span>
@@ -225,6 +235,52 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
                           {formatNotificationTime(notification.created_at || notification.createdAt || '')}
                         </p>
                       </div>
+                      
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        {!notification.is_read ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsRead(notification.id);
+                            }}
+                            disabled={isMarkingAsRead}
+                            className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Mark as read"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markAsUnread(notification.id);
+                            }}
+                            disabled={isMarkingAsUnread}
+                            className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                            title="Mark as unread"
+                          >
+                            <EyeOff className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteNotification(notification.id);
+                          }}
+                          disabled={isDeleting}
+                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Delete notification"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 );
@@ -238,13 +294,15 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
       {displayNotifications.length > 0 && (
         <div className="p-3 border-t border-gray-100">
           <Link href="/admin/notifications">
-            <Button
-              variant="outline"
-              className="w-full text-sm"
-              onClick={onClose}
+            <button
+              className="w-full text-sm px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              onClick={() => {
+                console.log('🔔 View All Notifications clicked');
+                onClose();
+              }}
             >
               View All Notifications
-            </Button>
+            </button>
           </Link>
         </div>
       )}
