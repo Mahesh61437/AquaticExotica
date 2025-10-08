@@ -628,12 +628,11 @@ export default function ProductDetail() {
               <div className="flex flex-col sm:flex-row gap-3">
                 {product.stock > 0 ? (
                   <Button 
-                    className="flex-1 h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
-                    size="lg"
+                    className="flex-1 !h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={handleAddToCart}
                   >
                     <ShoppingCart className="mr-2 h-5 w-5" /> 
-                    <span className="text-sm">Add to Cart</span>
+                    <span className="!text-sm">Add to Cart</span>
                   </Button>
                 ) : (
                   <div className="w-full">
