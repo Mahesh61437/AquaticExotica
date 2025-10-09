@@ -74,7 +74,13 @@ export default function Notifications() {
   const handleFilterChange = (key: string, value: any) => {
     console.log('🔔 Filter change:', { key, value });
     try {
-      setFilters(prev => ({ ...prev, [key]: value }));
+      // Handle "all" values by setting to empty string or undefined
+      let filterValue = value;
+      if (value === 'all') {
+        filterValue = key === 'is_read' ? undefined : '';
+      }
+      
+      setFilters(prev => ({ ...prev, [key]: filterValue }));
       setCurrentPage(1);
       console.log('🔔 Filter updated successfully');
     } catch (error) {
@@ -291,12 +297,12 @@ export default function Notifications() {
               </div>
 
               {/* Type filter */}
-              <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
+              <Select value={filters.type || 'all'} onValueChange={(value) => handleFilterChange('type', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="All types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All types</SelectItem>
+                  <SelectItem value="all">All types</SelectItem>
                   <SelectItem value="user_signup">User Signup</SelectItem>
                   <SelectItem value="order_created">Order Created</SelectItem>
                   <SelectItem value="stock_notification">Stock Notification</SelectItem>
@@ -307,14 +313,14 @@ export default function Notifications() {
 
               {/* Read status filter */}
               <Select 
-                value={filters.is_read === undefined ? '' : filters.is_read.toString()} 
-                onValueChange={(value) => handleFilterChange('is_read', value === '' ? undefined : value === 'true')}
+                value={filters.is_read === undefined ? 'all' : filters.is_read.toString()} 
+                onValueChange={(value) => handleFilterChange('is_read', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="All status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All status</SelectItem>
+                  <SelectItem value="all">All status</SelectItem>
                   <SelectItem value="false">Unread only</SelectItem>
                   <SelectItem value="true">Read only</SelectItem>
                 </SelectContent>
