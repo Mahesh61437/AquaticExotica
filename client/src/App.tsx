@@ -20,6 +20,8 @@ import SearchResults from "@/pages/SearchResults";
 import ProductDetail from "@/pages/ProductDetail";
 import Checkout from "@/pages/Checkout";
 import OrderConfirmation from "@/pages/OrderConfirmation";
+import PaymentSuccess from "@/pages/PaymentSuccess";
+import PaymentFailure from "@/pages/PaymentFailure";
 // Authentication pages
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -155,6 +157,8 @@ function Router() {
             </ProtectedRoute>
           )} />
           <Route path="/order-confirmation/:id" component={OrderConfirmation} />
+          <Route path="/payment/success" component={PaymentSuccess} />
+          <Route path="/payment/failure" component={PaymentFailure} />
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
           <Route path="/account" component={() => (

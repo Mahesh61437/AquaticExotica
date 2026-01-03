@@ -8,6 +8,7 @@ import { useCart } from "@/hooks/use-cart";
 import { useAuth } from "@/context/AuthContext";
 // import { useCheckoutAnalytics } from "@/hooks/use-analytics";
 import { apiRequest } from "@/lib/queryClient";
+import { processPayUPayment } from "@/lib/payu-service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -286,34 +287,38 @@ export function CheckoutForm() {
         body: JSON.stringify(orderData),
       });
 
-      // Track purchase completion
-      // trackOrderComplete({
-      //   id: response.id.toString(),
-      //   total: cart.total,
-      //   items: cart.items.map(item => ({
-      //     id: item.id,
-      //     name: item.name,
-      //     categories: [{ name: 'Aquatic Products', id: 1 }], // Default category
-      //     price: item.price.toString(),
-      //     quantity: item.quantity,
-      //   })),
-      // });
+      // Get order ID from response
+      const orderId = response.id;
 
-      // Clear cart after successful order
+      // Clear cart after successful order creation
       clearCart();
-      
+
+      // Show loading toast
       toast({
-        title: "Order received successfully!",
-        description: "We are currently checking if the stock is available for your order. We will contact you shortly via WhatsApp with the details.",
-        duration: 6000, // Show for longer so user can read message
+        title: "Order created!",
+        description: "Redirecting to payment gateway...",
+        duration: 3000,
       });
 
-      // Redirect to confirmation page using the order ID from response
+      // Initiate PayU payment and redirect
       try {
-        setLocation(`/order-confirmation/${response.id}`);
-      } catch (error) {
-        console.error("Error during redirect:", error);
-        setLocation('/');
+        await processPayUPayment(orderId);
+        // User will be redirected to PayU, so we don't need to do anything else here
+        // The form submission in processPayUPayment will handle the redirect
+      } catch (paymentError) {
+        console.error("Payment initiation error:", paymentError);
+        
+        // If payment initiation fails, redirect to order confirmation
+        // The order is still created, just payment wasn't initiated
+        toast({
+          title: "Order created",
+          description: "Payment initiation failed. Please try again from your orders page.",
+          variant: "destructive",
+          duration: 6000,
+        });
+        
+        // Redirect to order confirmation page
+        setLocation(`/order-confirmation/${orderId}`);
       }
     } catch (error) {
       console.error("Checkout error:", error);
