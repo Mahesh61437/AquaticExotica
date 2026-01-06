@@ -55,6 +55,7 @@ export function truncateText(text: string, maxLength: number): string {
 export type StockStatus = 'out-of-stock' | 'low-stock' | 'in-stock';
 
 export function getStockStatus(stockLevel: number): { status: StockStatus; color: string; text: string; message?: string } {
+  console.log('📦 Checking stock level:', stockLevel);
   if (stockLevel <= 0) {
     return {
       status: 'out-of-stock',

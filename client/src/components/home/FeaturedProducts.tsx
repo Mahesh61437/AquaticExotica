@@ -6,6 +6,57 @@ import { Product } from "@/types";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 
+// Map API product shape to internal `Product` shape (ensure `variants` exists)
+function mapApiToProduct(apiProduct: any) {
+  return {
+    id: apiProduct.id,
+    name: apiProduct.name,
+    description: apiProduct.description,
+    priceRange: apiProduct.priceRange,
+    category: apiProduct.categories && apiProduct.categories.length > 0 ? {
+      id: apiProduct.categories[0].id,
+      name: apiProduct.categories[0].name,
+      slug: apiProduct.categories[0].slug,
+      description: apiProduct.categories[0].description,
+      imageUrl: apiProduct.categories[0].imageUrl,
+      isActive: true,
+      createdAt: '',
+      updatedAt: ''
+    } : {
+      id: 0,
+      name: 'Uncategorized',
+      slug: 'uncategorized',
+      description: null,
+      imageUrl: '',
+      isActive: true,
+      createdAt: '',
+      updatedAt: ''
+    },
+    tags: apiProduct.tagDetails?.map((t: any) => t.name) || [],
+    tagDetails: apiProduct.tagDetails || [],
+    rating: apiProduct.rating,
+    isActive: apiProduct.isActive,
+    isNew: apiProduct.isNew,
+    isSale: apiProduct.isSale,
+    isFeatured: apiProduct.isFeatured,
+    isTrending: apiProduct.isTrending,
+    imageUrl: apiProduct.imageUrl,
+    thumbnailUrl: apiProduct.thumbnailUrl,
+    createdAt: apiProduct.createdAt,
+    updatedAt: apiProduct.updatedAt,
+    variants: apiProduct.variants?.map((variant: any) => ({
+      id: variant.id,
+      product: variant.product,
+      category: variant.category,
+      description: variant.description,
+      stock: variant.stock,
+      originalPrice: variant.originalPrice,
+      offerPrice: variant.offerPrice,
+      discountPercentage: variant.discountPercentage,
+      isInStock: variant.isInStock
+    })) || []
+  } as any;
+}
 export default function FeaturedProducts() {
   const [activeCategory, setActiveCategory] = useState<string>("sale");
   const [isClientLoading, setIsClientLoading] = useState(true);
@@ -27,10 +78,8 @@ export default function FeaturedProducts() {
     staleTime: 60 * 1000,
     queryFn: async () => {
       const response = await apiRequest("/api/products/featured");
-      if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
-      }
-      return response || [];
+      const results = response && typeof response === 'object' && 'results' in response ? (response.results || []) : (response || []);
+      return results.map((p: any) => mapApiToProduct(p));
     },
   });
 
@@ -39,10 +88,8 @@ export default function FeaturedProducts() {
     staleTime: 60 * 1000,
     queryFn: async () => {
       const response = await apiRequest("/api/products/new");
-      if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
-      }
-      return response || [];
+      const results = response && typeof response === 'object' && 'results' in response ? (response.results || []) : (response || []);
+      return results.map((p: any) => mapApiToProduct(p));
     },
   });
 
@@ -51,10 +98,8 @@ export default function FeaturedProducts() {
     staleTime: 60 * 1000,
     queryFn: async () => {
       const response = await apiRequest("/api/products/sale");
-      if (response && typeof response === 'object' && 'results' in response) {
-        return response.results || [];
-      }
-      return response || [];
+      const results = response && typeof response === 'object' && 'results' in response ? (response.results || []) : (response || []);
+      return results.map((p: any) => mapApiToProduct(p));
     },
   });
 

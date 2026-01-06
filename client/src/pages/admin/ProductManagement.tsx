@@ -43,10 +43,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -62,9 +62,10 @@ interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  variants: Variant[];
 }
 
 // Define tag interface
@@ -78,10 +79,10 @@ interface TagItem {
 interface ProductWithTagIds {
   name: string;
   description: string;
-  price: string;
-  compareAtPrice?: string;
-  discountPercentage?: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice?: string;
+  // discountPercentage?: number;
+  // stock: number;
   category_ids: number[];
   tags: number[];
   rating: string;
@@ -92,6 +93,19 @@ interface ProductWithTagIds {
   isTrending: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  variants: Variant[];
+}
+
+interface Variant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 export default function ProductManagement() {

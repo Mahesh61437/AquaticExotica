@@ -38,10 +38,10 @@ interface OrderItem {
     id: number;
     name: string;
     description: string;
-    price: string;
-    compareAtPrice: string;
-    discountPercentage: number;
-    stock: number;
+    // price: string;
+    // compareAtPrice: string;
+    // discountPercentage: number;
+    // stock: number;
     category: {
       id: number;
       name: string;
@@ -56,12 +56,13 @@ interface OrderItem {
     isSale: boolean;
     isFeatured: boolean;
     isTrending: boolean;
-    isInStock: boolean;
+    // isInStock: boolean;
     imageUrl: string;
   };
   quantity: number;
   price: string;
   totalPrice: number;
+  variants: Variants[];
 }
 
 // Define new shipping address type based on API response
@@ -89,6 +90,18 @@ interface NewOrder {
   grandTotal: number;
   status: string;
   createdAt: string;
+}
+
+interface Variants {
+  id: number;
+  product: number;
+  cvariantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 const statusColors: Record<string, string> = {

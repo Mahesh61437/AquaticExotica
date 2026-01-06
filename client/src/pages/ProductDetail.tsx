@@ -62,10 +62,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -81,10 +81,11 @@ interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
   images?: ProductImage[]; // Array of product images for carousel
+  variants: ApiVariants[];
 }
 
 // Define tag type
@@ -92,6 +93,18 @@ interface ApiTag {
   id: number;
   name: string;
   createdAt: string;
+}
+
+interface ApiVariants {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 export default function ProductDetail() {
@@ -121,6 +134,7 @@ export default function ProductDetail() {
   }>>({});
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   
   // Extract product ID from the slug
   const productId = params?.slug ? extractProductIdFromSlug(params.slug) : null;
@@ -224,6 +238,40 @@ export default function ProductDetail() {
     return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
+  // Aggregate variant stock into a single totalStock value
+  const totalStock = React.useMemo(() => {
+    if (!product || !Array.isArray(product.variants)) return 0;
+    return product.variants.reduce((s, v) => s + (v?.stock ?? 0), 0);
+  }, [product?.variants]);
+
+  // Selected variant (defaults to first in-stock or first variant)
+  const selectedVariant = React.useMemo(() => {
+    if (!product || !Array.isArray(product.variants) || product.variants.length === 0) return null;
+    if (selectedVariantId) {
+      return product.variants.find(v => v.id === selectedVariantId) || product.variants[0];
+    }
+    return product.variants.find(v => v.isInStock) || product.variants[0];
+  }, [product, selectedVariantId]);
+
+  const variantPriceNumber = React.useMemo(() => {
+    if (!selectedVariant) return 0;
+    return parseFloat(selectedVariant.offerPrice || selectedVariant.originalPrice || '0') || 0;
+  }, [selectedVariant]);
+
+  const variantComparePriceNumber = React.useMemo(() => {
+    if (!selectedVariant) return undefined;
+    const val = selectedVariant.originalPrice;
+    return val ? parseFloat(val) : undefined;
+  }, [selectedVariant]);
+
+  const variantStock = selectedVariant?.stock ?? 0;
+
+  // Ensure there's a sensible default variant selected once product data loads
+  React.useEffect(() => {
+    if (!product || !Array.isArray(product.variants) || product.variants.length === 0) return;
+    const fallback = product.variants.find(v => v.isInStock) || product.variants[0];
+    setSelectedVariantId(prev => (prev ?? fallback.id));
+  }, [product]);
   // Track product view when product data is loaded
   // useEffect(() => {
   //   if (product) {
@@ -263,6 +311,7 @@ export default function ProductDetail() {
               <Skeleton className="h-28 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
+            {/* Variant selector removed from loading UI to avoid accessing product while loading */}
           </div>
         </div>
       </div>
@@ -286,8 +335,9 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
     
-    // Do not add to cart if the product is out of stock
-    if (product.stock <= 0) {
+
+    // Do not add to cart if the selected variant is out of stock
+    if (variantStock <= 0) {
       toast({
         title: "Cannot add to cart",
         description: "This product is currently out of stock.",
@@ -295,16 +345,18 @@ export default function ProductDetail() {
       });
       return;
     }
-    
-    // Make sure the quantity doesn't exceed available stock
-    const finalQuantity = Math.min(quantity, product.stock);
+
+    // Make sure the quantity doesn't exceed available stock for the selected variant
+    const finalQuantity = Math.min(quantity, variantStock);
     
     addItem({
       id: product.id,
+      variantId: selectedVariant?.id,
       name: product.name,
-      price: parseFloat(product.price.toString()),
+      price: parseFloat(selectedVariant?.offerPrice || selectedVariant?.originalPrice || '0'),
       imageUrl: product.imageUrl,
       quantity: finalQuantity,
+      maxStock: variantStock,
     }, finalQuantity, true); // Open cart when adding from product detail
     
     // Track add to cart event
@@ -329,13 +381,16 @@ export default function ProductDetail() {
   // Edit handlers
   const handleEditOpen = () => {
     if (!product) return;
-    
+    // choose a sensible default variant (first in-stock or first available)
+    const fallbackVariant = product.variants && product.variants.length > 0 ? (product.variants.find(v => v.isInStock) || product.variants[0]) : undefined;
+    setSelectedVariantId(fallbackVariant?.id ?? null);
+
     setEditFormData({
       name: product.name,
       description: product.description,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
-      stock: product.stock,
+      price: fallbackVariant?.offerPrice || fallbackVariant?.originalPrice || '',
+      compareAtPrice: fallbackVariant?.originalPrice || '',
+      stock: totalStock,
               categoryId: product.categories && product.categories.length > 0 ? product.categories[0].id : 0,
       rating: product.rating,
       isNew: product.isNew,
@@ -358,12 +413,17 @@ export default function ProductDetail() {
     if (!product) return;
 
     try {
+      // Determine sensible defaults from selected variant or first variant
+      const fallbackVariant = selectedVariant || (product.variants && product.variants.length > 0 ? product.variants[0] : undefined);
+      const defaultPrice = editFormData.price ?? fallbackVariant?.offerPrice ?? fallbackVariant?.originalPrice ?? '0';
+      const defaultCompareAt = editFormData.compareAtPrice ?? fallbackVariant?.originalPrice ?? undefined;
+
       const submitData = {
         name: editFormData.name || product.name,
         description: editFormData.description || product.description,
-        price: editFormData.price || product.price,
-        compareAtPrice: editFormData.compareAtPrice || product.compareAtPrice,
-        stock: editFormData.stock || product.stock,
+        price: defaultPrice,
+        compareAtPrice: defaultCompareAt,
+        stock: editFormData.stock ?? totalStock,
         categoryId: editFormData.categoryId || (product.categories && product.categories.length > 0 ? product.categories[0].id : 0),
         tags: selectedTagIds,
         rating: editFormData.rating || product.rating,
@@ -429,9 +489,9 @@ export default function ProductDetail() {
         <meta property="og:image" content={product?.imageUrl || ''} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={window.location.href} />
-        <meta property="product:price:amount" content={product?.price || '0'} />
+        <meta property="product:price:amount" content={String(variantPriceNumber || 0)} />
         <meta property="product:price:currency" content="INR" />
-        <meta property="product:availability" content={(product?.stock || 0) > 0 ? "in stock" : "out of stock"} />
+        <meta property="product:availability" content={variantStock > 0 ? "in stock" : "out of stock"} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${product?.name || 'Product'} - Aquatic Exotica`} />
         <meta name="twitter:description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
@@ -446,9 +506,9 @@ export default function ProductDetail() {
             "image": product?.imageUrl || '',
             "offers": {
               "@type": "Offer",
-              "price": product?.price || '0',
+              "price": variantPriceNumber || '0',
               "priceCurrency": "INR",
-              "availability": (product?.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              "availability": variantStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
               "url": window.location.href
             },
             "brand": {
@@ -511,14 +571,16 @@ export default function ProductDetail() {
             </div>
             
             <div className="mt-4">
-              {product.compareAtPrice ? (
+              {selectedVariant ? (
                 <div className="flex items-center">
                   <span className="text-2xl font-semibold text-accent mr-2">
-                    {formatPrice(product.price)}
+                    {formatPrice(variantPriceNumber)}
                   </span>
-                  <span className="text-gray-400 line-through text-lg">
-                    {formatPrice(product.compareAtPrice)}
-                  </span>
+                  {variantComparePriceNumber ? (
+                    <span className="text-gray-400 line-through text-lg">
+                      {formatPrice(variantComparePriceNumber)}
+                    </span>
+                  ) : null}
                   {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
                   {(() => {
                     if (product.isFeatured) {
@@ -552,7 +614,7 @@ export default function ProductDetail() {
               ) : (
                 <div className="flex items-center">
                   <span className="text-2xl font-semibold">
-                    {formatPrice(product.price)}
+                    {formatPrice(variantPriceNumber)}
                   </span>
                   {/* Priority Badge for products without compareAtPrice */}
                   {(() => {
@@ -581,6 +643,31 @@ export default function ProductDetail() {
               )}
             </div>
             
+            {/* Variant selector (choose specific variant) */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mt-4 w-48">
+                <Label>Variant</Label>
+                <Select
+                  value={selectedVariantId?.toString() || ''}
+                  onValueChange={(value) => setSelectedVariantId(value ? parseInt(value) : null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {product.variants.map((v) => (
+                      // <SelectItem key={`variant-${v.id}`} value={v.id.toString()}>
+                      //   {(v.description && v.description.length > 0 ? v.description : v.variantType) || `Variant ${v.id}`} — {formatPrice(parseFloat(v.offerPrice || v.originalPrice || '0'))}
+                      // </SelectItem>
+                      <SelectItem key={`variant-${v.id}`} value={v.id.toString()}>
+                        {v.variantType}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div 
               className="mt-6 text-gray-700 prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: product.description }}
@@ -610,12 +697,12 @@ export default function ProductDetail() {
                   </Button>
                 </div>
                 {(() => {
-                  const stockInfo = getStockStatus(product.stock);
+                  const stockInfo = getStockStatus(variantStock);
                   return (
                     <div className="ml-4 flex-1">
                       <Badge className={`${stockInfo.color} px-3 py-1 text-xs sm:text-sm font-medium`} variant="outline">
                         <Package className="h-3 w-3 mr-1" />
-                        {stockInfo.text} ({product.stock} available)
+                        {stockInfo.text} ({variantStock} available)
                       </Badge>
                       {stockInfo.message && (
                         <p className="text-xs mt-1 text-gray-600">{stockInfo.message}</p>
@@ -626,7 +713,7 @@ export default function ProductDetail() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                {product.stock > 0 ? (
+                {variantStock > 0 ? (
                   <Button 
                     className="flex-1 !h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={handleAddToCart}
@@ -763,6 +850,14 @@ export default function ProductDetail() {
                     createdAt: tag.createdAt,
                     updatedAt: new Date().toISOString()
                   })) : [],
+                  // Compute a display priceRange from variants (min - max)
+                  priceRange: (() => {
+                    const vals = Array.isArray(relatedProduct.variants) ? relatedProduct.variants.map(v => parseFloat(v.offerPrice || v.originalPrice || '0')).filter(n => !isNaN(n)) : [];
+                    if (vals.length === 0) return formatPrice(0);
+                    const min = Math.min(...vals);
+                    const max = Math.max(...vals);
+                    return min === max ? formatPrice(min) : `${formatPrice(min)} - ${formatPrice(max)}`;
+                  })(),
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 }} />

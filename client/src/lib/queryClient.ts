@@ -2,7 +2,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 // import { trackApiError, trackApiSuccess, trackApiPerformance } from "./analytics";
 
 // API base URL - set via environment variable VITE_API_BASE
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://web-production-b3867.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 // Helper to build full URL for API calls
 function buildUrl(path: string): string {

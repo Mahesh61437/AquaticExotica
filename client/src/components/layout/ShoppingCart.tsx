@@ -73,7 +73,7 @@ export function ShoppingCart() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
-                                onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                                onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1), item.variantId)}
                               >
                                 <Minus className="h-4 w-4" />
                               </Button>
@@ -84,7 +84,9 @@ export function ShoppingCart() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id, item.quantity + 1, item.variantId)}
+                                disabled={item.maxStock !== undefined && item.quantity >= item.maxStock}
+                                title={item.maxStock !== undefined && item.quantity >= item.maxStock ? 'Max available stock reached' : undefined}
                               >
                                 <Plus className="h-4 w-4" />
                               </Button>
@@ -105,7 +107,7 @@ export function ShoppingCart() {
                         variant="ghost" 
                         size="icon" 
                         className="h-10 w-10 text-gray-400 hover:text-red-500 hover:bg-red-50 shrink-0"
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.id, item.variantId)}
                       >
                         <Trash2 className="h-5 w-5" />
                       </Button>

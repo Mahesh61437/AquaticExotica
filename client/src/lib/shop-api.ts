@@ -11,10 +11,10 @@ export interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -30,11 +30,12 @@ export interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
   createdAt: string;
   updatedAt: string;
+  variants: ApiVariants[];
 }
 
 export interface ApiTag {
@@ -61,6 +62,18 @@ export interface ProductFilters {
   filter_type?: 'new' | 'sale' | 'trending' | 'featured';
   sort_by?: 'name' | 'price' | 'rating' | 'created_at';
   sort_order?: 'asc' | 'desc';
+}
+
+export interface ApiVariants {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 // Shop API Functions
