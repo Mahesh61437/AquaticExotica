@@ -1,6 +1,8 @@
 import * as React from "react";
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { CartItem, Cart } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import { saveCart } from "@/lib/shop-api";
 // import { useCartAnalytics } from "@/hooks/use-analytics";
 
 interface CartContextType {
@@ -40,9 +42,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
 
   // Save cart to localStorage whenever it changes
+  const { currentUser } = useAuth();
+
   useEffect(() => {
+    // persist locally
     localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+
+    // debounce backend sync when user is signed in
+    let t: number | undefined;
+    if (currentUser) {
+      t = window.setTimeout(() => {
+        (async () => {
+          try {
+            console.log('⤴️ Attempting to sync cart to backend', {
+              userId: currentUser?.id,
+              items: cart.items,
+            });
+            await saveCart(cart);
+            console.log('✅ Cart synced to backend');
+          } catch (e) {
+            console.error('❌ Failed to sync cart to backend', e);
+          }
+        })();
+      }, 800);
+    }
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [cart, currentUser]);
 
   // Update cart totals
   const updateTotals = (items: CartItem[]) => {

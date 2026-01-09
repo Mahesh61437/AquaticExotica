@@ -1,4 +1,5 @@
 import { apiRequest } from './queryClient';
+import { Cart } from '@/types';
 
 // API Response Types for Django REST Framework pagination
 export interface PaginationMeta {
@@ -208,6 +209,32 @@ export class ShopAPI {
       console.error('🛍️ ShopAPI: Error fetching tags:', error);
       return [];
     }
+  }
+}
+
+// Save cart to backend
+export async function saveCart(cart: Cart) {
+  try {
+    const payload = {
+      items: cart.items.map(item => ({
+        product: item.id,
+        variant: item.variantId ?? null,
+        quantity: item.quantity
+      }))
+    };
+
+    console.log('🔁 saveCart payload', payload);
+
+    // Use PUT to update (viewset expected at /api/cart/)
+    const res = await apiRequest('/api/cart/', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+
+    return res;
+  } catch (error) {
+    console.error('saveCart error', error);
+    throw error;
   }
 }
 

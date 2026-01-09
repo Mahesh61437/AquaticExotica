@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFirebaseStorageUrl } from "@/lib/firebase";
+import { createFirebaseStorageUrl, parseFirebaseStoragePath } from "@/lib/firebase";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,20 @@ export function FirebaseImageSelector({
     
     // Auto-load image when path is entered (if it looks like a valid path)
     if (newPath && newPath.includes('/')) {
-      // Small delay to avoid too many requests
+      // If user pasted a full Firebase URL, use it directly
+      if (newPath.startsWith('http') && newPath.includes('firebasestorage.googleapis.com')) {
+        // Small delay to avoid too many requests
+        setTimeout(() => {
+          if (imagePath === newPath) {
+            // Use the full URL as preview and trigger selection
+            setPreviewUrl(newPath);
+            onImageSelected(newPath);
+          }
+        }, 200);
+        return;
+      }
+
+      // Otherwise treat it as a path and attempt to load after a short debounce
       setTimeout(() => {
         if (imagePath === newPath) {
           handleLoadImage();
@@ -54,18 +67,25 @@ export function FirebaseImageSelector({
       });
       return;
     }
-
     setLoading(true);
     setErrorLoading(false);
-    
+
     try {
-      // Create the Firebase Storage URL
-      const url = createFirebaseStorageUrl(imagePath, accessToken);
+      // If the user provided a full URL, use it; otherwise build the URL from path
+      let url: string;
+      const parsed = parseFirebaseStoragePath(imagePath);
+      if (parsed && parsed.length > 0 && imagePath.startsWith('http')) {
+        // The input was a full URL — use as-is
+        url = imagePath;
+      } else {
+        url = createFirebaseStorageUrl(imagePath, accessToken);
+      }
+
       console.log("Trying to load Firebase image from URL:", url);
-      
+
       // Test the image URL by creating an Image object
       const img = new Image();
-      
+
       img.onload = () => {
         setPreviewUrl(url);
         onImageSelected(url);
@@ -75,18 +95,18 @@ export function FirebaseImageSelector({
           description: "Image loaded successfully",
         });
       };
-      
+
       img.onerror = (e) => {
         console.error("Failed to load image:", e);
         setLoading(false);
         setErrorLoading(true);
         toast({
           title: "Error",
-          description: `Failed to load image. Please check if the image exists at path: ${imagePath}`,
+          description: `Failed to load image. Please check if the image exists at path or URL: ${imagePath}`,
           variant: "destructive",
         });
       };
-      
+
       // Set the source to trigger loading
       img.src = url;
     } catch (error) {

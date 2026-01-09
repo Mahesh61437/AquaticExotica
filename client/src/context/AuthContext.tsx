@@ -2,6 +2,7 @@ import * as React from "react";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
+import { saveCart } from "@/lib/shop-api";
 
 // Define our user interface - updated for Django JWT response
 interface User {
@@ -246,7 +247,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStoredUserData(user);
       
       setCurrentUser(user);
-      
+      // After successful sign-in, attempt to sync/create the server-side cart
+      (async () => {
+        try {
+          const savedCart = localStorage.getItem('cart');
+          if (savedCart) {
+            const parsed = JSON.parse(savedCart);
+            console.log('🔁 Syncing local cart to server after sign-in', parsed);
+            await saveCart(parsed);
+            console.log('✅ Server cart created/updated after sign-in');
+          } else {
+            // Ensure a cart exists server-side for the user (empty payload allowed)
+            console.log('🔁 No local cart found; creating empty server cart');
+            await saveCart({ items: [], count: 0, total: 0 });
+            console.log('✅ Empty server cart created after sign-in');
+          }
+        } catch (e) {
+          console.error('❌ Failed to sync/create server cart after sign-in', e);
+        }
+      })();
+
       console.log('✅ User state updated, currentUser should now be set');
       
       toast({
