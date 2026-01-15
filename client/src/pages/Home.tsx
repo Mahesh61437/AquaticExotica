@@ -247,10 +247,10 @@ export default function Home() {
       {/* Promotional Banner */}
       <PromotionalBanner />
 
-      {/* Diwali Popup Banner */}
-      {shouldShowBanner && (
+      {/* Diwali Popup Banner - Disabled */}
+      {/* {shouldShowBanner && (
         <DiwaliPopupBanner onClose={markBannerAsSeen} />
-      )}
+      )} */}
     </>
   );
 }

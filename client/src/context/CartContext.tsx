@@ -1,13 +1,15 @@
 import * as React from "react";
 import { createContext, useEffect, useState, ReactNode } from "react";
 import { CartItem, Cart } from "@/types";
+import { useAuth } from "@/context/AuthContext";
+import { saveCart } from "@/lib/shop-api";
 // import { useCartAnalytics } from "@/hooks/use-analytics";
 
 interface CartContextType {
   cart: Cart;
   addItem: (product: CartItem, quantity?: number, openCart?: boolean) => void;
-  removeItem: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  removeItem: (id: number, variantId?: number) => void;
+  updateQuantity: (id: number, quantity: number, variantId?: number) => void;
   clearCart: () => void;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
@@ -40,9 +42,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
 
   // Save cart to localStorage whenever it changes
+  const { currentUser } = useAuth();
+
   useEffect(() => {
+    // persist locally
     localStorage.setItem('cart', JSON.stringify(cart));
-  }, [cart]);
+
+    // debounce backend sync when user is signed in
+    let t: number | undefined;
+    if (currentUser) {
+      t = window.setTimeout(() => {
+        (async () => {
+          try {
+            console.log('⤴️ Attempting to sync cart to backend', {
+              userId: currentUser?.id,
+              items: cart.items,
+            });
+            await saveCart(cart);
+            console.log('✅ Cart synced to backend');
+          } catch (e) {
+            console.error('❌ Failed to sync cart to backend', e);
+          }
+        })();
+      }, 800);
+    }
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [cart, currentUser]);
 
   // Update cart totals
   const updateTotals = (items: CartItem[]) => {
@@ -54,19 +82,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Add item to cart
   const addItem = (product: CartItem, quantity = 1, openCart = false) => {
     setCart(prevCart => {
-      const existingItemIndex = prevCart.items.findIndex(item => item.id === product.id);
+      // Find item by id and variant if provided (treat variant-specific items separately)
+      const existingItemIndex = prevCart.items.findIndex(item => {
+        if (product.variantId !== undefined) {
+          return item.id === product.id && item.variantId === product.variantId;
+        }
+        return item.id === product.id && item.variantId === undefined;
+      });
+
+      const maxAvailable = product.maxStock ?? Infinity;
       let newItems;
 
       if (existingItemIndex >= 0) {
-        // Update existing item quantity
+        // Update existing item quantity but cap to maxStock if provided
         newItems = [...prevCart.items];
+        const existing = newItems[existingItemIndex];
+        const desired = existing.quantity + quantity;
+        const capped = Math.min(desired, existing.maxStock ?? maxAvailable);
         newItems[existingItemIndex] = {
-          ...newItems[existingItemIndex],
-          quantity: newItems[existingItemIndex].quantity + quantity
+          ...existing,
+          quantity: capped
         };
       } else {
-        // Add new item
-        newItems = [...prevCart.items, { ...product, quantity }];
+        // Add new item, cap initial quantity to maxStock
+        const cappedQty = Math.min(quantity, maxAvailable === Infinity ? quantity : Math.max(0, maxAvailable));
+        newItems = [...prevCart.items, { ...product, quantity: cappedQty }];
       }
 
       const { count, total } = updateTotals(newItems);
@@ -88,37 +128,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   // Remove item from cart
-  const removeItem = (id: number) => {
+  const removeItem = (id: number, variantId?: number) => {
     setCart(prevCart => {
-      const itemToRemove = prevCart.items.find(item => item.id === id);
-      const newItems = prevCart.items.filter(item => item.id !== id);
+      const newItems = prevCart.items.filter(item => {
+        if (variantId !== undefined) {
+          return !(item.id === id && item.variantId === variantId);
+        }
+        return item.id !== id;
+      });
       const { count, total } = updateTotals(newItems);
-      
-      // Track cart interaction
-      // if (itemToRemove) {
-      //   trackCartInteraction('remove_from_cart', {
-      //     product_id: itemToRemove.id,
-      //     product_name: itemToRemove.name,
-      //     quantity: itemToRemove.quantity,
-      //     price: itemToRemove.price,
-      //   });
-      // }
-      
       return { items: newItems, count, total };
     });
   };
 
   // Update item quantity
-  const updateQuantity = (id: number, quantity: number) => {
+  const updateQuantity = (id: number, quantity: number, variantId?: number) => {
     if (quantity <= 0) {
-      removeItem(id);
+      removeItem(id, variantId);
       return;
     }
-    
+
     setCart(prevCart => {
-      const newItems = prevCart.items.map(item => 
-        item.id === id ? { ...item, quantity } : item
-      );
+      const newItems = prevCart.items.map(item => {
+        if (item.id !== id) return item;
+        if (variantId !== undefined && item.variantId !== variantId) return item;
+        // Enforce maxStock if present on the item
+        const capped = item.maxStock !== undefined ? Math.min(quantity, item.maxStock) : quantity;
+        return { ...item, quantity: capped };
+      });
       const { count, total } = updateTotals(newItems);
       return { items: newItems, count, total };
     });

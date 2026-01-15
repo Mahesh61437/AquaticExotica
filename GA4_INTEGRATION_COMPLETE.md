@@ -36,7 +36,7 @@
 ```bash
 REACT_APP_GA4_MEASUREMENT_ID=G-NS31V1K0LZ
 REACT_APP_ENABLE_ANALYTICS=true
-REACT_APP_API_BASE_URL=https://web-production-b3867.up.railway.app
+REACT_APP_API_BASE_URL=http://localhost:8000
 ```
 
 ### Analytics Configuration

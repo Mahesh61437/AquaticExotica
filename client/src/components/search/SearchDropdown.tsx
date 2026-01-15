@@ -100,6 +100,46 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
   const results = searchResults?.results || [];
   const totalCount = searchResults?.count || 0;
 
+  const getProductPriceDisplay = (product: any) => {
+    // Prefer variants if present
+    const variants = product.variants || [];
+
+    if (Array.isArray(variants) && variants.length > 0) {
+      const offerPrices = variants.map((v: any) => Number(v.offerPrice)).filter((n: number) => !isNaN(n) && n > 0);
+      const originalPrices = variants.map((v: any) => Number(v.originalPrice)).filter((n: number) => !isNaN(n) && n > 0);
+
+      const minOffer = offerPrices.length ? Math.min(...offerPrices) : null;
+      const maxOffer = offerPrices.length ? Math.max(...offerPrices) : null;
+      const minOriginal = originalPrices.length ? Math.min(...originalPrices) : null;
+      const maxOriginal = originalPrices.length ? Math.max(...originalPrices) : null;
+
+      if (minOffer !== null) {
+        const low = minOffer;
+        const high = maxOffer !== null ? maxOffer : minOffer;
+        const primary = low === high ? formatPrice(low) : `${formatPrice(low)} - ${formatPrice(high)}`;
+        return { primary };
+      }
+
+      if (minOriginal !== null) {
+        const low = minOriginal;
+        const high = maxOriginal !== null ? maxOriginal : minOriginal;
+        const primary = low === high ? formatPrice(low) : `${formatPrice(low)} - ${formatPrice(high)}`;
+        return { primary};
+      }
+    }
+
+    // Fallback to old fields if present
+    if (product.price) {
+      return { primary: formatPrice(product.price),};
+    }
+
+    if (product.priceRange) {
+      return { primary: product.priceRange};
+    }
+
+    return { primary: 'N/A'};
+  };
+
   // Track search when results are available
   // useEffect(() => {
   //   if (searchQuery.trim().length > 0 && searchResults) {
@@ -200,14 +240,17 @@ export function SearchDropdown({ isOpen, onClose }: SearchDropdownProps) {
                         {product.description?.replace(/<[^>]*>/g, '').substring(0, 60)}...
                       </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="font-semibold text-primary">
-                          {formatPrice(product.price)}
-                        </span>
-                        {product.compareAtPrice && (
-                          <span className="text-sm text-gray-400 line-through">
-                            {formatPrice(product.compareAtPrice)}
-                          </span>
-                        )}
+                        {(() => {
+                          const { primary, secondary } = getProductPriceDisplay(product);
+                          return (
+                            <>
+                              <span className="font-semibold text-primary">{primary}</span>
+                              {secondary && (
+                                <span className="text-sm text-gray-400 line-through">{secondary}</span>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

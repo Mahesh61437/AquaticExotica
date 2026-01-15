@@ -2,7 +2,7 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 // import { trackApiError, trackApiSuccess, trackApiPerformance } from "./analytics";
 
 // API base URL - set via environment variable VITE_API_BASE
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://web-production-b3867.up.railway.app';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000';
 
 // Helper to build full URL for API calls
 function buildUrl(path: string): string {
@@ -76,6 +76,19 @@ async function throwIfResNotOk(res: Response, context: { url: string; method?: s
         } else if (errorData.detail) {
           errorMessage = errorData.detail;
         }
+        // Attach parsed JSON to the thrown error so callers can inspect validation details
+        const parsedError = new Error(errorMessage) as any;
+        parsedError.responseData = errorData;
+        // Log detailed error information
+        logApiError(parsedError, {
+          url: context.url,
+          method: context.method,
+          status: res.status,
+          statusText: res.statusText,
+          responseText,
+          requestBody: context.requestBody,
+        });
+        throw parsedError;
       } else {
         // If not JSON, treat as text
         responseText = await res.text();
@@ -88,9 +101,9 @@ async function throwIfResNotOk(res: Response, context: { url: string; method?: s
       console.error("Error parsing error response:", e);
     }
     
-    // Create error with enhanced context
-    const error = new Error(errorMessage);
-    
+    // Create error with enhanced context (non-JSON path)
+    const error = new Error(errorMessage) as any;
+    error.responseText = responseText;
     // Log detailed error information
     logApiError(error, {
       url: context.url,
@@ -100,7 +113,6 @@ async function throwIfResNotOk(res: Response, context: { url: string; method?: s
       responseText,
       requestBody: context.requestBody,
     });
-    
     throw error;
   }
 }

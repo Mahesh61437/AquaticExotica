@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StockNotificationForm } from "@/components/product/StockNotificationForm";
 import { ProductImageCarousel } from "@/components/product/ProductImageCarousel";
 import { Link } from "wouter";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import React from "react";
 import {
   Dialog,
@@ -62,10 +62,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -81,10 +81,11 @@ interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
   images?: ProductImage[]; // Array of product images for carousel
+  variants: ApiVariants[];
 }
 
 // Define tag type
@@ -92,6 +93,18 @@ interface ApiTag {
   id: number;
   name: string;
   createdAt: string;
+}
+
+interface ApiVariants {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 export default function ProductDetail() {
@@ -107,9 +120,7 @@ export default function ProductDetail() {
   const [editFormData, setEditFormData] = useState<Partial<{
     name: string;
     description: string;
-    price: string;
-    compareAtPrice: string;
-    stock: number;
+    // price/stock moved to variants
     categoryId: number;
     rating: string;
     isNew: boolean;
@@ -119,8 +130,13 @@ export default function ProductDetail() {
     imageUrl: string;
     thumbnailUrl: string;
   }>>({});
+  // Local editable variants for the product (edit modal)
+  const [productVariants, setProductVariants] = useState<ApiVariants[]>([]);
+  // Errors returned from API when submitting edit form
+  const [editErrors, setEditErrors] = useState<any | null>(null);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   
   // Extract product ID from the slug
   const productId = params?.slug ? extractProductIdFromSlug(params.slug) : null;
@@ -224,6 +240,40 @@ export default function ProductDetail() {
     return tags.map(tag => tag.name).filter(name => name !== '');
   };
 
+  // Aggregate variant stock into a single totalStock value
+  const totalStock = React.useMemo(() => {
+    if (!product || !Array.isArray(product.variants)) return 0;
+    return product.variants.reduce((s, v) => s + (v?.stock ?? 0), 0);
+  }, [product?.variants]);
+
+  // Selected variant (defaults to first in-stock or first variant)
+  const selectedVariant = React.useMemo(() => {
+    if (!product || !Array.isArray(product.variants) || product.variants.length === 0) return null;
+    if (selectedVariantId) {
+      return product.variants.find(v => v.id === selectedVariantId) || product.variants[0];
+    }
+    return product.variants.find(v => v.isInStock) || product.variants[0];
+  }, [product, selectedVariantId]);
+
+  const variantPriceNumber = React.useMemo(() => {
+    if (!selectedVariant) return 0;
+    return parseFloat(selectedVariant.offerPrice || selectedVariant.originalPrice || '0') || 0;
+  }, [selectedVariant]);
+
+  const variantComparePriceNumber = React.useMemo(() => {
+    if (!selectedVariant) return undefined;
+    const val = selectedVariant.originalPrice;
+    return val ? parseFloat(val) : undefined;
+  }, [selectedVariant]);
+
+  const variantStock = selectedVariant?.stock ?? 0;
+
+  // Ensure there's a sensible default variant selected once product data loads
+  React.useEffect(() => {
+    if (!product || !Array.isArray(product.variants) || product.variants.length === 0) return;
+    const fallback = product.variants.find(v => v.isInStock) || product.variants[0];
+    setSelectedVariantId(prev => (prev ?? fallback.id));
+  }, [product]);
   // Track product view when product data is loaded
   // useEffect(() => {
   //   if (product) {
@@ -263,6 +313,7 @@ export default function ProductDetail() {
               <Skeleton className="h-28 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
+            {/* Variant selector removed from loading UI to avoid accessing product while loading */}
           </div>
         </div>
       </div>
@@ -286,8 +337,9 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (!product) return;
     
-    // Do not add to cart if the product is out of stock
-    if (product.stock <= 0) {
+
+    // Do not add to cart if the selected variant is out of stock
+    if (variantStock <= 0) {
       toast({
         title: "Cannot add to cart",
         description: "This product is currently out of stock.",
@@ -295,16 +347,18 @@ export default function ProductDetail() {
       });
       return;
     }
-    
-    // Make sure the quantity doesn't exceed available stock
-    const finalQuantity = Math.min(quantity, product.stock);
+
+    // Make sure the quantity doesn't exceed available stock for the selected variant
+    const finalQuantity = Math.min(quantity, variantStock);
     
     addItem({
       id: product.id,
+      variantId: selectedVariant?.id,
       name: product.name,
-      price: parseFloat(product.price.toString()),
+      price: parseFloat(selectedVariant?.offerPrice || selectedVariant?.originalPrice || '0'),
       imageUrl: product.imageUrl,
       quantity: finalQuantity,
+      maxStock: variantStock,
     }, finalQuantity, true); // Open cart when adding from product detail
     
     // Track add to cart event
@@ -326,17 +380,46 @@ export default function ProductDetail() {
     setQuantity(Math.max(1, value));
   };
 
+  // Variant editor helpers for the edit modal
+  const handleAddVariant = () => {
+    const newVariant: ApiVariants = {
+      id: Date.now() * -1, // temporary negative id for new variants
+      product: product?.id ?? 0,
+      variantType: '',
+      description: '',
+      stock: 0,
+      originalPrice: '',
+      offerPrice: '',
+      discountPercentage: 0,
+      isInStock: false,
+    };
+    setProductVariants(prev => [...prev, newVariant]);
+  };
+
+  const handleUpdateVariantField = (index: number, field: keyof ApiVariants, value: any) => {
+    setProductVariants(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value } as ApiVariants;
+      return copy;
+    });
+  };
+
+  const handleRemoveVariant = (index: number) => {
+    setProductVariants(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Edit handlers
   const handleEditOpen = () => {
     if (!product) return;
-    
+    // choose a sensible default variant (first in-stock or first available)
+    const fallbackVariant = product.variants && product.variants.length > 0 ? (product.variants.find(v => v.isInStock) || product.variants[0]) : undefined;
+    setSelectedVariantId(fallbackVariant?.id ?? null);
+
     setEditFormData({
       name: product.name,
       description: product.description,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
-      stock: product.stock,
-              categoryId: product.categories && product.categories.length > 0 ? product.categories[0].id : 0,
+      // price/stock are variant-scoped now
+      categoryId: product.categories && product.categories.length > 0 ? product.categories[0].id : 0,
       rating: product.rating,
       isNew: product.isNew,
       isSale: product.isSale,
@@ -349,6 +432,10 @@ export default function ProductDetail() {
     // Set selected tags
     setSelectedTagIds(product.tags || []);
     setTagInput("");
+    // Initialize editable variants from product variants
+    setProductVariants(Array.isArray(product.variants) ? product.variants.map(v => ({...v})) : []);
+    // Clear previous validation errors
+    setEditErrors(null);
     
     setIsEditModalOpen(true);
   };
@@ -358,43 +445,100 @@ export default function ProductDetail() {
     if (!product) return;
 
     try {
+      // Build variants payload from local variant editor and map to snake_case
+      const variantsPayload = productVariants.map(v => ({
+        id: v.id && v.id > 0 ? v.id : undefined,
+        variant_type: v.variantType,
+        description: v.description,
+        stock: v.stock,
+        original_price: v.originalPrice,
+        offer_price: v.offerPrice,
+      }));
+
+      // Client-side validation: ensure each variant has a variant_type
+      const variantErrors: string[] = [];
+      variantsPayload.forEach((v, idx) => {
+        if (!v.variant_type || String(v.variant_type).trim() === '') {
+          variantErrors.push(`Variant #${idx + 1} is missing variant type`);
+        }
+      });
+      if (variantErrors.length > 0) {
+        setEditErrors({ variants: variantErrors });
+        toast({ title: 'Validation', description: 'Please fix variant errors before submitting', variant: 'destructive' });
+        return;
+      }
+
       const submitData = {
         name: editFormData.name || product.name,
         description: editFormData.description || product.description,
-        price: editFormData.price || product.price,
-        compareAtPrice: editFormData.compareAtPrice || product.compareAtPrice,
-        stock: editFormData.stock || product.stock,
-        categoryId: editFormData.categoryId || (product.categories && product.categories.length > 0 ? product.categories[0].id : 0),
+        // product-level price/stock removed; variants contain pricing/stock now
+        // Send both `category_id` (singular) and `category_ids` (array) to support either serializer shape
+        category_id: editFormData.categoryId || (product.categories && product.categories.length > 0 ? product.categories[0].id : null),
+        category_ids: editFormData.categoryId ? [editFormData.categoryId] : (product.categories && product.categories.length > 0 ? [product.categories[0].id] : []),
         tags: selectedTagIds,
         rating: editFormData.rating || product.rating,
-        isNew: editFormData.isNew ?? product.isNew,
-        isSale: editFormData.isSale ?? product.isSale,
-        isFeatured: editFormData.isFeatured ?? product.isFeatured,
-        isTrending: editFormData.isTrending ?? product.isTrending,
-        imageUrl: editFormData.imageUrl || product.imageUrl,
-        thumbnailUrl: editFormData.thumbnailUrl || product.thumbnailUrl,
+        is_new: editFormData.isNew ?? product.isNew,
+        is_sale: editFormData.isSale ?? product.isSale,
+        is_featured: editFormData.isFeatured ?? product.isFeatured,
+        is_trending: editFormData.isTrending ?? product.isTrending,
+        image_url: editFormData.imageUrl || product.imageUrl,
+        thumbnail_url: editFormData.thumbnailUrl || product.thumbnailUrl,
+        // Send both `variants` and `productvariants` to accommodate different serializer expectations
+        variants: variantsPayload,
+        productvariants: variantsPayload,
       };
 
-      await apiRequest(`/api/products/${product.id}`, {
+      const response = await apiRequest(`/api/products/${product.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submitData)
       });
+      console.log('submitData', submitData);
+      console.log('API response:', response);
 
       toast({
         title: "Success",
         description: "Product updated successfully",
       });
-      
+      // clear any previous errors
+      setEditErrors(null);
+
+      // Close modal and update product cache without full reload
       setIsEditModalOpen(false);
-      // Refresh the product data
-      window.location.reload();
+      // Invalidate product and related queries so UI refreshes
+      try {
+        queryClient.invalidateQueries({ queryKey: [`/api/products/${product.id}`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/products/${product.id}/related`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });
+      } catch (e) {
+        console.warn('Failed to invalidate queries', e);
+      }
+      // Force a full page reload once to ensure UI reflects backend changes
+      try {
+        window.location.reload();
+      } catch (e) {
+        console.warn('Failed to reload page', e);
+      }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: `Failed to update product: ${error.message || 'Unknown error'}`,
-        variant: "destructive",
-      });
+      console.error('Product update error:', error);
+      // If the apiRequest attached parsed response data, surface it
+      if (error && (error as any).responseData) {
+        setEditErrors((error as any).responseData);
+        // Show top-level message if available
+        const top = (error as any).responseData.detail || (error as any).responseData.message;
+        toast({
+          title: "Error",
+          description: top || 'Failed to update product. See details below.',
+          variant: "destructive",
+        });
+      } else {
+        setEditErrors({ non_field_errors: [error?.message || 'Unknown error'] });
+        toast({
+          title: "Error",
+          description: `Failed to update product: ${error?.message || 'Unknown error'}`,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -429,9 +573,9 @@ export default function ProductDetail() {
         <meta property="og:image" content={product?.imageUrl || ''} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={window.location.href} />
-        <meta property="product:price:amount" content={product?.price || '0'} />
+        <meta property="product:price:amount" content={String(variantPriceNumber || 0)} />
         <meta property="product:price:currency" content="INR" />
-        <meta property="product:availability" content={(product?.stock || 0) > 0 ? "in stock" : "out of stock"} />
+        <meta property="product:availability" content={variantStock > 0 ? "in stock" : "out of stock"} />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${product?.name || 'Product'} - Aquatic Exotica`} />
         <meta name="twitter:description" content={generateMetaDescription(cleanTextForSEO(product?.description || ''))} />
@@ -446,9 +590,9 @@ export default function ProductDetail() {
             "image": product?.imageUrl || '',
             "offers": {
               "@type": "Offer",
-              "price": product?.price || '0',
+              "price": variantPriceNumber || '0',
               "priceCurrency": "INR",
-              "availability": (product?.stock || 0) > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              "availability": variantStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
               "url": window.location.href
             },
             "brand": {
@@ -511,14 +655,16 @@ export default function ProductDetail() {
             </div>
             
             <div className="mt-4">
-              {product.compareAtPrice ? (
+              {selectedVariant ? (
                 <div className="flex items-center">
                   <span className="text-2xl font-semibold text-accent mr-2">
-                    {formatPrice(product.price)}
+                    {formatPrice(variantPriceNumber)}
                   </span>
-                  <span className="text-gray-400 line-through text-lg">
-                    {formatPrice(product.compareAtPrice)}
-                  </span>
+                  {variantComparePriceNumber ? (
+                    <span className="text-gray-400 line-through text-lg">
+                      {formatPrice(variantComparePriceNumber)}
+                    </span>
+                  ) : null}
                   {/* Priority Badge - Show only one with priority: Featured > Trending > New > Sale */}
                   {(() => {
                     if (product.isFeatured) {
@@ -552,7 +698,7 @@ export default function ProductDetail() {
               ) : (
                 <div className="flex items-center">
                   <span className="text-2xl font-semibold">
-                    {formatPrice(product.price)}
+                    {formatPrice(variantPriceNumber)}
                   </span>
                   {/* Priority Badge for products without compareAtPrice */}
                   {(() => {
@@ -581,6 +727,28 @@ export default function ProductDetail() {
               )}
             </div>
             
+            {/* Variant selector (choose specific variant) */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="mt-4 w-48">
+                <Label>Variant</Label>
+                <Select
+                  value={(selectedVariantId ?? selectedVariant?.id)?.toString() || ''}
+                  onValueChange={(value) => setSelectedVariantId(value ? parseInt(value) : null)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select variant" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {product.variants.map((v) => (
+                      <SelectItem key={`variant-${v.id}`} value={v.id.toString()}>
+                        {(v.variantType || `Variant ${v.id}`) + (v.description ? ` (${v.description})` : '')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div 
               className="mt-6 text-gray-700 prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: product.description }}
@@ -610,12 +778,12 @@ export default function ProductDetail() {
                   </Button>
                 </div>
                 {(() => {
-                  const stockInfo = getStockStatus(product.stock);
+                  const stockInfo = getStockStatus(variantStock);
                   return (
                     <div className="ml-4 flex-1">
                       <Badge className={`${stockInfo.color} px-3 py-1 text-xs sm:text-sm font-medium`} variant="outline">
                         <Package className="h-3 w-3 mr-1" />
-                        {stockInfo.text} ({product.stock} available)
+                        {stockInfo.text} ({variantStock} available)
                       </Badge>
                       {stockInfo.message && (
                         <p className="text-xs mt-1 text-gray-600">{stockInfo.message}</p>
@@ -626,7 +794,7 @@ export default function ProductDetail() {
               </div>
               
               <div className="flex flex-col sm:flex-row gap-3">
-                {product.stock > 0 ? (
+                {variantStock > 0 ? (
                   <Button 
                     className="flex-1 !h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={handleAddToCart}
@@ -763,6 +931,14 @@ export default function ProductDetail() {
                     createdAt: tag.createdAt,
                     updatedAt: new Date().toISOString()
                   })) : [],
+                  // Compute a display priceRange from variants (min - max)
+                  priceRange: (() => {
+                    const vals = Array.isArray(relatedProduct.variants) ? relatedProduct.variants.map(v => parseFloat(v.offerPrice || v.originalPrice || '0')).filter(n => !isNaN(n)) : [];
+                    if (vals.length === 0) return formatPrice(0);
+                    const min = Math.min(...vals);
+                    const max = Math.max(...vals);
+                    return min === max ? formatPrice(min) : `${formatPrice(min)} - ${formatPrice(max)}`;
+                  })(),
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()
                 }} />
@@ -783,6 +959,20 @@ export default function ProductDetail() {
           </DialogHeader>
           
           <form onSubmit={handleEditSubmit} className="space-y-6">
+            {/* Display API validation errors if any */}
+            {editErrors && (
+              <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded">
+                <strong className="block mb-2">Validation Errors:</strong>
+                <ul className="list-disc pl-5 space-y-1 text-sm">
+                  {Object.entries(editErrors).map(([key, val]) => (
+                    <li key={key}>
+                      <span className="font-semibold">{key}:</span>{' '}
+                      {Array.isArray(val) ? val.join(', ') : String(val)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Basic Information */}
               <div className="space-y-4">
@@ -796,44 +986,7 @@ export default function ProductDetail() {
                     required
                   />
                 </div>
-                
-                <div>
-                  <Label htmlFor="price">Price *</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    step="0.01"
-                    value={editFormData.price || ''}
-                    onChange={(e) => setEditFormData({...editFormData, price: e.target.value})}
-                    placeholder="0.00"
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="compareAtPrice">Compare At Price</Label>
-                  <Input
-                    id="compareAtPrice"
-                    type="number"
-                    step="0.01"
-                    value={editFormData.compareAtPrice || ''}
-                    onChange={(e) => setEditFormData({...editFormData, compareAtPrice: e.target.value})}
-                    placeholder="0.00"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="stock">Stock *</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    value={editFormData.stock || ''}
-                    onChange={(e) => setEditFormData({...editFormData, stock: parseInt(e.target.value) || 0})}
-                    placeholder="0"
-                    required
-                  />
-                </div>
-                
+
                 <div>
                   <Label htmlFor="rating">Rating</Label>
                   <Input
@@ -930,7 +1083,51 @@ export default function ProductDetail() {
                 </div>
               </div>
             </div>
-            
+
+            {/* Variants (price/stock are managed per-variant) */}
+            <div className="space-y-4">
+              <Label>Variants</Label>
+              <div className="space-y-3">
+                {productVariants.map((v, idx) => (
+                  <div key={`variant-edit-${v.id}-${idx}`} className="p-3 border rounded-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <strong className="text-sm">Variant #{idx + 1}</strong>
+                      <button type="button" onClick={() => handleRemoveVariant(idx)} className="text-red-500 hover:underline">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                      <div>
+                        <Label>Variant Type</Label>
+                        <Input value={v.variantType || ''} onChange={(e) => handleUpdateVariantField(idx, 'variantType', e.target.value)} placeholder="e.g. Small, Large" />
+                      </div>
+                      <div>
+                        <Label>Stock</Label>
+                        <Input type="number" value={v.stock ?? 0} onChange={(e) => handleUpdateVariantField(idx, 'stock', parseInt(e.target.value) || 0)} />
+                      </div>
+                      <div>
+                        <Label>Original Price</Label>
+                        <Input type="number" step="0.01" value={v.originalPrice || ''} onChange={(e) => handleUpdateVariantField(idx, 'originalPrice', e.target.value)} />
+                      </div>
+                      <div>
+                        <Label>Offer Price</Label>
+                        <Input type="number" step="0.01" value={v.offerPrice || ''} onChange={(e) => handleUpdateVariantField(idx, 'offerPrice', e.target.value)} />
+                      </div>
+                      <div className="md:col-span-3">
+                        <Label>Description</Label>
+                        <Input value={v.description || ''} onChange={(e) => handleUpdateVariantField(idx, 'description', e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <Button type="button" onClick={handleAddVariant} variant="ghost" size="sm">
+                  <Plus className="h-4 w-4 mr-2" /> Add Variant
+                </Button>
+              </div>
+            </div>
+
             {/* Description */}
             <div>
               <Label htmlFor="description">Description</Label>

@@ -6,8 +6,7 @@ import { Link } from "wouter";
 import { Product } from "@/types";
 import { formatPrice, generateStarRating, getStockStatus, generateProductUrl } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { OptimizedImage } from "@/components/ui/optimized-image";
+// removed unused imports: Skeleton, OptimizedImage
 import React from "react";
 
 // Custom interface for display purposes that allows string[] tags
@@ -22,33 +21,43 @@ interface ProductCardProps {
 
 export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   const { addItem } = useCart();
-  const [isAdded, setIsAdded] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+    const [isAdded, setIsAdded] = useState(false);
+    const [imageLoaded, setImageLoaded] = useState(false);
 
   // Use thumbnail if available, otherwise fall back to main image
   const displayImage = product.thumbnailUrl || product.imageUrl;
+  
+    // primary variant used for stock and price
+    const primaryVariants = product.variants?.find(variant => variant.isInStock) || product.variants?.[0];
+    const stock = primaryVariants?.stock ?? 0;
+    // const priceValue = parseFloat(primaryVariants?.offerPrice ?? primaryVariants?.originalPrice ?? '0');
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+    const maxStock = (product.variants ?? []).reduce(
+                      (max, v) => Math.max(max, v.stock), 0);
+
+
+    // Removed as we can't add to cart without variant selection
+  // const handleAddToCart = (e: React.MouseEvent) => {
+  //   e.preventDefault();
+  //   e.stopPropagation();
     
-    // Do not add to cart if the product is out of stock
-    if (product.stock <= 0) return;
+  //   // Do not add to cart if the product is out of stock
+  //   if (stock <= 0) return;
     
-    addItem({
-      id: product.id,
-      name: product.name,
-      price: parseFloat(product.price.toString()),
-      imageUrl: product.imageUrl,
-      quantity: 1
-    });
+  //   addItem({
+  //     id: product.id,
+  //     name: product.name,
+  //     price: priceValue,
+  //     imageUrl: product.imageUrl,
+  //     quantity: 1
+  //   });
     
-    // Show added state for 1.5 seconds
-    setIsAdded(true);
-    setTimeout(() => {
-      setIsAdded(false);
-    }, 1500);
-  };
+  //   // Show added state for 1.5 seconds
+  //   setIsAdded(true);
+  //   setTimeout(() => {
+  //     setIsAdded(false);
+  //   }, 1500);
+  // };
 
   return (
     <Link 
@@ -103,7 +112,7 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
         })()}
         
         {/* Quick Actions */}
-        <div className="quick-actions">
+        {/* <div className="quick-actions">
           <Button 
             className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
             onClick={handleAddToCart}
@@ -124,7 +133,7 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
               </>
             )}
           </Button>
-        </div>
+        </div> */}
       </div>
       
       <div className="p-4">
@@ -132,33 +141,30 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
           <div>
             <h3 className="font-medium">{product.name}</h3>
             <div className="flex items-center mt-1">
-              {product.compareAtPrice ? (
+              {product.priceRange ? (
                 <>
                   <span className="text-accent font-semibold">
-                    {formatPrice(product.price)}
-                  </span>
-                  <span className="ml-2 text-gray-400 line-through text-sm">
-                    {formatPrice(product.compareAtPrice)}
+                    {formatPrice(product.priceRange)}
                   </span>
                 </>
               ) : (
                 <span className="text-dark font-semibold">
-                  {formatPrice(product.price)}
+                  {formatPrice(product.priceRange)}
                 </span>
               )}
             </div>
             
             {/* Stock Indicator */}
             {(() => {
-              const stockInfo = getStockStatus(product.stock);
+              const stockInfo = getStockStatus(maxStock);
               return (
                 <div className="mt-2">
                   <Badge className={`${stockInfo.color}`} variant="outline">
                     <Package className="h-3 w-3 mr-1" />
                     {stockInfo.text}
                   </Badge>
-                  {product.stock <= 5 && product.stock > 0 && (
-                    <p className="text-xs mt-1 text-amber-600 font-medium">Only {product.stock} left!</p>
+                  {stock <= 5 && stock > 0 && (
+                    <p className="text-xs mt-1 text-amber-600 font-medium">Only {stock} left!</p>
                   )}
                 </div>
               );
@@ -180,8 +186,8 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   return (
     prev.id === next.id &&
     prev.name === next.name &&
-    prev.price === next.price &&
-    prev.stock === next.stock &&
+    // prev.price === next.price &&
+    // prev.stock === next.stock &&
     prev.imageUrl === next.imageUrl &&
     prev.thumbnailUrl === next.thumbnailUrl &&
     prev.isNew === next.isNew &&

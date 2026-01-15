@@ -13,10 +13,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  priceRange: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -32,10 +32,11 @@ interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   createdAt: string;
   updatedAt: string;
+  variants: ApiVariants[];
 }
 
 // Define tag type
@@ -65,6 +66,18 @@ interface ProductGridProps {
   initialLimit?: number;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
+}
+
+interface ApiVariants {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 export const ProductGrid = React.memo(({ 
@@ -239,11 +252,12 @@ export const ProductGrid = React.memo(({
         id: apiProduct.id,
         name: apiProduct.name,
         description: apiProduct.description,
-        price: apiProduct.price,
-        compareAtPrice: apiProduct.compareAtPrice,
-        discountPercentage: apiProduct.discountPercentage,
-        stock: apiProduct.stock,
-        category: apiProduct.categories && apiProduct.categories.length > 0 ? {
+        // price: apiProduct.price,
+        // compareAtPrice: apiProduct.compareAtPrice,
+        // discountPercentage: apiProduct.discountPercentage,
+        // stock: apiProduct.stock,
+        priceRange: apiProduct.priceRange,
+        categories: apiProduct.categories && apiProduct.categories.length > 0 ? [{
           id: apiProduct.categories[0].id,
           name: apiProduct.categories[0].name,
           slug: apiProduct.categories[0].slug,
@@ -252,7 +266,7 @@ export const ProductGrid = React.memo(({
           isActive: true,
           createdAt: '',
           updatedAt: ''
-        } : {
+        }] : [{
           id: 0,
           name: 'Uncategorized',
           slug: 'uncategorized',
@@ -261,7 +275,7 @@ export const ProductGrid = React.memo(({
           isActive: true,
           createdAt: '',
           updatedAt: ''
-        },
+        }],
         tags: apiProduct.tagDetails?.map(tag => tag.name) || [],
         tagDetails: apiProduct.tagDetails?.map(tag => ({
           id: tag.id,
@@ -277,10 +291,21 @@ export const ProductGrid = React.memo(({
         isSale: apiProduct.isSale,
         isFeatured: apiProduct.isFeatured,
         isTrending: apiProduct.isTrending,
-        isInStock: apiProduct.isInStock,
+        // isInStock: apiProduct.isInStock,
         imageUrl: apiProduct.imageUrl,
         createdAt: apiProduct.createdAt,
-        updatedAt: apiProduct.updatedAt
+        updatedAt: apiProduct.updatedAt,
+        variants: apiProduct.variants?.map(variant => ({
+          id: variant.id,
+          product: variant.product,
+          variantType: variant.variantType,
+          description: variant.description,
+          stock: variant.stock,
+          originalPrice: variant.originalPrice,
+          offerPrice: variant.offerPrice,
+          discountPercentage: variant.discountPercentage,
+          isInStock: variant.isInStock
+        })) || [],
       };
       return <ProductCard key={product.id} product={product} />;
     });

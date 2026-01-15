@@ -3,10 +3,10 @@ export interface Product {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  priceRange: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: Category[];
   tags: string[];
   tagDetails?: Tag[];
@@ -16,20 +16,21 @@ export interface Product {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
   createdAt: string;
   updatedAt: string;
+  variants: Variant[];
 }
 
 export interface InsertProduct {
   name: string;
   description: string;
-  price: string;
+  // price: string;
   compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // discountPercentage: number;
+  // stock: number;
   categoryId: number;
   tags: string[];
   rating: string;
@@ -40,6 +41,7 @@ export interface InsertProduct {
   isTrending: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  variants: Variant[];
 }
 
 // Category types
@@ -126,6 +128,10 @@ export interface CartItem {
   price: number;
   quantity: number;
   imageUrl: string;
+  // Optional variant id when item represents a specific product variant
+  variantId?: number;
+  // Optional maximum available stock for this cart item (used to cap quantity)
+  maxStock?: number;
 }
 
 export interface Cart {
@@ -133,3 +139,15 @@ export interface Cart {
   total: number;
   count: number;
 } 
+
+export interface Variant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
+}

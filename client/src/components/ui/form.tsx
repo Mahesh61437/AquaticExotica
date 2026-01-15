@@ -66,6 +66,12 @@ const useFormField = () => {
 
 type FormItemContextValue = {
   id: string
+  registerDescription: () => void
+  unregisterDescription: () => void
+  registerMessage: () => void
+  unregisterMessage: () => void
+  hasDescription: boolean
+  hasMessage: boolean
 }
 
 const FormItemContext = React.createContext<FormItemContextValue>(
@@ -77,9 +83,26 @@ const FormItem = React.forwardRef<
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
   const id = React.useId()
+  const [hasDescription, setHasDescription] = React.useState(false)
+  const [hasMessage, setHasMessage] = React.useState(false)
+
+  const registerDescription = React.useCallback(() => setHasDescription(true), [])
+  const unregisterDescription = React.useCallback(() => setHasDescription(false), [])
+  const registerMessage = React.useCallback(() => setHasMessage(true), [])
+  const unregisterMessage = React.useCallback(() => setHasMessage(false), [])
 
   return (
-    <FormItemContext.Provider value={{ id }}>
+    <FormItemContext.Provider
+      value={{
+        id,
+        registerDescription,
+        unregisterDescription,
+        registerMessage,
+        unregisterMessage,
+        hasDescription,
+        hasMessage,
+      }}
+    >
       <div ref={ref} className={cn("space-y-2", className)} {...props} />
     </FormItemContext.Provider>
   )
@@ -108,16 +131,30 @@ const FormControl = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof Slot>
 >(({ ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
+  const itemContext = React.useContext(FormItemContext)
+
+  // Build aria-describedby only when description or message exist
+  let ariaDescribedBy: string | undefined
+  const hasDesc = itemContext?.hasDescription
+  const hasMsg = itemContext?.hasMessage
+
+  if (!hasDesc && !hasMsg) {
+    ariaDescribedBy = undefined
+  } else if (!error) {
+    ariaDescribedBy = hasDesc ? `${formDescriptionId}` : undefined
+  } else {
+    // when error, include both if available
+    const parts: string[] = []
+    if (hasDesc) parts.push(formDescriptionId)
+    if (hasMsg) parts.push(formMessageId)
+    ariaDescribedBy = parts.length > 0 ? parts.join(' ') : undefined
+  }
 
   return (
     <Slot
       ref={ref}
       id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
+      aria-describedby={ariaDescribedBy}
       aria-invalid={!!error}
       {...props}
     />
@@ -130,6 +167,14 @@ const FormDescription = React.forwardRef<
   React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => {
   const { formDescriptionId } = useFormField()
+  const itemContext = React.useContext(FormItemContext)
+
+  React.useEffect(() => {
+    itemContext?.registerDescription?.()
+    return () => {
+      itemContext?.unregisterDescription?.()
+    }
+  }, [itemContext])
 
   return (
     <p
@@ -152,6 +197,14 @@ const FormMessage = React.forwardRef<
   if (!body) {
     return null
   }
+  const itemContext = React.useContext(FormItemContext)
+
+  React.useEffect(() => {
+    itemContext?.registerMessage?.()
+    return () => {
+      itemContext?.unregisterMessage?.()
+    }
+  }, [itemContext])
 
   return (
     <p

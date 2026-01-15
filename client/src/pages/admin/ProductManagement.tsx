@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice, getStockStatus } from "@/lib/utils";
 import { StockNotifier } from "@/components/admin/StockNotifier";
 import { FirebaseImageSelector } from "@/components/admin/FirebaseImageSelector";
+import { ProductImageCarousel } from "@/components/product/ProductImageCarousel";
 import {
   Select,
   SelectContent,
@@ -43,10 +44,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -62,9 +63,10 @@ interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  variants: Variant[];
 }
 
 // Define tag interface
@@ -78,10 +80,6 @@ interface TagItem {
 interface ProductWithTagIds {
   name: string;
   description: string;
-  price: string;
-  compareAtPrice?: string;
-  discountPercentage?: number;
-  stock: number;
   category_ids: number[];
   tags: number[];
   rating: string;
@@ -92,6 +90,26 @@ interface ProductWithTagIds {
   isTrending: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
+  variants: Variant[];
+}
+
+interface Variant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
+}
+
+interface ProductImage {
+  id: number;
+  imageUrl: string;
+  order: number;
+  createdAt?: string;
 }
 
 export default function ProductManagement() {
@@ -101,14 +119,12 @@ export default function ProductManagement() {
   const [formData, setFormData] = useState<Partial<ProductWithTagIds>>({
     name: "",
     description: "",
-    price: "",
-    compareAtPrice: "",
     imageUrl: "",
     thumbnailUrl: "",
     category_ids: [],
     tags: [],
     rating: "0",
-    stock: 0,
+    variants: [],
     isNew: false,
     isSale: false,
     isFeatured: false,
@@ -117,6 +133,9 @@ export default function ProductManagement() {
   const [tagInput, setTagInput] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  const [showImageSelector, setShowImageSelector] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -128,8 +147,7 @@ export default function ProductManagement() {
   const requiredFields = [
     'name',
     'description',
-    'price',
-    'stock',
+    'category_ids',
     'category_ids',
     'imageUrl',
   ];
@@ -189,7 +207,7 @@ export default function ProductManagement() {
       type: typeof value,
       length: typeof value === 'string' ? value.length : 'N/A',
       isTruthy: Boolean(value),
-      isNotZero: value !== 0,
+      isNotZero: typeof value === 'number' ? value !== 0 : false,
       isNumber: typeof value === 'number',
       isGTEZero: typeof value === 'number' && value >= 0,
       isValid: (() => {
@@ -226,6 +244,19 @@ export default function ProductManagement() {
       tags: selectedTagIds
     }));
   }, [selectedTagIds]);
+
+  // Synchronize formData.variants with local variants state
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      variants
+    }));
+  }, [variants]);
+
+  // Sync images into formData
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, images }));
+  }, [images]);
   
 
   const [formError, setFormError] = useState<string | null>(null);
@@ -504,6 +535,10 @@ export default function ProductManagement() {
     }, []);
   }, [products]);
 
+  const totalVariantStock = React.useMemo(() => {
+    return variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
+  }, [variants]);
+
   // Create product mutation
   const createMutation = useMutation({
     mutationFn: async (data: ProductWithTagIds) => {
@@ -595,14 +630,12 @@ export default function ProductManagement() {
     setFormData({
       name: product.name,
       description: product.description,
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
       imageUrl: product.imageUrl,
       thumbnailUrl: product.thumbnailUrl,
+      variants: product.variants || [],
       category_ids: product.categories?.map(cat => cat.id) || [],
       tags: [],
       rating: product.rating,
-      stock: product.stock,
       isNew: product.isNew,
       isSale: product.isSale,
       isFeatured: product.isFeatured,
@@ -625,6 +658,7 @@ export default function ProductManagement() {
     // Set selected category IDs
     const categoryIds = product.categories?.map(cat => cat.id) || [];
     setSelectedCategoryIds(categoryIds);
+    setVariants(product.variants || []);
     
     setIsOpen(true);
   };
@@ -639,11 +673,11 @@ export default function ProductManagement() {
     e.preventDefault();
     setFormError(null);
     // Validate all required fields
-    if (!formData.name || !formData.description || !formData.price || formData.stock === undefined || formData.stock === null || !formData.category_ids || formData.category_ids.length === 0 || !formData.imageUrl) {
-      setFormError("Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.");
+    if (!formData.name || !formData.description || !formData.category_ids || formData.category_ids.length === 0 || !formData.imageUrl) {
+      setFormError("Please fill in all required fields: Name, Description, Category, and Image.");
       toast({
         title: "Error",
-        description: "Please fill in all required fields: Name, Description, Price, Stock, Category, and Image.",
+        description: "Please fill in all required fields: Name, Description, Category, and Image.",
         variant: "destructive",
       });
       return;
@@ -670,13 +704,10 @@ export default function ProductManagement() {
       }
     }
 
-    // Prepare data with tag IDs for API
+    // Prepare data with tag IDs and variants for API
     const submitData: ProductWithTagIds = {
       name: formData.name || '',
       description: formData.description || '',
-      price: formData.price || '',
-      compareAtPrice: formData.compareAtPrice || '',
-      stock: formData.stock || 0,
       category_ids: selectedCategoryIds || [],
       tags: selectedTagIds || [],
       rating: formData.rating || '0',
@@ -686,6 +717,8 @@ export default function ProductManagement() {
       isTrending: formData.isTrending || false,
       imageUrl: formData.imageUrl || '',
       ...(formData.thumbnailUrl && { thumbnailUrl: formData.thumbnailUrl }),
+      variants: variants || [],
+      ...(images && images.length > 0 && { images: images.map(img => ({ imageUrl: img.imageUrl, order: img.order })) }),
     };
 
     console.log('📤 Submitting product data:', submitData);
@@ -704,14 +737,12 @@ export default function ProductManagement() {
     setFormData({
       name: "",
       description: "",
-      price: "",
-      compareAtPrice: "",
       imageUrl: "",
       thumbnailUrl: "",
       category_ids: [],
       tags: [],
       rating: "0",
-      stock: 0,
+      variants: [],
       isNew: false,
       isSale: false,
       isFeatured: false,
@@ -721,6 +752,7 @@ export default function ProductManagement() {
     setTagInput("");
     setSelectedTagIds([]);
     setSelectedCategoryIds([]);
+    setVariants([]);
   };
 
   const handleAddTag = () => {
@@ -817,11 +849,32 @@ export default function ProductManagement() {
               header: "Price",
               accessor: (product: ApiProduct) => (
                 <div className="flex flex-col">
-                  <span className="font-medium">{formatPrice(product.price)}</span>
-                  {product.compareAtPrice && (
-                    <span className="text-sm text-muted-foreground line-through">
-                      {formatPrice(product.compareAtPrice)}
-                    </span>
+                  {product.variants && product.variants.length > 0 ? (
+                    (() => {
+                      // Find lowest offerPrice (if present) or originalPrice
+                      let minOffer: number | null = null;
+                      let minOriginal: number | null = null;
+                      product.variants.forEach(v => {
+                        const op = Number(v.offerPrice) || null;
+                        const orp = Number(v.originalPrice) || null;
+                        if (op) minOffer = minOffer === null ? op : Math.min(minOffer, op);
+                        if (orp) minOriginal = minOriginal === null ? orp : Math.min(minOriginal, orp);
+                      });
+
+                      const displayPrice = minOffer ?? minOriginal;
+                      return displayPrice ? (
+                        <>
+                          <span className="font-medium">{formatPrice(displayPrice)}</span>
+                          {minOffer && minOriginal && minOriginal > minOffer && (
+                            <span className="text-sm text-muted-foreground line-through">
+                              {formatPrice(minOriginal)}
+                            </span>
+                          )}
+                        </>
+                      ) : (<span className="text-muted-foreground">N/A</span>);
+                    })()
+                  ) : (
+                    <span className="text-muted-foreground">N/A</span>
                   )}
                 </div>
               )
@@ -845,17 +898,15 @@ export default function ProductManagement() {
             {
               header: "Stock",
               accessor: (product: ApiProduct) => (
-                <Badge
-                  variant={
-                    getStockStatus(product.stock).status === 'in-stock'
-                      ? 'default'
-                      : getStockStatus(product.stock).status === 'low-stock'
-                      ? 'outline'
-                      : 'destructive'
-                  }
-                >
-                  {product.stock} {getStockStatus(product.stock).text}
-                </Badge>
+                (() => {
+                  const total = product.variants ? product.variants.reduce((s, v) => s + (Number(v.stock) || 0), 0) : 0;
+                  const status = getStockStatus(total).status;
+                  return (
+                    <Badge variant={status === 'in-stock' ? 'default' : status === 'low-stock' ? 'outline' : 'destructive'}>
+                      {total} {getStockStatus(total).text}
+                    </Badge>
+                  )
+                })()
               )
             },
             {
@@ -1018,32 +1069,92 @@ export default function ProductManagement() {
               )}
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <Label>Variants</Label>
               <div className="space-y-2">
-                <Label htmlFor="price">Price (₹) *</Label>
-                <Input
-                  id="price"
-                  value={formData.price || ""}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                  placeholder="E.g. 1999"
-                  required
-                  className={formData.price && formData.price !== '' ? 'border-green-500' : 'border-red-500'}
-                />
-                {formData.price && formData.price !== '' ? (
-                  <span className="text-xs text-green-600">✅ Valid</span>
-                ) : (
-                  <span className="text-xs text-red-600">❌ Required</span>
-                )}
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="compareAtPrice">Compare At Price (₹)</Label>
-                <Input
-                  id="compareAtPrice"
-                  value={formData.compareAtPrice || ""}
-                  onChange={(e) => setFormData({ ...formData, compareAtPrice: e.target.value || undefined })}
-                  placeholder="Original price (if discounted)"
-                />
+                {variants.map((v, idx) => (
+                  <div key={idx} className="p-3 border rounded space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label>Variant Type</Label>
+                        <Input
+                          value={v.variantType || ''}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            newVariants[idx] = { ...newVariants[idx], variantType: e.target.value };
+                            setVariants(newVariants);
+                          }}
+                          placeholder="e.g. One Plant, Pack of 3"
+                        />
+                      </div>
+                      <div className="w-28">
+                        <Label>Stock</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={v.stock ?? 0}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            const val = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
+                            newVariants[idx] = { ...newVariants[idx], stock: val };
+                            setVariants(newVariants);
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Description</Label>
+                        <Textarea
+                          value={v.description || ''}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            newVariants[idx] = { ...newVariants[idx], description: e.target.value };
+                            setVariants(newVariants);
+                          }}
+                          placeholder="Variant description"
+                        />
+                      </div>
+                      <div>
+                        <Label>Original Price</Label>
+                        <Input
+                          value={v.originalPrice || ''}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            newVariants[idx] = { ...newVariants[idx], originalPrice: e.target.value };
+                            setVariants(newVariants);
+                          }}
+                          placeholder="e.g. 1999"
+                        />
+                        <Label className="mt-2">Offer Price</Label>
+                        <Input
+                          value={v.offerPrice || ''}
+                          onChange={(e) => {
+                            const newVariants = [...variants];
+                            newVariants[idx] = { ...newVariants[idx], offerPrice: e.target.value };
+                            setVariants(newVariants);
+                          }}
+                          placeholder="e.g. 1499"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button variant="destructive" size="sm" onClick={() => {
+                        setVariants(prev => prev.filter((_, i) => i !== idx));
+                      }}>
+                        <Trash2 className="w-4 h-4" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+
+                <div>
+                  <Button type="button" onClick={() => setVariants(prev => [...prev, { id: 0, product: 0, variantType: '', description: '', stock: 0, originalPrice: '', offerPrice: '', discountPercentage: 0, isInStock: false }])}>
+                    <Plus className="mr-2 h-4 w-4" /> Add Variant
+                  </Button>
+                </div>
               </div>
             </div>
             
@@ -1089,30 +1200,84 @@ export default function ProductManagement() {
                 </div>
               </div>
             </div>
+
+            {/* Product images carousel + add image button */}
+            <div className="mt-4">
+              <Label>Product Images</Label>
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  {/* Show carousel if images exist, otherwise placeholder */}
+                  {images && images.length > 0 ? (
+                    <ProductImageCarousel images={images.map(img => ({ id: img.id, imageUrl: img.imageUrl, order: img.order, createdAt: img.createdAt || new Date().toISOString() }))} fallbackImage={formData.imageUrl} />
+                  ) : (
+                    <div className="aspect-[3/4] rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                      No additional images
+                    </div>
+                  )}
+                </div>
+
+                <div className="w-64">
+                  {showImageSelector ? (
+                    <div className="p-2 border rounded">
+                      <FirebaseImageSelector
+                        onImageSelected={(url) => {
+                          // Append new image at end with order = images.length
+                          const newImg: ProductImage = { id: Date.now(), imageUrl: url, order: images.length, createdAt: new Date().toISOString() };
+                          setImages(prev => [...prev, newImg]);
+                          setShowImageSelector(false);
+                        }}
+                        className="w-full"
+                      />
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="outline" onClick={() => setShowImageSelector(false)}>Cancel</Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Button onClick={() => setShowImageSelector(true)} className="w-full">
+                        <Plus className="mr-2 h-4 w-4" /> Add Image
+                      </Button>
+
+                      <div className="space-y-2">
+                        {images.map((img) => (
+                          <div key={img.id} className="flex items-center gap-2">
+                            <img src={img.imageUrl} className="w-16 h-16 object-cover rounded" />
+                            <div className="flex-1 text-sm">
+                              <div className="truncate">{img.imageUrl}</div>
+                              <div className="text-xs text-muted-foreground">Order: {img.order}</div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="icon" variant="ghost" onClick={() => {
+                                // Move up
+                                const idx = images.findIndex(i => i.id === img.id);
+                                if (idx > 0) {
+                                  const next = [...images];
+                                  const tmp = next[idx-1];
+                                  next[idx-1] = next[idx];
+                                  next[idx] = tmp;
+                                  setImages(next.map((it, i) => ({ ...it, order: i })));
+                                }
+                              }}>
+                                ▲
+                              </Button>
+                              <Button size="icon" variant="destructive" onClick={() => setImages(prev => prev.filter(i => i.id !== img.id))}>×</Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="stock">Stock *</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  value={formData.stock || 0}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    const stockValue = value === '' ? 0 : parseInt(value) || 0;
-                    setFormData({ ...formData, stock: stockValue });
-                  }}
-                  min={0}
-                  required
-                  className={typeof formData.stock === 'number' && formData.stock >= 0 ? 'border-green-500' : 'border-red-500'}
-                />
-                {typeof formData.stock === 'number' && formData.stock >= 0 ? (
-                  <span className="text-xs text-green-600">✅ Valid</span>
-                ) : (
-                  <span className="text-xs text-red-600">❌ Required</span>
-                )}
+                <Label>Total Stock</Label>
+                <Input id="totalStock" value={String(totalVariantStock)} readOnly />
+                <span className="text-xs text-muted-foreground">Derived from variants</span>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="rating">Rating (0-5) *</Label>
                 <Input
@@ -1321,10 +1486,9 @@ export default function ProductManagement() {
                     ...formData,
                     name: "Test Product",
                     description: "Test description",
-                    price: "100",
-                    stock: 10,
                     imageUrl: "https://placehold.co/600x800/e6e6e6/999999?text=Test+Image"
                   });
+                  setVariants([{ id: 0, product: 0, variantType: 'Default', description: 'Default variant', stock: 10, originalPrice: '100', offerPrice: '80', discountPercentage: 20, isInStock: true }]);
                   if (categories && categories.length > 0) {
                     setSelectedCategoryIds([categories[0].id]);
                   }
@@ -1350,12 +1514,14 @@ export default function ProductManagement() {
             </DialogFooter>
           </form>
           
-          {/* Add stock notifier component when editing a product */}
-          {editingProduct && editingProduct.stock > 0 && (
+          {/* Add stock notifier component when editing a product (derived from variants) */}
+          {editingProduct && (editingProduct.variants ? editingProduct.variants.reduce((s,v) => s + (Number(v.stock)||0), 0) : 0) > 0 && (
             <div className="mt-6 border-t pt-6">
               <StockNotifier 
                 product={{
                   ...editingProduct,
+                  // Provide `stock` for StockNotifier compatibility by summing variant stocks
+                  stock: editingProduct.variants ? editingProduct.variants.reduce((s,v) => s + (Number(v.stock)||0), 0) : 0,
                   categories: editingProduct.categories && editingProduct.categories.length > 0 ? editingProduct.categories.map(cat => ({
                     id: cat.id,
                     name: cat.name,
@@ -1386,7 +1552,7 @@ export default function ProductManagement() {
                   })) : [],
                   createdAt: new Date().toISOString(),
                   updatedAt: new Date().toISOString()
-                }}
+                } as any}
                 onSuccess={() => {
                   queryClient.invalidateQueries({ queryKey: ["/api/products/"] });
                   queryClient.invalidateQueries({ queryKey: ["/api/tags/"] });

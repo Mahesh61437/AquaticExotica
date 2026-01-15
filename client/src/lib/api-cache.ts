@@ -251,7 +251,7 @@ export function clearUserDependentCache(): void {
 }
 
 // Base URL for API calls (set via environment variable VITE_API_BASE)
-export const API_BASE: string = (typeof import.meta.env.VITE_API_BASE === 'string' && import.meta.env.VITE_API_BASE !== '') ? import.meta.env.VITE_API_BASE.replace(/\/+$/, '') : 'https://web-production-b3867.up.railway.app';
+export const API_BASE: string = (typeof import.meta.env.VITE_API_BASE === 'string' && import.meta.env.VITE_API_BASE !== '') ? import.meta.env.VITE_API_BASE.replace(/\/+$/, '') : 'http://127.0.0.1:8000';
 
 // Helper to prepend API_BASE to relative paths
 export function buildUrl(path: string): string {

@@ -137,18 +137,15 @@ export function TrendingProducts() {
                     dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>
                   </div>
                   <div className="mt-2">
-                    {product.compareAtPrice ? (
+                    {product.priceRange ? (
                       <>
                         <span className="text-accent font-semibold">
-                          {formatPrice(product.price)}
-                        </span>
-                        <span className="ml-2 text-gray-400 line-through text-sm">
-                          {formatPrice(product.compareAtPrice)}
+                          {product.priceRange}
                         </span>
                       </>
                     ) : (
                       <span className="text-dark font-semibold">
-                        {formatPrice(product.price)}
+                        {product.priceRange}
                       </span>
                     )}
                   </div>

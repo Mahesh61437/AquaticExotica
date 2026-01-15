@@ -1,4 +1,5 @@
 import { apiRequest } from './queryClient';
+import { Cart } from '@/types';
 
 // API Response Types for Django REST Framework pagination
 export interface PaginationMeta {
@@ -11,10 +12,10 @@ export interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  price: string;
-  compareAtPrice: string;
-  discountPercentage: number;
-  stock: number;
+  // price: string;
+  // compareAtPrice: string;
+  // discountPercentage: number;
+  // stock: number;
   categories: {
     id: number;
     name: string;
@@ -30,11 +31,12 @@ export interface ApiProduct {
   isSale: boolean;
   isFeatured: boolean;
   isTrending: boolean;
-  isInStock: boolean;
+  // isInStock: boolean;
   imageUrl: string;
   thumbnailUrl?: string;
   createdAt: string;
   updatedAt: string;
+  variants: ApiVariants[];
 }
 
 export interface ApiTag {
@@ -61,6 +63,18 @@ export interface ProductFilters {
   filter_type?: 'new' | 'sale' | 'trending' | 'featured';
   sort_by?: 'name' | 'price' | 'rating' | 'created_at';
   sort_order?: 'asc' | 'desc';
+}
+
+export interface ApiVariants {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  discountPercentage: number;
+  isInStock: boolean;
 }
 
 // Shop API Functions
@@ -195,6 +209,32 @@ export class ShopAPI {
       console.error('🛍️ ShopAPI: Error fetching tags:', error);
       return [];
     }
+  }
+}
+
+// Save cart to backend
+export async function saveCart(cart: Cart) {
+  try {
+    const payload = {
+      items: cart.items.map(item => ({
+        product: item.id,
+        variant: item.variantId ?? null,
+        quantity: item.quantity
+      }))
+    };
+
+    console.log('🔁 saveCart payload', payload);
+
+    // Use PUT to update (viewset expected at /api/cart/)
+    const res = await apiRequest('/api/cart/', {
+      method: 'PUT',
+      body: JSON.stringify(payload)
+    });
+
+    return res;
+  } catch (error) {
+    console.error('saveCart error', error);
+    throw error;
   }
 }
 
