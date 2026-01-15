@@ -1,11 +1,24 @@
-www.aquaticexotica.com {
+{
+    # Disable automatic HTTPS - Railway handles SSL/TLS termination
+    auto_https off
+}
+
+# Listen on internal port - Railway handles SSL and routes to this port
+# Uses PORT env var (Railway sets this), defaults to 8080
+:{$PORT:8080} {
     # Serve static files from React build
     root * dist
     file_server
 
-    # API routing to Django backend (update host and port if needed)
+    # API routing to Django backend
+    # Uses API_BASE env var (set to same value as VITE_API_BASE)
+    # Example: API_BASE=https://web-production-b3867.up.railway.app
     handle_path /api/* {
-        reverse_proxy web-production-b3867.up.railway.app  # Replace 'django' with your backend service name or localhost
+        reverse_proxy {$API_BASE:https://web-production-b3867.up.railway.app} {
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto https
+        }
     }
 
     # Fallback for SPA routing (React Router)
