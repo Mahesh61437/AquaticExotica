@@ -206,10 +206,10 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* Diwali Popup Banner */}
-      {shouldShowBanner && (
+      {/* Diwali Popup Banner - Disabled */}
+      {/* {shouldShowBanner && (
         <DiwaliPopupBanner onClose={markBannerAsSeen} />
-      )}
+      )} */}
     </>
   );
 }
