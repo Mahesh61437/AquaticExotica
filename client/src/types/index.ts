@@ -130,6 +130,8 @@ export interface CartItem {
   imageUrl: string;
   // Optional variant id when item represents a specific product variant
   variantId?: number;
+  // Optional variant name/description to display to user
+  variantName?: string;
   // Optional maximum available stock for this cart item (used to cap quantity)
   maxStock?: number;
 }

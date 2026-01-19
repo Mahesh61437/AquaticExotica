@@ -46,8 +46,8 @@ export function ShoppingCart() {
           ) : (
             <div>
               <ul className="divide-y divide-gray-200">
-                {cart.items.map((item) => (
-                  <li key={item.id} className="py-6 sm:py-4">
+                {cart.items.map((item, index) => (
+                  <li key={`${item.id}-${item.variantId || 'no-variant'}-${index}`} className="py-6 sm:py-4">
                     <div className="flex items-start gap-4">
                       <img 
                         src={item.imageUrl} 
@@ -59,6 +59,9 @@ export function ShoppingCart() {
                         <h3 className="font-semibold text-gray-900 text-base sm:text-sm leading-tight mb-2">
                           {item.name}
                         </h3>
+                        {item.variantName && (
+                          <p className="text-xs text-gray-600 mb-1">{item.variantName}</p>
+                        )}
                         
                         <div className="space-y-3">
                           {/* Price per unit */}

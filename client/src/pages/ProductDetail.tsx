@@ -351,6 +351,8 @@ export default function ProductDetail() {
     // Make sure the quantity doesn't exceed available stock for the selected variant
     const finalQuantity = Math.min(quantity, variantStock);
     
+    const variantName = selectedVariant?.description || selectedVariant?.variantType || '';
+    
     addItem({
       id: product.id,
       variantId: selectedVariant?.id,
@@ -358,6 +360,7 @@ export default function ProductDetail() {
       price: parseFloat(selectedVariant?.offerPrice || selectedVariant?.originalPrice || '0'),
       imageUrl: product.imageUrl,
       quantity: finalQuantity,
+      variantName: variantName,
       maxStock: variantStock,
     }, finalQuantity, true); // Open cart when adding from product detail
     

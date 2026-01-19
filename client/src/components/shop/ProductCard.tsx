@@ -27,37 +27,61 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
   // Use thumbnail if available, otherwise fall back to main image
   const displayImage = product.thumbnailUrl || product.imageUrl;
   
-    // primary variant used for stock and price
-    const primaryVariants = product.variants?.find(variant => variant.isInStock) || product.variants?.[0];
-    const stock = primaryVariants?.stock ?? 0;
-    // const priceValue = parseFloat(primaryVariants?.offerPrice ?? primaryVariants?.originalPrice ?? '0');
+    // Find the lowest priced variant (prefer in-stock variants)
+    const getLowestPricedVariant = () => {
+      if (!product.variants || product.variants.length === 0) return null;
+      
+      // Filter in-stock variants first
+      const inStockVariants = product.variants.filter(v => v.isInStock);
+      const variantsToCheck = inStockVariants.length > 0 ? inStockVariants : product.variants;
+      
+      // Find variant with lowest price (use offerPrice if available, otherwise originalPrice)
+      return variantsToCheck.reduce((lowest, current) => {
+        const lowestPrice = parseFloat(lowest.offerPrice || lowest.originalPrice || '0');
+        const currentPrice = parseFloat(current.offerPrice || current.originalPrice || '0');
+        return currentPrice < lowestPrice ? current : lowest;
+      });
+    };
 
+    const lowestVariant = getLowestPricedVariant();
+    const stock = lowestVariant?.stock ?? 0;
     const maxStock = (product.variants ?? []).reduce(
-                      (max, v) => Math.max(max, v.stock), 0);
+      (max, v) => Math.max(max, v.stock), 0);
 
-
-    // Removed as we can't add to cart without variant selection
-  // const handleAddToCart = (e: React.MouseEvent) => {
-  //   e.preventDefault();
-  //   e.stopPropagation();
-    
-  //   // Do not add to cart if the product is out of stock
-  //   if (stock <= 0) return;
-    
-  //   addItem({
-  //     id: product.id,
-  //     name: product.name,
-  //     price: priceValue,
-  //     imageUrl: product.imageUrl,
-  //     quantity: 1
-  //   });
-    
-  //   // Show added state for 1.5 seconds
-  //   setIsAdded(true);
-  //   setTimeout(() => {
-  //     setIsAdded(false);
-  //   }, 1500);
-  // };
+    const handleAddToCart = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // If product has variants, use the lowest priced variant
+      if (product.variants && product.variants.length > 0) {
+        if (!lowestVariant || !lowestVariant.isInStock) {
+          return; // Can't add if no in-stock variant
+        }
+        
+        const variantPrice = parseFloat(lowestVariant.offerPrice || lowestVariant.originalPrice || '0');
+        const variantName = lowestVariant.description || lowestVariant.variantType || '';
+        
+        addItem({
+          id: product.id,
+          name: product.name,
+          price: variantPrice,
+          imageUrl: product.imageUrl,
+          quantity: 1,
+          variantId: lowestVariant.id,
+          variantName: variantName,
+          maxStock: lowestVariant.stock,
+        });
+      } else {
+        // No variants - can't add (shouldn't happen with new structure, but handle gracefully)
+        return;
+      }
+      
+      // Show added state for 1.5 seconds
+      setIsAdded(true);
+      setTimeout(() => {
+        setIsAdded(false);
+      }, 1500);
+    };
 
   return (
     <Link 
@@ -111,19 +135,19 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
           return null;
         })()}
         
-        {/* Quick Actions */}
-        {/* <div className="quick-actions">
+        {/* Quick Actions - Shows on hover */}
+        <div className="quick-actions">
           <Button 
             className={`flex-1 text-xs py-1 ${isAdded ? 'bg-green-600 hover:bg-green-700' : ''}`}
             onClick={handleAddToCart}
-            disabled={product.stock <= 0}
-            title={product.stock <= 0 ? "Out of stock" : ""}
+            disabled={!lowestVariant || !lowestVariant.isInStock || stock <= 0}
+            title={!lowestVariant || !lowestVariant.isInStock || stock <= 0 ? "Out of stock" : "Add to cart"}
           >
             {isAdded ? (
               <>
                 <Check className="h-4 w-4 mr-1" /> Added
               </>
-            ) : product.stock <= 0 ? (
+            ) : !lowestVariant || !lowestVariant.isInStock || stock <= 0 ? (
               <>
                 <Package className="h-4 w-4 mr-1" /> Out of Stock
               </>
@@ -133,7 +157,7 @@ export const ProductCard = React.memo(({ product }: ProductCardProps) => {
               </>
             )}
           </Button>
-        </div> */}
+        </div>
       </div>
       
       <div className="p-4">

@@ -243,7 +243,8 @@ export function CheckoutForm() {
       const items = cart.items.map(item => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price.toFixed(2)
+        price: item.price.toFixed(2),
+        variant_id: item.variantId ?? null  // Always include variant_id (null if no variant)
       }));
 
       const shippingCost = 150; // Shipping cost
@@ -783,8 +784,8 @@ export function CheckoutForm() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {cart.items.map((item) => (
-              <div key={item.id} className="flex justify-between items-center pb-2 border-b">
+            {cart.items.map((item, index) => (
+              <div key={`${item.id}-${item.variantId || 'no-variant'}-${index}`} className="flex justify-between items-center pb-2 border-b">
                 <div className="flex items-center gap-2">
                   <div className="h-12 w-12 bg-gray-100 rounded overflow-hidden">
                     <img
@@ -795,6 +796,9 @@ export function CheckoutForm() {
                   </div>
                   <div>
                     <p className="font-medium">{item.name}</p>
+                    {item.variantName && (
+                      <p className="text-xs text-gray-600">{item.variantName}</p>
+                    )}
                     <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
                   </div>
                 </div>
