@@ -83,6 +83,8 @@ interface ProductWithTagIds {
   category_ids: number[];
   tags: number[];
   rating: string;
+  price?: string;
+  compareAtPrice?: string;
   isActive?: boolean;
   isNew: boolean;
   isSale: boolean;
@@ -124,6 +126,8 @@ export default function ProductManagement() {
     category_ids: [],
     tags: [],
     rating: "0",
+    price: "",
+    compareAtPrice: "",
     variants: [],
     isNew: false,
     isSale: false,
@@ -636,6 +640,8 @@ export default function ProductManagement() {
       category_ids: product.categories?.map(cat => cat.id) || [],
       tags: [],
       rating: product.rating,
+      price: (product as any).price || "",
+      compareAtPrice: (product as any).compareAtPrice || "",
       isNew: product.isNew,
       isSale: product.isSale,
       isFeatured: product.isFeatured,
@@ -711,6 +717,8 @@ export default function ProductManagement() {
       category_ids: selectedCategoryIds || [],
       tags: selectedTagIds || [],
       rating: formData.rating || '0',
+      ...(formData.price && { price: formData.price }),
+      ...(formData.compareAtPrice && { compareAtPrice: formData.compareAtPrice }),
       isNew: formData.isNew || false,
       isSale: formData.isSale || false,
       isFeatured: formData.isFeatured || false,
@@ -742,6 +750,8 @@ export default function ProductManagement() {
       category_ids: [],
       tags: [],
       rating: "0",
+      price: "",
+      compareAtPrice: "",
       variants: [],
       isNew: false,
       isSale: false,
@@ -1271,6 +1281,36 @@ export default function ProductManagement() {
               </div>
             </div>
             
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="price">Price</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.price || ""}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="e.g. 1999"
+                />
+                <span className="text-xs text-muted-foreground">Base product price</span>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="compareAtPrice">Compare At Price</Label>
+                <Input
+                  id="compareAtPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.compareAtPrice || ""}
+                  onChange={(e) => setFormData({ ...formData, compareAtPrice: e.target.value })}
+                  placeholder="e.g. 2499"
+                />
+                <span className="text-xs text-muted-foreground">Original price (for discount display)</span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Total Stock</Label>
