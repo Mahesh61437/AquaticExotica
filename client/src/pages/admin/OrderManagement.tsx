@@ -25,11 +25,27 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Eye, PenLine } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Order } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatPrice } from "@/lib/utils";
+import { generateProductUrl } from "@/lib/utils";
+import { formatPrice, generateProductUrl } from "@/lib/utils";
 import React from "react";
+
+// Define variant type based on API response
+interface OrderVariant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  savings: string;
+  discountPercentage: number;
+  isInStock: boolean;
+}
 
 // Define new order item type based on API response
 interface OrderItem {
@@ -37,32 +53,13 @@ interface OrderItem {
   product: {
     id: number;
     name: string;
-    description: string;
-    // price: string;
-    // compareAtPrice: string;
-    // discountPercentage: number;
-    // stock: number;
-    category: {
-      id: number;
-      name: string;
-      slug: string;
-      description: string | null;
-      imageUrl: string;
-    };
-    tags: string;
-    rating: string;
-    isActive: boolean;
-    isNew: boolean;
-    isSale: boolean;
-    isFeatured: boolean;
-    isTrending: boolean;
-    // isInStock: boolean;
     imageUrl: string;
+    thumbnailUrl?: string | null;
   };
+  variant: OrderVariant | null;
   quantity: number;
   price: string;
   totalPrice: number;
-  variants: Variants[];
 }
 
 // Define new shipping address type based on API response
@@ -92,17 +89,6 @@ interface NewOrder {
   createdAt: string;
 }
 
-interface Variants {
-  id: number;
-  product: number;
-  cvariantType: string;
-  description: string;
-  stock: number;
-  originalPrice: string;
-  offerPrice: string;
-  discountPercentage: number;
-  isInStock: boolean;
-}
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800 border-yellow-300",
@@ -549,7 +535,16 @@ export default function OrderManagement() {
                           className="w-16 h-16 object-cover rounded"
                         />
                         <div className="flex-1">
-                          <h4 className="font-medium">{item.product.name}</h4>
+                          <Link href={generateProductUrl(item.product)}>
+                            <h4 className="font-medium hover:text-primary cursor-pointer transition-colors">
+                              {item.product.name}
+                            </h4>
+                          </Link>
+                          {item.variant && (
+                            <p className="text-sm text-gray-600 mt-1">
+                              Variant: {item.variant.description || item.variant.variantType}
+                            </p>
+                          )}
                           <p className="text-sm text-muted-foreground">
                             Quantity: {item.quantity} × {formatPrice(item.price)}
                           </p>

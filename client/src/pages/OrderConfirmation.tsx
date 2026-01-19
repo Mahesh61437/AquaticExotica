@@ -3,9 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { CheckCircle, ChevronRight, Truck, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, generateProductUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
+
+// Define variant type based on API response
+interface OrderVariant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  savings: string;
+  discountPercentage: number;
+  isInStock: boolean;
+}
 
 // Define new order item type based on API response
 interface OrderItem {
@@ -13,29 +27,10 @@ interface OrderItem {
   product: {
     id: number;
     name: string;
-    description: string;
-    // price: string;
-    // compareAtPrice: string;
-    // discountPercentage: number;
-    // stock: number;
-    category: {
-      id: number;
-      name: string;
-      slug: string;
-      description: string | null;
-      imageUrl: string;
-    };
-    tags: string;
-    rating: string;
-    isActive: boolean;
-    isNew: boolean;
-    isSale: boolean;
-    isFeatured: boolean;
-    isTrending: boolean;
-    // isInStock: boolean;
     imageUrl: string;
-    variants: Variants[];
+    thumbnailUrl?: string | null;
   };
+  variant: OrderVariant | null;
   quantity: number;
   price: string;
   totalPrice: number;
@@ -76,17 +71,6 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
-interface Variants {
-  id: number;
-  product: number;
-  variantType: string;
-  description: string;
-  stock: number;
-  originalPrice: string;
-  offerPrice: string;
-  discountPercentage: number;
-  isInStock: boolean;
-}
 
 export default function OrderConfirmation() {
   const [, params] = useRoute("/order-confirmation/:id");
@@ -250,7 +234,16 @@ export default function OrderConfirmation() {
                     />
                   </div>
                   <div className="ml-4 flex-1">
-                    <h4 className="font-medium">{item.product.name}</h4>
+                    <Link href={generateProductUrl(item.product)}>
+                      <h4 className="font-medium hover:text-primary cursor-pointer transition-colors">
+                        {item.product.name}
+                      </h4>
+                    </Link>
+                    {item.variant && (
+                      <p className="text-sm text-gray-600 mt-1">
+                        Variant: {item.variant.description || item.variant.variantType}
+                      </p>
+                    )}
                     <div className="flex justify-between mt-1 text-sm">
                       <span className="text-gray-600">Qty: {item.quantity}</span>
                       <span>{formatPrice(item.totalPrice)}</span>

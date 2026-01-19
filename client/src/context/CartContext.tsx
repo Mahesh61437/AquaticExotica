@@ -1,9 +1,18 @@
 import * as React from "react";
-import { createContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useEffect, useState, useRef, ReactNode } from "react";
 import { CartItem, Cart } from "@/types";
 import { useAuth } from "@/context/AuthContext";
-import { saveCart } from "@/lib/shop-api";
+import { saveCart, updateCartItem, deleteCartItem } from "@/lib/shop-api";
 // import { useCartAnalytics } from "@/hooks/use-analytics";
+
+// Queue item for individual cart updates
+interface PendingUpdate {
+  type: 'update' | 'delete';
+  productId: number;
+  variantId: number | null;
+  quantity?: number;
+  timestamp: number;
+}
 
 interface CartContextType {
   cart: Cart;
@@ -39,38 +48,115 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
   
   const [isCartOpen, setIsCartOpen] = useState(false);
-  // const { trackCartInteraction, trackCartAbandonmentEvent } = useCartAnalytics();
+  const { currentUser } = useAuth();
+  
+  // Queue for pending updates
+  const updateQueueRef = useRef<PendingUpdate[]>([]);
+  const isProcessingRef = useRef(false);
+  const updateTimeoutRef = useRef<number | undefined>();
 
   // Save cart to localStorage whenever it changes
-  const { currentUser } = useAuth();
-
   useEffect(() => {
-    // persist locally
     localStorage.setItem('cart', JSON.stringify(cart));
+  }, [cart]);
 
-    // debounce backend sync when user is signed in
-    let t: number | undefined;
-    if (currentUser) {
-      t = window.setTimeout(() => {
-        (async () => {
-          try {
-            console.log('⤴️ Attempting to sync cart to backend', {
-              userId: currentUser?.id,
-              items: cart.items,
-            });
-            await saveCart(cart);
-            console.log('✅ Cart synced to backend');
-          } catch (e) {
-            console.error('❌ Failed to sync cart to backend', e);
-          }
-        })();
-      }, 800);
+  // Process update queue one at a time with delays
+  const processUpdateQueue = React.useCallback(async () => {
+    if (isProcessingRef.current || !currentUser) return;
+    
+    if (updateQueueRef.current.length === 0) {
+      isProcessingRef.current = false;
+      return;
     }
 
+    isProcessingRef.current = true;
+    const update = updateQueueRef.current.shift();
+    
+    if (!update) {
+      isProcessingRef.current = false;
+      return;
+    }
+
+    try {
+      if (update.type === 'delete') {
+        // Delete immediately (no delay)
+        console.log('🗑️ Deleting cart item', { productId: update.productId, variantId: update.variantId });
+        await deleteCartItem(update.productId, update.variantId);
+        console.log('✅ Cart item deleted');
+      } else {
+        // Update with delay
+        console.log('🔁 Updating cart item', { productId: update.productId, variantId: update.variantId, quantity: update.quantity });
+        await updateCartItem(update.productId, update.variantId, update.quantity || 0);
+        console.log('✅ Cart item updated');
+      }
+    } catch (error) {
+      console.error('❌ Failed to update cart item', error);
+    }
+
+    // Process next item after delay (500ms for updates, immediate for deletes)
+    if (updateQueueRef.current.length > 0) {
+      const delay = updateQueueRef.current[0]?.type === 'delete' ? 0 : 500;
+      updateTimeoutRef.current = window.setTimeout(() => {
+        processUpdateQueue();
+      }, delay);
+    } else {
+      isProcessingRef.current = false;
+    }
+  }, [currentUser]);
+
+  // Queue an update for backend sync
+  const queueUpdate = React.useCallback((update: PendingUpdate) => {
+    if (!currentUser) return;
+
+    // Remove any pending updates for the same item (keep only latest)
+    updateQueueRef.current = updateQueueRef.current.filter(
+      u => !(u.productId === update.productId && u.variantId === update.variantId)
+    );
+
+    // Add new update
+    updateQueueRef.current.push({
+      ...update,
+      timestamp: Date.now()
+    });
+
+    // Start processing if not already processing
+    if (!isProcessingRef.current) {
+      const delay = update.type === 'delete' ? 0 : 500;
+      updateTimeoutRef.current = window.setTimeout(() => {
+        processUpdateQueue();
+      }, delay);
+    }
+  }, [currentUser, processUpdateQueue]);
+
+  // Initial cart sync on sign-in
+  useEffect(() => {
+    if (currentUser && cart.items.length > 0) {
+      // Use full cart sync for initial sync only
+      const timer = window.setTimeout(async () => {
+        try {
+          console.log('⤴️ Initial cart sync after sign-in', {
+            userId: currentUser.id,
+            items: cart.items,
+          });
+          await saveCart(cart);
+          console.log('✅ Initial cart synced to backend');
+        } catch (e) {
+          console.error('❌ Failed to sync cart to backend', e);
+        }
+      }, 1000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentUser?.id]); // Only on user change, not cart change
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
-      if (t) clearTimeout(t);
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
     };
-  }, [cart, currentUser]);
+  }, []);
 
   // Update cart totals
   const updateTotals = (items: CartItem[]) => {
@@ -92,24 +178,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
       const maxAvailable = product.maxStock ?? Infinity;
       let newItems;
+      let finalQuantity: number;
 
       if (existingItemIndex >= 0) {
         // Update existing item quantity but cap to maxStock if provided
         newItems = [...prevCart.items];
         const existing = newItems[existingItemIndex];
         const desired = existing.quantity + quantity;
-        const capped = Math.min(desired, existing.maxStock ?? maxAvailable);
+        finalQuantity = Math.min(desired, existing.maxStock ?? maxAvailable);
         newItems[existingItemIndex] = {
           ...existing,
-          quantity: capped
+          quantity: finalQuantity
         };
       } else {
         // Add new item, cap initial quantity to maxStock
-        const cappedQty = Math.min(quantity, maxAvailable === Infinity ? quantity : Math.max(0, maxAvailable));
-        newItems = [...prevCart.items, { ...product, quantity: cappedQty }];
+        finalQuantity = Math.min(quantity, maxAvailable === Infinity ? quantity : Math.max(0, maxAvailable));
+        newItems = [...prevCart.items, { ...product, quantity: finalQuantity }];
       }
 
       const { count, total } = updateTotals(newItems);
+      
+      // Queue backend update
+      queueUpdate({
+        type: 'update',
+        productId: product.id,
+        variantId: product.variantId ?? null,
+        quantity: finalQuantity
+      });
+
       return { items: newItems, count, total };
     });
 
@@ -137,6 +233,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return item.id !== id;
       });
       const { count, total } = updateTotals(newItems);
+      
+      // Queue delete immediately (no delay)
+      queueUpdate({
+        type: 'delete',
+        productId: id,
+        variantId: variantId ?? null
+      });
+
       return { items: newItems, count, total };
     });
   };
@@ -157,6 +261,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         return { ...item, quantity: capped };
       });
       const { count, total } = updateTotals(newItems);
+      
+      // Queue backend update
+      const updatedItem = newItems.find(item => 
+        item.id === id && (variantId === undefined ? item.variantId === undefined : item.variantId === variantId)
+      );
+      
+      if (updatedItem) {
+        queueUpdate({
+          type: 'update',
+          productId: id,
+          variantId: variantId ?? null,
+          quantity: updatedItem.quantity
+        });
+      }
+
       return { items: newItems, count, total };
     });
   };

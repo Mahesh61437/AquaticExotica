@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRoute, useLocation } from "wouter";
+import { useRoute, useLocation, Link } from "wouter";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/use-toast";
 import { apiRequest } from "../lib/queryClient";
-import { formatPrice } from "../lib/utils";
+import { formatPrice, generateProductUrl } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,38 +18,33 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Package, Truck, CheckCircle, Clock, XCircle } from "lucide-react";
 
+// Define variant type based on API response
+interface OrderVariant {
+  id: number;
+  product: number;
+  variantType: string;
+  description: string;
+  stock: number;
+  originalPrice: string;
+  offerPrice: string;
+  savings: string;
+  discountPercentage: number;
+  isInStock: boolean;
+}
+
 // Define new order item type based on API response
 interface OrderItem {
   id: number;
   product: {
     id: number;
     name: string;
-    description: string;
-    // price: string;
-    // compareAtPrice: string;
-    // discountPercentage: number;
-    // stock: number;
-    category: {
-      id: number;
-      name: string;
-      slug: string;
-      description: string | null;
-      imageUrl: string;
-    };
-    tags: string;
-    rating: string;
-    isActive: boolean;
-    isNew: boolean;
-    isSale: boolean;
-    isFeatured: boolean;
-    isTrending: boolean;
-    // isInStock: boolean;
     imageUrl: string;
+    thumbnailUrl?: string | null;
   };
+  variant: OrderVariant | null;
   quantity: number;
   price: string;
   totalPrice: number;
-  variants: Variants[];
 }
 
 // Define new shipping address type based on API response
@@ -87,17 +82,6 @@ interface PaginatedResponse<T> {
   results: T[];
 }
 
-interface Variants {
-  id: number;
-  product: number;
-  variantType: string;
-  description: string;
-  stock: number;
-  originalPrice: string;
-  offerPrice: string;
-  discountPercentage: number;
-  isInStock: boolean;
-}
 
 export default function OrderDetail() {
   const { currentUser } = useAuth();
@@ -301,7 +285,16 @@ export default function OrderDetail() {
                       />
                     </div>
                     <div className="flex-grow">
-                      <h4 className="font-medium">{item.product.name}</h4>
+                      <Link href={generateProductUrl(item.product)}>
+                        <h4 className="font-medium hover:text-primary cursor-pointer transition-colors">
+                          {item.product.name}
+                        </h4>
+                      </Link>
+                      {item.variant && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Variant: {item.variant.description || item.variant.variantType}
+                        </p>
+                      )}
                       <div className="text-sm text-gray-500">
                         Quantity: {item.quantity}
                       </div>

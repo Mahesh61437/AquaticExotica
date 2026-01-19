@@ -212,7 +212,7 @@ export class ShopAPI {
   }
 }
 
-// Save cart to backend
+// Save cart to backend (full cart sync - used for initial sync)
 export async function saveCart(cart: Cart) {
   try {
     const payload = {
@@ -234,6 +234,55 @@ export async function saveCart(cart: Cart) {
     return res;
   } catch (error) {
     console.error('saveCart error', error);
+    throw error;
+  }
+}
+
+// Add or update a single cart item
+export async function updateCartItem(productId: number, variantId: number | null, quantity: number) {
+  try {
+    const payload = {
+      product: productId,
+      variant: variantId,
+      quantity: quantity
+    };
+
+    console.log('🔁 updateCartItem payload', payload);
+
+    // POST to add/update item (backend should handle upsert)
+    const res = await apiRequest('/api/cart/items/', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    return res;
+  } catch (error) {
+    console.error('updateCartItem error', error);
+    throw error;
+  }
+}
+
+// Delete a single cart item
+export async function deleteCartItem(productId: number, variantId: number | null) {
+  try {
+    // Build query params for delete
+    const params = new URLSearchParams({
+      product: productId.toString()
+    });
+    if (variantId !== null) {
+      params.append('variant', variantId.toString());
+    }
+
+    console.log('🗑️ deleteCartItem', { productId, variantId });
+
+    // DELETE request with query params
+    const res = await apiRequest(`/api/cart/items/?${params.toString()}`, {
+      method: 'DELETE'
+    });
+
+    return res;
+  } catch (error) {
+    console.error('deleteCartItem error', error);
     throw error;
   }
 }
