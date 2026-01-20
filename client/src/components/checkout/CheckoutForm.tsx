@@ -287,34 +287,32 @@ export function CheckoutForm() {
         body: JSON.stringify(orderData),
       });
 
-      // Track purchase completion
-      // trackOrderComplete({
-      //   id: response.id.toString(),
-      //   total: cart.total,
-      //   items: cart.items.map(item => ({
-      //     id: item.id,
-      //     name: item.name,
-      //     categories: [{ name: 'Aquatic Products', id: 1 }], // Default category
-      //     price: item.price.toString(),
-      //     quantity: item.quantity,
-      //   })),
-      // });
+      const orderId = response.id;
 
-      // Clear cart after successful order
+      // Clear cart after order creation (before payment)
       clearCart();
-      
-      toast({
-        title: "Order received successfully!",
-        description: "We are currently checking if the stock is available for your order. We will contact you shortly via WhatsApp with the details.",
-        duration: 6000, // Show for longer so user can read message
-      });
 
-      // Redirect to confirmation page using the order ID from response
+      // Initiate PayU payment and redirect to PayU hosted checkout
+      // Backend will fetch order details and customer info from database
       try {
-        setLocation(`/order-confirmation/${response.id}`);
-      } catch (error) {
-        console.error("Error during redirect:", error);
-        setLocation('/');
+        const { processPayUPayment } = await import("@/lib/payu-service");
+        
+        await processPayUPayment(orderId);
+        
+        // User will be redirected to PayU, so no need to redirect here
+        // PayU will redirect back to success/failure URLs after payment
+      } catch (paymentError: any) {
+        console.error("Payment initiation error:", paymentError);
+        
+        // If payment initiation fails, redirect to order confirmation anyway
+        // Order is already created, payment can be retried later
+        toast({
+          title: "Order created",
+          description: "Order created successfully. Payment initiation failed. You can retry payment from order details.",
+          variant: "default",
+        });
+        
+        setLocation(`/order-confirmation/${orderId}`);
       }
     } catch (error) {
       console.error("Checkout error:", error);
