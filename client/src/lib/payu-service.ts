@@ -17,7 +17,7 @@ export interface PayUPaymentParams {
 
 // PayU payment initiation request - No longer needed as backend fetches from order
 
-// PayU payment initiation response
+// PayU payment initiation response (camelCase as per backend API)
 export interface PayUInitiateResponse {
   key: string;
   txnid: string;
@@ -29,7 +29,7 @@ export interface PayUInitiateResponse {
   hash: string;
   surl: string;
   furl: string;
-  payu_url: string;
+  payuUrl: string; // camelCase as per backend API
 }
 
 // PayU payment status response
@@ -63,6 +63,11 @@ export async function initiatePayUPayment(
       },
     });
 
+    // Log the full response for debugging
+    console.log("🔍 PayU Initiate Response:", JSON.stringify(response, null, 2));
+    console.log("🔍 payuUrl value:", response.payuUrl);
+    console.log("🔍 payuUrl type:", typeof response.payuUrl);
+
     return response;
   } catch (error: any) {
     console.error("PayU payment initiation error:", error);
@@ -91,6 +96,12 @@ export async function getPaymentStatus(orderId: number): Promise<PayUPaymentStat
  * Creates a hidden form and submits it to PayU
  */
 export function redirectToPayU(paymentParams: PayUPaymentParams, payuUrl: string): void {
+  // Validate PayU URL
+  if (!payuUrl || payuUrl === "undefined" || !payuUrl.startsWith("http")) {
+    console.error("Invalid PayU URL:", payuUrl);
+    throw new Error(`Invalid PayU URL: ${payuUrl}. Please check backend configuration.`);
+  }
+
   // Create a form element
   const form = document.createElement("form");
   form.method = "POST";
@@ -129,8 +140,18 @@ export async function processPayUPayment(
     // Backend will fetch order details and customer info from database
     const response = await initiatePayUPayment(orderId);
 
+    // Validate required fields
     if (!response.hash) {
-      throw new Error("Failed to initiate payment - invalid response");
+      throw new Error("Failed to initiate payment - missing hash in response");
+    }
+    if (!response.key) {
+      throw new Error("Failed to initiate payment - missing merchant key in response");
+    }
+    if (!response.txnid) {
+      throw new Error("Failed to initiate payment - missing transaction ID in response");
+    }
+    if (!response.surl || !response.furl) {
+      throw new Error("Failed to initiate payment - missing success/failure URLs in response");
     }
 
     // Step 2: Prepare payment parameters
@@ -148,8 +169,27 @@ export async function processPayUPayment(
       service_provider: "payu_paisa", // Default service provider
     };
 
-    // Step 3: Redirect to PayU hosted checkout
-    redirectToPayU(paymentParams, response.payu_url);
+    // Step 3: Get PayU URL (camelCase from backend)
+    const payuUrl = response.payuUrl;
+    
+    console.log("🔍 Final payuUrl value:", payuUrl);
+    console.log("🔍 payuUrl validation:", {
+      exists: !!payuUrl,
+      isUndefined: payuUrl === "undefined",
+      startsWithHttp: payuUrl?.startsWith("http"),
+    });
+    
+    if (!payuUrl || payuUrl === "undefined" || typeof payuUrl !== "string") {
+      console.error("❌ Invalid PayU URL detected:", {
+        payuUrl,
+        type: typeof payuUrl,
+        response: JSON.stringify(response, null, 2)
+      });
+      throw new Error(`Failed to initiate payment - invalid PayU URL: ${payuUrl}. Please check backend response includes 'payuUrl' field.`);
+    }
+
+    // Step 4: Redirect to PayU hosted checkout
+    redirectToPayU(paymentParams, payuUrl);
   } catch (error) {
     console.error("PayU payment processing error:", error);
     throw error;

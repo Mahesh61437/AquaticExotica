@@ -301,15 +301,19 @@ export function CheckoutForm() {
         
         // User will be redirected to PayU, so no need to redirect here
         // PayU will redirect back to success/failure URLs after payment
+        // Note: If backend API is not implemented, this will throw an error
       } catch (paymentError: any) {
         console.error("Payment initiation error:", paymentError);
         
         // If payment initiation fails, redirect to order confirmation anyway
         // Order is already created, payment can be retried later
+        const errorMessage = paymentError?.message || paymentError?.error || "Unknown error";
+        
         toast({
           title: "Order created",
-          description: "Order created successfully. Payment initiation failed. You can retry payment from order details.",
+          description: `Order created successfully. Payment initiation failed: ${errorMessage}. You can retry payment from order details.`,
           variant: "default",
+          duration: 8000,
         });
         
         setLocation(`/order-confirmation/${orderId}`);
