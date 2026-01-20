@@ -23,13 +23,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, PenLine } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, Eye, PenLine, Edit, Plus, Minus, Trash2, Save, X } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Order } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { generateProductUrl } from "@/lib/utils";
 import { formatPrice, generateProductUrl } from "@/lib/utils";
 import React from "react";
 
@@ -102,8 +102,13 @@ export default function OrderManagement() {
   const { toast } = useToast();
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editedItems, setEditedItems] = useState<OrderItem[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<NewOrder | null>(null);
   const [newStatus, setNewStatus] = useState<string>("");
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [productSearchQuery, setProductSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -288,7 +293,7 @@ export default function OrderManagement() {
   // Update order status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      return await apiRequest(`/api/orders/${id}`, {
+      return await apiRequest(`/api/orders/${id}/update_status/`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
@@ -340,7 +345,250 @@ export default function OrderManagement() {
 
   const handleViewOrder = (order: NewOrder) => {
     setSelectedOrder(order);
+    setEditedItems([...order.items]);
+    setIsEditMode(false);
     setIsViewOpen(true);
+  };
+
+  const handleEditOrder = () => {
+    if (selectedOrder) {
+      setIsEditMode(true);
+      setEditedItems([...selectedOrder.items]);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (selectedOrder) {
+      setIsEditMode(false);
+      setEditedItems([...selectedOrder.items]);
+      setIsAddingProduct(false);
+      setProductSearchQuery("");
+      setSearchResults([]);
+    }
+  };
+
+  // Search products for adding to order
+  const searchProducts = async (query: string) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      const response = await apiRequest(`/api/products/?q=${encodeURIComponent(query)}&page_size=10`);
+      const products = response?.results || response || [];
+      setSearchResults(products);
+    } catch (error) {
+      console.error('Error searching products:', error);
+      setSearchResults([]);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchProducts(productSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [productSearchQuery]);
+
+  // Add order item mutation
+  const addOrderItemMutation = useMutation({
+    mutationFn: async ({ orderId, productId, variantId, quantity, price }: { 
+      orderId: number; 
+      productId: number; 
+      variantId: number | null; 
+      quantity: number; 
+      price: string;
+    }) => {
+      return await apiRequest(`/api/orders/${orderId}/items/`, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product: productId,
+          variant: variantId,
+          quantity: quantity,
+          price: price
+        })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/"] });
+      // Refresh order data
+      if (selectedOrder) {
+        apiRequest(`/api/orders/${selectedOrder.id}`).then((order) => {
+          setSelectedOrder(order);
+          setEditedItems(order.items || []);
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to add item: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update order item mutation
+  const updateOrderItemMutation = useMutation({
+    mutationFn: async ({ orderId, itemId, quantity, price }: { 
+      orderId: number; 
+      itemId: number; 
+      quantity: number; 
+      price: string;
+    }) => {
+      return await apiRequest(`/api/orders/${orderId}/items/${itemId}/`, {
+        method: 'PATCH',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quantity: quantity,
+          price: price
+        })
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/"] });
+      // Refresh order data
+      if (selectedOrder) {
+        apiRequest(`/api/orders/${selectedOrder.id}`).then((order) => {
+          setSelectedOrder(order);
+          setEditedItems(order.items || []);
+        });
+      }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to update item: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete order item mutation
+  const deleteOrderItemMutation = useMutation({
+    mutationFn: async ({ orderId, itemId }: { orderId: number; itemId: number }) => {
+      return await apiRequest(`/api/orders/${orderId}/items/${itemId}/`, {
+        method: 'DELETE'
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders/"] });
+      // Refresh order data
+      if (selectedOrder) {
+        apiRequest(`/api/orders/${selectedOrder.id}`).then((order) => {
+          setSelectedOrder(order);
+          setEditedItems(order.items || []);
+        });
+      }
+      toast({
+        title: "Item Removed",
+        description: "Item has been removed from the order",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: `Failed to remove item: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateItemQuantity = (itemId: number, newQuantity: number) => {
+    if (!selectedOrder) return;
+    
+    if (newQuantity <= 0) {
+      handleRemoveItem(itemId);
+      return;
+    }
+
+    // Update local state immediately for better UX
+    setEditedItems(prev => prev.map(item => {
+      if (item.id === itemId) {
+        const updatedPrice = parseFloat(item.price);
+        return {
+          ...item,
+          quantity: newQuantity,
+          totalPrice: updatedPrice * newQuantity
+        };
+      }
+      return item;
+    }));
+
+    // Find the item to get current price
+    const item = editedItems.find(i => i.id === itemId);
+    if (item) {
+      updateOrderItemMutation.mutate({
+        orderId: selectedOrder.id,
+        itemId: itemId,
+        quantity: newQuantity,
+        price: item.price
+      });
+    }
+  };
+
+  const handleRemoveItem = (itemId: number) => {
+    if (!selectedOrder) return;
+    
+    // Update local state immediately
+    setEditedItems(prev => prev.filter(item => item.id !== itemId));
+    
+    // Call API to delete
+    deleteOrderItemMutation.mutate({
+      orderId: selectedOrder.id,
+      itemId: itemId
+    });
+  };
+
+  const handleAddProductToOrder = (product: any, variant?: any) => {
+    if (!selectedOrder) return;
+    
+    const price = variant ? parseFloat(variant.offerPrice || variant.originalPrice) : parseFloat(product.price || '0');
+    const quantity = 1;
+    const priceString = price.toFixed(2);
+
+    // Optimistically add to local state
+    const tempId = Date.now();
+    const newItem: OrderItem = {
+      id: tempId, // Temporary ID until API returns real ID
+      product: {
+        id: product.id,
+        name: product.name,
+        imageUrl: product.imageUrl,
+        thumbnailUrl: product.thumbnailUrl
+      },
+      variant: variant ? {
+        id: variant.id,
+        product: product.id,
+        variantType: variant.variantType,
+        description: variant.description,
+        stock: variant.stock,
+        originalPrice: variant.originalPrice,
+        offerPrice: variant.offerPrice,
+        savings: variant.savings || '0',
+        discountPercentage: variant.discountPercentage,
+        isInStock: variant.isInStock
+      } : null,
+      quantity: quantity,
+      price: priceString,
+      totalPrice: price * quantity
+    };
+
+    setEditedItems(prev => [...prev, newItem]);
+    setIsAddingProduct(false);
+    setProductSearchQuery("");
+    setSearchResults([]);
+
+    // Call API to add item
+    addOrderItemMutation.mutate({
+      orderId: selectedOrder.id,
+      productId: product.id,
+      variantId: variant?.id ?? null,
+      quantity: quantity,
+      price: priceString
+    });
   };
 
   const handleUpdateStatus = (order: NewOrder) => {
@@ -490,7 +738,16 @@ export default function OrderManagement() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Total Amount</Label>
-                    <div className="mt-1">{formatCurrency(selectedOrder.grandTotal)}</div>
+                    <div className="mt-1">
+                      {isEditMode ? (
+                        formatCurrency(
+                          editedItems.reduce((sum, item) => sum + item.totalPrice, 0) + 
+                          parseFloat(selectedOrder.shippingCost)
+                        )
+                      ) : (
+                        formatCurrency(selectedOrder.grandTotal)
+                      )}
+                    </div>
                   </div>
                   <div>
                     <Label className="text-sm font-medium">Shipping Cost</Label>
@@ -522,12 +779,38 @@ export default function OrderManagement() {
 
               {/* Order Items */}
               <Card>
-                <CardHeader>
-                  <CardTitle>Order Items ({selectedOrder.items.length})</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Order Items ({isEditMode ? editedItems.length : selectedOrder.items.length})</CardTitle>
+                  {!isEditMode && (
+                    <Button variant="outline" size="sm" onClick={handleEditOrder}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Items
+                    </Button>
+                  )}
+                  {isEditMode && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        onClick={handleCancelEdit}
+                        disabled={addOrderItemMutation.isPending || updateOrderItemMutation.isPending || deleteOrderItemMutation.isPending}
+                      >
+                        {(addOrderItemMutation.isPending || updateOrderItemMutation.isPending || deleteOrderItemMutation.isPending) ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Done
+                      </Button>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {Array.isArray(selectedOrder.items) && selectedOrder.items.map((item) => (
+                    {(isEditMode ? editedItems : selectedOrder.items).map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
                         <img 
                           src={item.product.imageUrl} 
@@ -545,16 +828,140 @@ export default function OrderManagement() {
                               Variant: {item.variant.description || item.variant.variantType}
                             </p>
                           )}
-                          <p className="text-sm text-muted-foreground">
-                            Quantity: {item.quantity} × {formatPrice(item.price)}
-                          </p>
+                          {isEditMode ? (
+                            <div className="flex items-center gap-2 mt-2">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity - 1)}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <Input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleUpdateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                                className="w-20 text-center"
+                              />
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleUpdateItemQuantity(item.id, item.quantity + 1)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                              <span className="text-sm text-muted-foreground ml-2">
+                                × {formatPrice(item.price)}
+                              </span>
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                className="h-8 w-8 ml-auto"
+                                onClick={() => handleRemoveItem(item.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Quantity: {item.quantity} × {formatPrice(item.price)}
+                            </p>
+                          )}
                         </div>
                         <div className="text-right">
                           <div className="font-medium">{formatCurrency(item.totalPrice)}</div>
                         </div>
                       </div>
                     ))}
+                    
+                    {isEditMode && (
+                      <div className="border-t pt-4">
+                        {!isAddingProduct ? (
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => setIsAddingProduct(true)}
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Product
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="Search products..."
+                              value={productSearchQuery}
+                              onChange={(e) => setProductSearchQuery(e.target.value)}
+                            />
+                            {searchResults.length > 0 && (
+                              <div className="border rounded-lg max-h-60 overflow-y-auto">
+                                {searchResults.map((product) => (
+                                  <div key={product.id} className="p-2 border-b hover:bg-gray-50">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium">{product.name}</p>
+                                        {product.variants && product.variants.length > 0 ? (
+                                          <div className="mt-1">
+                                            {product.variants.map((variant: any) => (
+                                              <Button
+                                                key={variant.id}
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-xs"
+                                                onClick={() => handleAddProductToOrder(product, variant)}
+                                              >
+                                                {variant.description || variant.variantType} - {formatPrice(variant.offerPrice || variant.originalPrice)}
+                                              </Button>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-xs mt-1"
+                                            onClick={() => handleAddProductToOrder(product)}
+                                          >
+                                            Add - {formatPrice(product.price || '0')}
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setIsAddingProduct(false);
+                                setProductSearchQuery("");
+                                setSearchResults([]);
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
+                  
+                  {isEditMode && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium">New Total:</span>
+                        <span className="text-lg font-bold">
+                          {formatCurrency(
+                            editedItems.reduce((sum, item) => sum + item.totalPrice, 0) + 
+                            parseFloat(selectedOrder.shippingCost)
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
