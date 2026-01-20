@@ -108,10 +108,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const queueUpdate = React.useCallback((update: PendingUpdate) => {
     if (!currentUser) return;
 
+    // For deletes, check if already queued or processing - prevent duplicates
+    if (update.type === 'delete') {
+      const isAlreadyQueued = updateQueueRef.current.some(
+        u => u.type === 'delete' && 
+             u.productId === update.productId && 
+             u.variantId === update.variantId
+      );
+      if (isAlreadyQueued) {
+        console.log('⚠️ Delete already queued, skipping duplicate', update);
+        return; // Skip duplicate delete
+      }
+    }
+
     // Remove any pending updates for the same item (keep only latest)
-    updateQueueRef.current = updateQueueRef.current.filter(
-      u => !(u.productId === update.productId && u.variantId === update.variantId)
-    );
+    // For updates, replace old with new. For deletes, prevent duplicates above.
+    if (update.type === 'update') {
+      updateQueueRef.current = updateQueueRef.current.filter(
+        u => !(u.productId === update.productId && u.variantId === update.variantId)
+      );
+    }
 
     // Add new update
     updateQueueRef.current.push({

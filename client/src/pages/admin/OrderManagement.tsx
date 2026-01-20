@@ -109,6 +109,13 @@ export default function OrderManagement() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  
+  // Debouncing for quantity updates
+  const quantityUpdateTimeoutsRef = React.useRef<Map<number, number>>(new Map());
+  const pendingUpdatesRef = React.useRef<Map<number, { quantity: number; price: string }>>(new Map());
+  
+  // Track items being deleted to prevent duplicate delete calls
+  const deletingItemsRef = React.useRef<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
@@ -359,6 +366,14 @@ export default function OrderManagement() {
 
   const handleCancelEdit = () => {
     if (selectedOrder) {
+      // Clear all pending timeouts
+      quantityUpdateTimeoutsRef.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+      quantityUpdateTimeoutsRef.current.clear();
+      pendingUpdatesRef.current.clear();
+      deletingItemsRef.current.clear();
+      
       setIsEditMode(false);
       setEditedItems([...selectedOrder.items]);
       setIsAddingProduct(false);
@@ -390,6 +405,19 @@ export default function OrderManagement() {
     }, 300);
     return () => clearTimeout(timer);
   }, [productSearchQuery]);
+
+  // Cleanup pending updates when dialog closes or component unmounts
+  useEffect(() => {
+    return () => {
+      // Clear all quantity update timeouts
+      quantityUpdateTimeoutsRef.current.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+      quantityUpdateTimeoutsRef.current.clear();
+      pendingUpdatesRef.current.clear();
+      deletingItemsRef.current.clear();
+    };
+  }, [isViewOpen]);
 
   // Add order item mutation
   const addOrderItemMutation = useMutation({
@@ -473,7 +501,7 @@ export default function OrderManagement() {
         method: 'DELETE'
       });
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["/api/orders/"] });
       // Refresh order data
       if (selectedOrder) {
@@ -482,12 +510,16 @@ export default function OrderManagement() {
           setEditedItems(order.items || []);
         });
       }
+      // Remove from deleting set
+      deletingItemsRef.current.delete(variables.itemId);
       toast({
         title: "Item Removed",
         description: "Item has been removed from the order",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error, variables) => {
+      // Remove from deleting set even on error so user can retry
+      deletingItemsRef.current.delete(variables.itemId);
       toast({
         title: "Error",
         description: `Failed to remove item: ${error.message}`,
@@ -519,27 +551,77 @@ export default function OrderManagement() {
 
     // Find the item to get current price
     const item = editedItems.find(i => i.id === itemId);
-    if (item) {
-      updateOrderItemMutation.mutate({
-        orderId: selectedOrder.id,
-        itemId: itemId,
-        quantity: newQuantity,
-        price: item.price
-      });
+    if (!item) return;
+
+    // Store pending update
+    pendingUpdatesRef.current.set(itemId, {
+      quantity: newQuantity,
+      price: item.price
+    });
+
+    // Clear existing timeout for this item
+    const existingTimeout = quantityUpdateTimeoutsRef.current.get(itemId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
     }
+
+    // Set new debounced timeout (500ms delay)
+    const timeoutId = window.setTimeout(() => {
+      const pendingUpdate = pendingUpdatesRef.current.get(itemId);
+      if (pendingUpdate && selectedOrder) {
+        // Remove from pending updates
+        pendingUpdatesRef.current.delete(itemId);
+        quantityUpdateTimeoutsRef.current.delete(itemId);
+        
+        // Make API call
+        updateOrderItemMutation.mutate({
+          orderId: selectedOrder.id,
+          itemId: itemId,
+          quantity: pendingUpdate.quantity,
+          price: pendingUpdate.price
+        });
+      }
+    }, 500);
+
+    quantityUpdateTimeoutsRef.current.set(itemId, timeoutId);
   };
 
   const handleRemoveItem = (itemId: number) => {
     if (!selectedOrder) return;
     
+    // Prevent duplicate delete calls
+    if (deletingItemsRef.current.has(itemId)) {
+      console.log('⚠️ Delete already in progress for item', itemId);
+      return;
+    }
+    
+    // Mark as being deleted
+    deletingItemsRef.current.add(itemId);
+    
+    // Clear any pending update for this item
+    const existingTimeout = quantityUpdateTimeoutsRef.current.get(itemId);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+      quantityUpdateTimeoutsRef.current.delete(itemId);
+    }
+    pendingUpdatesRef.current.delete(itemId);
+    
     // Update local state immediately
     setEditedItems(prev => prev.filter(item => item.id !== itemId));
     
-    // Call API to delete
-    deleteOrderItemMutation.mutate({
-      orderId: selectedOrder.id,
-      itemId: itemId
-    });
+    // Call API to delete immediately (no debounce for delete)
+    deleteOrderItemMutation.mutate(
+      {
+        orderId: selectedOrder.id,
+        itemId: itemId
+      },
+      {
+        onSettled: () => {
+          // Remove from deleting set after API call completes (success or error)
+          deletingItemsRef.current.delete(itemId);
+        }
+      }
+    );
   };
 
   const handleAddProductToOrder = (product: any, variant?: any) => {
