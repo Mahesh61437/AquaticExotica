@@ -35,7 +35,6 @@ export default function ResetPassword() {
             confirmPassword: ""
         }
     });
-    const email = sessionStorage.getItem('resetEmail');
     const onSubmit = async (data: ResetPasswordFormValues) => {
         const email = sessionStorage.getItem('resetEmail');
         if (!email) {
@@ -58,6 +57,7 @@ export default function ResetPassword() {
             console.error("Reset password error:", error);
         } finally {
             setLoading(false);
+            sessionStorage.removeItem('resetEmail');
         }
     };
 
