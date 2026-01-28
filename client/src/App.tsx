@@ -26,6 +26,8 @@ import PaymentFailure from "@/pages/PaymentFailure";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Account from "./pages/Account";
+import SendOTP from "./pages/SendOTP";
+import ResetPassword from "./pages/ResetPassword";
 // Orders
 import MyOrders from "./pages/MyOrders";
 import OrderDetail from "./pages/OrderDetail";
@@ -161,6 +163,8 @@ function Router() {
           <Route path="/payment/failure" component={PaymentFailure} />
           <Route path="/login" component={Login} />
           <Route path="/signup" component={Signup} />
+          <Route path="/forgot-password/send-otp" component={SendOTP} />
+          <Route path="/forgot-password/reset-password" component={ResetPassword} />
           <Route path="/account" component={() => (
             <ProtectedRoute requireAuth={true}>
               <Account />
