@@ -219,7 +219,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         type: 'update',
         productId: product.id,
         variantId: product.variantId ?? null,
-        quantity: finalQuantity
+        quantity: finalQuantity,
+        timestamp: Date.now()
       });
 
       return { items: newItems, count, total };
@@ -254,7 +255,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       queueUpdate({
         type: 'delete',
         productId: id,
-        variantId: variantId ?? null
+        variantId: variantId ?? null,
+        timestamp: Date.now()
       });
 
       return { items: newItems, count, total };
@@ -288,7 +290,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           type: 'update',
           productId: id,
           variantId: variantId ?? null,
-          quantity: updatedItem.quantity
+          quantity: updatedItem.quantity,
+          timestamp: Date.now()
         });
       }
 
