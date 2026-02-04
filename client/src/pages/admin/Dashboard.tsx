@@ -73,6 +73,19 @@ export default function AdminDashboard() {
     enabled: !!currentUser?.isAdmin,
   });
 
+  const countUniqueAbandonedCarts = (response: any): number => {
+    console.log("Counting unique abandoned carts from response:", response);
+    if (!response?.results) return 0;
+
+    const cartIds = new Set<number>();
+    for (const item of response.results) {
+      cartIds.add(item.cart.id);
+    }
+
+    return cartIds.size;
+  };
+
+
   // Update stats when data changes
   useEffect(() => {
     const fetchStats = async () => {
@@ -104,7 +117,7 @@ export default function AdminDashboard() {
           orders: getCount(ordersResponse),
           users: getCount(usersResponse),
           tags: getCount(tagsResponse),
-          abaondonedCarts: getCount(abandonedCartsResponse), 
+          abaondonedCarts: countUniqueAbandonedCarts(abandonedCartsResponse), 
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -114,7 +127,7 @@ export default function AdminDashboard() {
     if (currentUser?.isAdmin) {
       fetchStats();
     }
-  }, [currentUser, productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse]);
+  }, [currentUser, productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse, abandonedCartsResponse]);
 
   // ProtectedRoute ensures currentUser is not null and isAdmin, but TypeScript doesn't know that
   if (!currentUser || !currentUser.isAdmin) {

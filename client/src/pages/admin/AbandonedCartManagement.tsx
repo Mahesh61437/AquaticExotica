@@ -8,6 +8,7 @@ interface User {
   firstName: string;
   lastName: string;
   phone: string | null;
+  email: string | null;
 }
 
 interface Variant {
@@ -76,6 +77,7 @@ const groupAbandonedCarts = (
 export default function AbandonedCartUI() {
   const [carts, setCarts] = useState<GroupedCart[]>([]);
   const [selectedCart, setSelectedCart] = useState<GroupedCart | null>(null);
+  const [openedCarts, setOpenedCarts] = useState<Set<number>>(new Set());
 
 
   const {data: abandonedCartResponse, isLoading } = useQuery<ApiResponse>({
@@ -101,13 +103,22 @@ export default function AbandonedCartUI() {
       <div className="col-span-2 bg-white rounded-2xl shadow p-5">
         <h2 className="text-xl font-semibold mb-4">Abandoned Carts</h2>
 
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse table-fixed">
+          <colgroup>
+    <col className="w-[20%]" /> {/* Customer */}
+    <col className="w-[15%]" /> {/* Contact */}
+    <col className="w-[25%]" /> {/* Email */}
+    <col className="w-[10%]" /> {/* Total */}
+    <col className="w-[15%]" /> {/* Last Activity */}
+    <col className="w-[15%]" /> {/* Cart */}
+  </colgroup>
           <thead>
             <tr className="border-b text-sm text-gray-500">
               <th className="text-left">Customer</th>
-              <th className="text-left">Product Name</th>
+              <th className="text-left">Customer contact</th>
+              <th className="text-left">Customer email</th>
               <th className="text-left">Total Items</th>
-              <th className="text-center">Last Activity</th>
+              <th className="text-left">Last Activity</th>
               <th className="text-left">Cart</th>
             </tr>
           </thead>
@@ -122,15 +133,24 @@ export default function AbandonedCartUI() {
                   {cart.user.firstName} {cart.user.lastName}
                 </td>
                 <td>{cart.user.phone ?? "—"}</td>
+                <td className="break-all whitespace-normal">{cart.user.email ?? "--"}</td>
                 <td>{cart.totalQty}</td>
                 <td className="text-sm text-gray-600">
                   {formatDistanceToNow(new Date(cart.lastActivity), { addSuffix: true })}
                 </td>
                 <td className="text-right">
                   <button
-                    onClick={() => setSelectedCart(cart)}
-                    className="px-3 py-1 text-sm rounded-md border border-gray-300 hover:bg-gray-100"
-                  >
+                    onClick={() => {
+                      setSelectedCart(cart);
+                      setOpenedCarts((prev) => new Set(prev).add(cart.cartId));}}
+                    className={`
+                        px-3 py-1 text-sm rounded-md border transition
+                        ${
+                          openedCarts.has(cart.cartId)
+                            ? "bg-gray-200 text-gray-600 border-gray-300 hover:bg-gray-300"
+                            : "bg-red-50 text-red-600 border-red-200 hover:bg-red-100"
+                        }
+                      `}                  >
                     View Cart
                   </button>
                 </td>
