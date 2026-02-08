@@ -83,7 +83,8 @@ interface ProductWithTagIds {
   category_ids: number[];
   tags: number[];
   rating: string;
-  price?: string;
+  price?: number;
+  stock: number;
   compareAtPrice?: string;
   isActive?: boolean;
   isNew: boolean;
@@ -126,7 +127,8 @@ export default function ProductManagement() {
     category_ids: [],
     tags: [],
     rating: "0",
-    price: "",
+    price: 0,
+    stock: 0,
     compareAtPrice: "",
     variants: [],
     isNew: false,
@@ -719,6 +721,8 @@ export default function ProductManagement() {
       rating: formData.rating || '0',
       ...(formData.price && { price: formData.price }),
       ...(formData.compareAtPrice && { compareAtPrice: formData.compareAtPrice }),
+      price: formData.price || 0,
+      stock: formData.stock || 0,
       isNew: formData.isNew || false,
       isSale: formData.isSale || false,
       isFeatured: formData.isFeatured || false,
@@ -750,7 +754,8 @@ export default function ProductManagement() {
       category_ids: [],
       tags: [],
       rating: "0",
-      price: "",
+      price: 0,
+      stock: 0,
       compareAtPrice: "",
       variants: [],
       isNew: false,
@@ -998,6 +1003,31 @@ export default function ProductManagement() {
                 ) : (
                   <span className="text-xs text-red-600">❌ Required</span>
                 )}
+
+                <div>
+                  <Label htmlFor="imageUrl">Price *</Label>
+                  <Input
+                    id="price"
+                    value={formData.price || 0}
+                    onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value)})}
+                    placeholder="Price of the main product"
+                    required
+                    className={formData.price && formData.price !== 0 ? 'border-green-500' : 'border-red-500'}
+                  />
+                </div>
+                console.log('🔍 Form data stock:', formData);
+                <div>
+                  <Label htmlFor="imageUrl">Stock *</Label>
+                  <Input
+                    id="price"
+                    value={formData.stock || 0}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value)})}
+                    placeholder="Price of the main product"
+                    required
+                    className={formData.stock && formData.stock !== 0 ? 'border-green-500' : 'border-red-500'}
+                  />
+                </div>
+                
               </div>
               
               <div className="space-y-2">
@@ -1290,7 +1320,7 @@ export default function ProductManagement() {
                   step="0.01"
                   min="0"
                   value={formData.price || ""}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, price: parseInt(e.target.value) })}
                   placeholder="e.g. 1999"
                 />
                 <span className="text-xs text-muted-foreground">Base product price</span>

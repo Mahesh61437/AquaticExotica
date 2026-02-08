@@ -62,10 +62,10 @@ interface ApiProduct {
   id: number;
   name: string;
   description: string;
-  // price: string;
+  price: number;
   // compareAtPrice: string;
   // discountPercentage: number;
-  // stock: number;
+  stock: number;
   categories: {
     id: number;
     name: string;
@@ -120,6 +120,8 @@ export default function ProductDetail() {
   const [editFormData, setEditFormData] = useState<Partial<{
     name: string;
     description: string;
+    price: number,
+    stock: number,
     // price/stock moved to variants
     categoryId: number;
     rating: string;
@@ -350,6 +352,13 @@ export default function ProductDetail() {
 
     // Make sure the quantity doesn't exceed available stock for the selected variant
     const finalQuantity = Math.min(quantity, variantStock);
+    if (finalQuantity <= 0) {
+      toast({
+        title: "Cannot add to cart",
+        description: "Quantity is zero."
+      });
+      return;
+    }
     
     const variantName = selectedVariant?.description || selectedVariant?.variantType || '';
     
@@ -380,7 +389,8 @@ export default function ProductDetail() {
   };
 
   const handleQuantityChange = (value: number) => {
-    setQuantity(Math.max(1, value));
+    console.log('🔍 Quantity changed to:', value);
+    setQuantity(Math.max(0, value));
   };
 
   // Variant editor helpers for the edit modal
@@ -422,6 +432,8 @@ export default function ProductDetail() {
       name: product.name,
       description: product.description,
       // price/stock are variant-scoped now
+      price: product.price,
+      stock: product.stock,
       categoryId: product.categories && product.categories.length > 0 ? product.categories[0].id : 0,
       rating: product.rating,
       isNew: product.isNew,
@@ -474,6 +486,8 @@ export default function ProductDetail() {
       const submitData = {
         name: editFormData.name || product.name,
         description: editFormData.description || product.description,
+        price: editFormData.price || product.price,
+        stock: editFormData.stock || product.stock,
         // product-level price/stock removed; variants contain pricing/stock now
         // Send both `category_id` (singular) and `category_ids` (array) to support either serializer shape
         category_id: editFormData.categoryId || (product.categories && product.categories.length > 0 ? product.categories[0].id : null),
@@ -766,7 +780,7 @@ export default function ProductDetail() {
                     size="icon" 
                     className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity - 1)}
-                    disabled={quantity <= 1}
+                    disabled={quantity <=0}
                   >
                     <span className="text-lg font-medium">-</span>
                   </Button>
@@ -776,6 +790,7 @@ export default function ProductDetail() {
                     size="icon" 
                     className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity + 1)}
+                    disabled={quantity>=variantStock}
                   >
                     <span className="text-lg font-medium">+</span>
                   </Button>
@@ -1003,6 +1018,31 @@ export default function ProductDetail() {
                     placeholder="0.0"
                   />
                 </div>
+
+                <div>
+                  <Label htmlFor="price">Price</Label>
+                  <Input
+                    id="price"
+                    type="number"
+                    step="1"
+                    value={editFormData.price || ''}
+                    onChange={(e) => setEditFormData({...editFormData, price: parseInt(e.target.value)})}
+                    placeholder="0.0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="stock">Stock</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    step="1"
+                    value={editFormData.stock || ''}
+                    onChange={(e) => setEditFormData({...editFormData, stock: parseInt(e.target.value)})}
+                    placeholder="0"
+                  />
+                </div>
+
               </div>
               
               {/* Category and Tags */}

@@ -140,6 +140,12 @@ export default function Login() {
               Sign up
             </a>
           </p>
+          <p className="text-center text-sm text-gray-500 mt-2">
+            Forgot your password?{" "}
+            <a className="text-blue-500 hover:text-blue-700 font-semibold cursor-pointer" onClick={() => setLocation("/forgot-password/send-otp")}>
+              Reset
+            </a>
+          </p>
         </CardFooter>
       </Card>
     </div>

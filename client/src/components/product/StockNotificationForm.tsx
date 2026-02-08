@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Bell } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/context/AuthContext";
 
 interface StockNotificationFormProps {
   productId: number;
@@ -16,6 +17,16 @@ export function StockNotificationForm({ productId, productName }: StockNotificat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const isAuthenticated = !!currentUser;
+
+  // If user is authenticated, pre-fill email and disable input
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.email) {
+      setEmail(currentUser.email);
+    }
+  }, [isAuthenticated, currentUser]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,18 +96,17 @@ export function StockNotificationForm({ productId, productName }: StockNotificat
         <div className="flex-1">
           <h3 className="font-medium text-gray-900 mb-2">Get notified when back in stock</h3>
           <p className="text-sm text-gray-600 mb-3">
-            Enter your email address and we'll notify you when this product becomes available again.
+            Enter your email address or phone number and we'll notify you when this product becomes available again.
           </p>
           
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
               <Label htmlFor="email" className="sr-only">
-                Email address
+                Email address or phone number
               </Label>
               <Input
                 id="email"
-                type="email"
-                placeholder="Enter your email"
+                placeholder="Enter your email or phone number"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={isSubmitting}

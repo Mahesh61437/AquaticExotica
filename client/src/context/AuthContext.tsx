@@ -30,6 +30,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
   getAccessToken: () => string | null;
+  sendResetOTP: (email: string) => Promise<void>;
+  ResetPassword: (email: string, otp: string, newPassword: string, confirmPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -316,13 +318,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return getStoredToken();
   };
 
+  const sendResetOTP = async (email: string): Promise<void> => {
+    try {
+      await apiRequest<void>('/api/auth/forgot-password/send-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      });
+    } catch (error: any) {
+      console.error("❌ Send reset OTP error", error);
+      throw error;
+    }
+  };
+
+  const ResetPassword = async (email: string, otp: string, newPassword: string, confirmPassword: string): Promise<void> => {
+    try {
+      await apiRequest<void>('/api/auth/forgot-password/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, otp, newPassword, confirmPassword }),
+      });
+    } catch (error: any) {
+      console.error("❌ Reset password error", error);
+      throw error;
+    }
+  };
+
   const value: AuthContextType = {
     currentUser,
     loading,
     signUp,
     signIn,
     signOut,
-    getAccessToken
+    getAccessToken,
+    sendResetOTP,
+    ResetPassword
   };
 
   return (

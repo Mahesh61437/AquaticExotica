@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users, ShoppingCart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductManagement from "./ProductManagement";
@@ -11,6 +11,8 @@ import CategoryManagement from "./CategoryManagement";
 import TagManagement from "./TagManagement";
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
+import AbandonedCartManagement from "./AbandonedCartManagement"
+import { get } from "react-hook-form";
 
 interface AdminStats {
   products: number;
@@ -18,6 +20,7 @@ interface AdminStats {
   orders: number;
   users: number;
   tags: number;
+  abaondonedCarts: number;
 }
 
 export default function AdminDashboard() {
@@ -30,6 +33,7 @@ export default function AdminDashboard() {
     orders: 0,
     users: 0,
     tags: 0,
+    abaondonedCarts: 0
   });
 
   // Fetch admin stats
@@ -63,6 +67,25 @@ export default function AdminDashboard() {
     enabled: !!currentUser?.isAdmin,
   });
 
+  const {data: abandonedCartsResponse } = useQuery({
+    queryKey: ["/api/abandoned-cart/"],
+    queryFn: async () => await apiRequest("/api/abandoned-cart/"),
+    enabled: !!currentUser?.isAdmin,
+  });
+
+  const countUniqueAbandonedCarts = (response: any): number => {
+    console.log("Counting unique abandoned carts from response:", response);
+    if (!response?.results) return 0;
+
+    const cartIds = new Set<number>();
+    for (const item of response.results) {
+      cartIds.add(item.cart.id);
+    }
+
+    return cartIds.size;
+  };
+
+
   // Update stats when data changes
   useEffect(() => {
     const fetchStats = async () => {
@@ -93,7 +116,8 @@ export default function AdminDashboard() {
           categories: getCount(categoriesResponse),
           orders: getCount(ordersResponse),
           users: getCount(usersResponse),
-          tags: getCount(tagsResponse)
+          tags: getCount(tagsResponse),
+          abaondonedCarts: countUniqueAbandonedCarts(abandonedCartsResponse), 
         });
       } catch (error) {
         console.error("Error fetching admin stats:", error);
@@ -103,7 +127,7 @@ export default function AdminDashboard() {
     if (currentUser?.isAdmin) {
       fetchStats();
     }
-  }, [currentUser, productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse]);
+  }, [currentUser, productsResponse, categoriesResponse, ordersResponse, usersResponse, tagsResponse, abandonedCartsResponse]);
 
   // ProtectedRoute ensures currentUser is not null and isAdmin, but TypeScript doesn't know that
   if (!currentUser || !currentUser.isAdmin) {
@@ -121,30 +145,41 @@ export default function AdminDashboard() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-6 gap-2">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
+          <TabsList className=" relative
+                  flex w-full gap-1
+                  overflow-x-auto
+                  rounded-lg
+                  bg-muted
+                  p-1
+                  md:overflow-visible
+                  md:grid md:grid-cols-7">
+            <TabsTrigger value="overview" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <LayoutDashboard className="h-4 w-4" />
               <span className="hidden md:inline">Overview</span>
             </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2">
+            <TabsTrigger value="products" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <ShoppingBag className="h-4 w-4" />
               <span className="hidden md:inline">Products</span>
             </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
+            <TabsTrigger value="categories" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <Tags className="h-4 w-4" />
               <span className="hidden md:inline">Categories</span>
             </TabsTrigger>
-            <TabsTrigger value="tags" className="flex items-center gap-2">
+            <TabsTrigger value="tags" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <Hash className="h-4 w-4" />
               <span className="hidden md:inline">Tags</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
+            <TabsTrigger value="orders" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <ListOrdered className="h-4 w-4" />
               <span className="hidden md:inline">Orders</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
+            <TabsTrigger value="users" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
               <Users className="h-4 w-4" />
               <span className="hidden md:inline">Users</span>
+            </TabsTrigger>
+            <TabsTrigger value="abandoned-carts" className="flex items-center justify-center gap-2 h-10 min-w-[120px]">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden md:inline">Abandoned Carts</span>
             </TabsTrigger>
           </TabsList>
 
@@ -214,6 +249,20 @@ export default function AdminDashboard() {
                   </p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Abandoned Carts</CardTitle>
+                  <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.abaondonedCarts}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Abndoned cards more than half an hour
+                  </p>
+                </CardContent>
+              </Card>
+
             </div>
             
             <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -266,6 +315,10 @@ export default function AdminDashboard() {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="abandoned-carts">
+            <AbandonedCartManagement />
           </TabsContent>
         </Tabs>
       </div>
