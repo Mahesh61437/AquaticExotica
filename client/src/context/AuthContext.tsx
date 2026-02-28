@@ -27,7 +27,7 @@ interface AuthContextType {
   currentUser: User | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<User | null>;
-  signIn: (email: string, password: string) => Promise<User | null>;
+  signIn: (emailOrUsername: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
   getAccessToken: () => string | null;
 }
@@ -201,20 +201,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string): Promise<User | null> => {
+  const signIn = async (emailOrUsername: string, password: string): Promise<User | null> => {
     try {
       console.log('🔐 Starting signIn process...');
-      console.log('📧 Email:', email);
+      const isEmail = emailOrUsername.includes('@');
+      console.log(isEmail ? '📧 Email login' : '👤 Username login');
       
       const response = await apiRequest<DjangoAuthResponse>('/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          email,
-          password
-        })
+        body: JSON.stringify(
+          isEmail
+            ? { email: emailOrUsername, password }
+            : { username: emailOrUsername, password }
+        )
       });
       
       console.log('✅ Login API response received:', response);

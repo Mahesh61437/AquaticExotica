@@ -12,10 +12,9 @@ import { useAuth } from "../context/AuthContext";
 import { useToast } from "../hooks/use-toast";
 
 const loginSchema = z.object({
-  email: z
+  emailOrUsername: z
     .string()
-    .min(1, { message: "Email is required" })
-    .email({ message: "Please enter a valid email address" }),
+    .min(1, { message: "Email or username is required" }),
   password: z
     .string()
     .min(6, { message: "Password must be at least 6 characters" })
@@ -49,7 +48,7 @@ export default function Login() {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
+      emailOrUsername: "",
       password: ""
     }
   });
@@ -57,7 +56,7 @@ export default function Login() {
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setLoading(true);
-      const user = await signIn(data.email, data.password);
+      const user = await signIn(data.emailOrUsername, data.password);
       
       if (user) {
         // Check if user was coming from checkout
@@ -95,7 +94,7 @@ export default function Login() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Sign in to your account</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to sign in
+            Enter your email or username and password to sign in
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,12 +102,12 @@ export default function Login() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="email"
+                name="emailOrUsername"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Email or username</FormLabel>
                     <FormControl>
-                      <Input placeholder="example@email.com" type="email" {...field} />
+                      <Input placeholder="email@example.com or username" type="text" autoComplete="username" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
