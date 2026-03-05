@@ -244,8 +244,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Promotional Banner */}
-      <PromotionalBanner />
+      {/* Promotional Banner - Disabled */}
+      {/* <PromotionalBanner /> */}
 
       {/* Diwali Popup Banner - Disabled */}
       {/* {shouldShowBanner && (
