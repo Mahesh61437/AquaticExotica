@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductManagement from "./ProductManagement";
@@ -11,6 +11,7 @@ import CategoryManagement from "./CategoryManagement";
 import TagManagement from "./TagManagement";
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
+import ProductSales from "./ProductSales";
 
 interface AdminStats {
   products: number;
@@ -69,25 +70,25 @@ export default function AdminDashboard() {
       try {
         const getCount = (response: any): number => {
           if (!response) return 0;
-          
+
           // Handle new pagination format: { count, next, previous, results }
           if (response && typeof response === 'object' && 'count' in response) {
             return response.count || 0;
           }
-          
+
           // Handle array format (fallback)
           if (Array.isArray(response)) {
             return response.length;
           }
-          
+
           // Handle old format with data property
           if (response && typeof response === 'object' && 'data' in response) {
             return Array.isArray(response.data) ? response.data.length : 0;
           }
-          
+
           return 0;
         };
-        
+
         setStats({
           products: getCount(productsResponse),
           categories: getCount(categoriesResponse),
@@ -99,7 +100,7 @@ export default function AdminDashboard() {
         console.error("Error fetching admin stats:", error);
       }
     };
-    
+
     if (currentUser?.isAdmin) {
       fetchStats();
     }
@@ -116,37 +117,43 @@ export default function AdminDashboard() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
           <p className="text-muted-foreground">
-            Manage products, categories, tags, orders, and users.
+            Manage products, categories, tags, orders, sales, and users.
           </p>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full md:w-auto grid-cols-2 md:grid-cols-6 gap-2">
-            <TabsTrigger value="overview" className="flex items-center gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden md:inline">Overview</span>
-            </TabsTrigger>
-            <TabsTrigger value="products" className="flex items-center gap-2">
-              <ShoppingBag className="h-4 w-4" />
-              <span className="hidden md:inline">Products</span>
-            </TabsTrigger>
-            <TabsTrigger value="categories" className="flex items-center gap-2">
-              <Tags className="h-4 w-4" />
-              <span className="hidden md:inline">Categories</span>
-            </TabsTrigger>
-            <TabsTrigger value="tags" className="flex items-center gap-2">
-              <Hash className="h-4 w-4" />
-              <span className="hidden md:inline">Tags</span>
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="flex items-center gap-2">
-              <ListOrdered className="h-4 w-4" />
-              <span className="hidden md:inline">Orders</span>
-            </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              <span className="hidden md:inline">Users</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-1 scrollbar-hide">
+            <TabsList className="inline-flex w-auto min-w-full justify-start md:justify-center p-1 bg-muted/50 h-auto">
+              <TabsTrigger value="overview" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <LayoutDashboard className="h-4 w-4" />
+                <span>Overview</span>
+              </TabsTrigger>
+              <TabsTrigger value="products" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <ShoppingBag className="h-4 w-4" />
+                <span>Products</span>
+              </TabsTrigger>
+              <TabsTrigger value="categories" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <Tags className="h-4 w-4" />
+                <span>Categories</span>
+              </TabsTrigger>
+              <TabsTrigger value="tags" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <Hash className="h-4 w-4" />
+                <span>Tags</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <ListOrdered className="h-4 w-4" />
+                <span>Orders</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <Users className="h-4 w-4" />
+                <span>Users</span>
+              </TabsTrigger>
+              <TabsTrigger value="sales" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
+                <BarChart3 className="h-4 w-4" />
+                <span>Sales</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
@@ -162,7 +169,7 @@ export default function AdminDashboard() {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Categories</CardTitle>
@@ -175,7 +182,7 @@ export default function AdminDashboard() {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Tags</CardTitle>
@@ -188,7 +195,7 @@ export default function AdminDashboard() {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Orders</CardTitle>
@@ -201,7 +208,7 @@ export default function AdminDashboard() {
                   </p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Users</CardTitle>
@@ -215,7 +222,7 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <Card className="col-span-1 md:col-span-2 lg:col-span-3">
                 <CardHeader>
@@ -242,6 +249,9 @@ export default function AdminDashboard() {
                     <li>
                       <strong>Users</strong>: Manage user accounts and permissions
                     </li>
+                    <li>
+                      <strong>Sales</strong>: View detailed product sales performance and revenue
+                    </li>
                   </ul>
                 </CardContent>
               </Card>
@@ -266,6 +276,9 @@ export default function AdminDashboard() {
 
           <TabsContent value="users">
             <UserManagement />
+          </TabsContent>
+          <TabsContent value="sales">
+            <ProductSales />
           </TabsContent>
         </Tabs>
       </div>

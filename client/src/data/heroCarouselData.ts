@@ -8,7 +8,7 @@ const heroCarouselSlides: CarouselSlide[] = [
   {
     id: 1,
     title: "Discover Aquatic Wonders",
-    subtitle: "Premium aquatic plants, rare fish species & professional equipment. Free delivery on orders above ₹2000!",
+    subtitle: "Premium aquatic plants, rare fish species & professional equipment. Safe & secure nationwide delivery across India.",
     imageUrl: "/images/aquarium_banner.jpeg",
     buttonText: "Explore Collection",
     buttonLink: "/shop"

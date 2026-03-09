@@ -36,11 +36,9 @@ export default function Shipping() {
                   <p>
                     <strong className="text-primary">Delivering across India</strong>
                   </p>
-                  <p className="mt-2">Delivery charges per kg:</p>
                   <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>₹100 per kg for Karnataka</li>
-                    <li>₹120 per kg for Andhra Pradesh, Kerala, Tamil Nadu</li>
-                    <li>₹150 per kg for other places</li>
+                    <li>₹110 for Bangalore</li>
+                    <li>₹150 for all other places</li>
                   </ul>
                 </div>
 

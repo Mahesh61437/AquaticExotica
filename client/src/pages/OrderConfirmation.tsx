@@ -1,7 +1,7 @@
 import { useRoute, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
-import { CheckCircle, ChevronRight, Truck, CalendarClock } from "lucide-react";
+import { CheckCircle, ChevronRight, Truck, CalendarClock, Clock, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, generateProductUrl } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -75,7 +75,7 @@ interface PaginatedResponse<T> {
 export default function OrderConfirmation() {
   const [, params] = useRoute("/order-confirmation/:id");
   const orderId = params?.id ? parseInt(params.id) : 0;
-  
+
   const { data: response, isLoading } = useQuery<NewOrder | PaginatedResponse<NewOrder>>({
     queryKey: [`/api/orders/${orderId}`],
     enabled: !!orderId,
@@ -86,24 +86,24 @@ export default function OrderConfirmation() {
   // Handle different response formats
   const order: NewOrder | null = React.useMemo(() => {
     if (!response) return null;
-    
+
     // Check if response is paginated with new format: { count, next, previous, results }
     if (response && typeof response === 'object' && 'results' in response) {
       const results = (response as PaginatedResponse<NewOrder>).results;
       return Array.isArray(results) && results.length > 0 ? results[0] : null;
     }
-    
+
     // Check if response is paginated with old format: { data }
     if (response && typeof response === 'object' && 'data' in response) {
       const data = (response as any).data;
       return Array.isArray(data) && data.length > 0 ? data[0] : null;
     }
-    
+
     // Check if response is a direct object
     if (response && typeof response === 'object' && 'id' in response) {
       return response as NewOrder;
     }
-    
+
     return null;
   }, [response]);
 
@@ -136,7 +136,7 @@ export default function OrderConfirmation() {
       </div>
     );
   }
-  
+
   return (
     <>
       <Helmet>
@@ -159,24 +159,46 @@ export default function OrderConfirmation() {
           </div>
 
           <div className="text-center mb-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-3xl font-heading font-bold mb-2">Thank You for Your Order!</h1>
+            <div className="relative inline-block mb-4">
+              <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+              <div className="absolute -bottom-1 -right-1 bg-blue-100 rounded-full p-1 border-2 border-white">
+                <Clock className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+            <h1 className="text-3xl font-heading font-bold mb-2">Order Pending Confirmation</h1>
             <p className="text-xl text-gray-600 mb-2">
               Your order #{order.id} has been received
             </p>
-            <div className="bg-blue-50 text-blue-700 p-4 rounded-lg mt-4 max-w-lg mx-auto">
-              <p className="font-medium mb-1">Stock Check in Progress</p>
-              <p className="text-sm">
-                We are currently checking if the stock is available for your order. 
-                We will contact you shortly via WhatsApp with further details about 
-                availability, payment options, and delivery.
+            <div className="bg-blue-50 border border-blue-100 text-blue-800 p-6 rounded-lg mt-6 max-w-lg mx-auto shadow-sm">
+              <div className="flex items-center gap-3 mb-3 justify-center">
+                <MessageCircle className="h-6 w-6 text-green-600" />
+                <h3 className="font-bold text-lg">Next Steps: Complete Payment</h3>
+              </div>
+              <p className="text-sm leading-relaxed mb-4">
+                Mahesh will contact you shortly, or you can <strong>text us on WhatsApp</strong>
+                to complete the payment and confirm your order.
               </p>
+              <div className="flex flex-col gap-2 items-center">
+                <a
+                  href="https://wa.me/918074751370"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#128C7E] text-white font-bold py-2.5 px-6 rounded-full transition-colors shadow-md"
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  Chat on WhatsApp
+                </a>
+                <span className="text-xs text-blue-600 font-medium">+91 8074751370</span>
+              </div>
+            </div>
+            <div className="mt-6 text-sm text-gray-500 italic">
+              * We are currently checking stock availability for your items.
             </div>
           </div>
 
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
-            
+
             <div className="border-b pb-4 mb-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
@@ -195,7 +217,7 @@ export default function OrderConfirmation() {
                 <p>Phone: {order.shippingAddress.recipientPhone}</p>
               </div>
             </div>
-            
+
             <div className="border-b pb-4 mb-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center">
@@ -221,7 +243,7 @@ export default function OrderConfirmation() {
                 </span>
               </div>
             </div>
-            
+
             <h3 className="font-medium mb-3">Order Items</h3>
             <ul className="divide-y">
               {Array.isArray(order.items) && order.items.map((item, index: number) => (
@@ -252,7 +274,7 @@ export default function OrderConfirmation() {
                 </li>
               ))}
             </ul>
-            
+
             <div className="mt-4 pt-4 border-t">
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Subtotal</span>

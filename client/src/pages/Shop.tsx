@@ -10,14 +10,11 @@ import { generateMetaDescription } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { Category } from "@/types";
 import { apiRequest } from "@/lib/queryClient";
-import { DiwaliPopupBanner } from "@/components/ui/DiwaliPopupBanner";
-import { useBannerVisibility } from "@/hooks/use-banner-visibility";
 
 export default function Shop() {
   const [, params] = useRoute("/shop/:category?");
   const [location] = useLocation();
-  const { shouldShowBanner, markBannerAsSeen } = useBannerVisibility();
-  
+
   // Extract URL parameters using window.location.search
   const urlParams = new URLSearchParams(window.location.search);
   const searchQuery = urlParams.get("search") || "";
@@ -39,12 +36,12 @@ export default function Shop() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const response = await apiRequest("/api/categories/");
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
+
       // Fallback to array format
       return response || [];
     },
@@ -55,7 +52,7 @@ export default function Shop() {
   let pageTitle = "All Products";
   let categorySlug = "";
   let urlCategoryId: number | undefined = undefined;
-  
+
   if (params?.category) {
     categorySlug = params.category;
     // Capitalize first letter
@@ -139,15 +136,15 @@ export default function Shop() {
               <p className="text-gray-500 mt-2">Showing results for "{searchQuery}"</p>
             )}
           </div>
-          
+
           {/* Mobile Filters Button */}
           <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
             <SheetTrigger asChild>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="mt-4 md:mt-0 md:hidden"
               >
-                <Filter className="h-4 w-4 mr-2" /> 
+                <Filter className="h-4 w-4 mr-2" />
                 Filters
                 {(activeCategoryIds.length > 0 || activePriceRange[0] > 0 || activePriceRange[1] < 10000 || activeInStock) && (
                   <span className="ml-2 bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
@@ -190,11 +187,11 @@ export default function Shop() {
               onClearFilters={handleClearFilters}
             />
           </div>
-          
+
           {/* Products */}
           <div className="md:col-span-3">
-            <ProductGrid 
-              filter={filterParam} 
+            <ProductGrid
+              filter={filterParam}
               searchQuery={searchQuery}
               activeCategoryIds={activeCategoryIds}
               activePriceRange={activePriceRange}
@@ -206,10 +203,6 @@ export default function Shop() {
         </div>
       </div>
 
-      {/* Diwali Popup Banner - Disabled */}
-      {/* {shouldShowBanner && (
-        <DiwaliPopupBanner onClose={markBannerAsSeen} />
-      )} */}
     </>
   );
 }

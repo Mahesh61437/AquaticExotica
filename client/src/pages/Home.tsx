@@ -3,12 +3,9 @@ import { Helmet } from "react-helmet";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import heroImage from "@assets/akva_4.jpeg";
-import { PromotionalBanner } from "@/components/home/PromotionalBanner";
 import React from "react";
 import { generateMetaDescription } from "@/lib/utils";
 import { useAnalytics } from "@/hooks/use-analytics";
-import { DiwaliPopupBanner } from "@/components/ui/DiwaliPopupBanner";
-import { useBannerVisibility } from "@/hooks/use-banner-visibility";
 
 // Direct imports to avoid lazy loading issues
 import FeaturedCategories from "@/components/home/FeaturedCategories";
@@ -19,7 +16,6 @@ import { TrendingProducts } from "@/components/home/TrendingProducts";
 
 export default function Home() {
   const { trackPage } = useAnalytics();
-  const { shouldShowBanner, markBannerAsSeen } = useBannerVisibility();
 
   // Track page view when component mounts
   useEffect(() => {
@@ -71,9 +67,9 @@ export default function Home() {
 
       {/* Simple Hero Banner */}
       <div className="relative w-full h-[60vh] flex items-center">
-        <div 
-          className="absolute inset-0 bg-cover bg-center" 
-          style={{ 
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
             backgroundImage: `url(${heroImage})`,
             backgroundSize: 'cover',
           }}
@@ -81,13 +77,13 @@ export default function Home() {
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-black bg-opacity-50"></div>
         </div>
-        
+
         <div className="container mx-auto px-4 relative z-10 text-white">
           <h1 className="text-4xl md:text-6xl font-heading font-bold max-w-xl leading-tight">
             Premium Aquatic Products for Your Aquarium
           </h1>
           <p className="mt-4 max-w-xl text-lg">
-            Discover our wide selection of aquatic plants, rare fish species, and professional equipment. Free delivery on orders over ₹2000.
+            Discover our wide selection of aquatic plants, rare fish species, and professional equipment. Safe and secure nationwide delivery.
           </p>
           <Button asChild className="mt-8 px-8 py-6 text-base">
             <Link href="/shop">
@@ -103,9 +99,9 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex flex-col items-center space-y-6">
             <div className="flex items-center space-x-4">
-              <img 
-                src="https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657" 
-                alt="Aquatic Exotica Logo" 
+              <img
+                src="https://firebasestorage.googleapis.com/v0/b/aqua-india-61437.firebasestorage.app/o/icon%2Faquaticexoticicon.png?alt=media&token=d7bcaa53-5145-4203-af8f-4ceed21b4657"
+                alt="Aquatic Exotica Logo"
                 className="h-20 w-20 object-contain"
               />
               <div className="text-left">
@@ -118,7 +114,7 @@ export default function Home() {
               </div>
             </div>
             <p className="max-w-2xl text-gray-600 text-lg leading-relaxed">
-              Your trusted partner for premium aquatic plants, rare fish species, and professional aquarium equipment. 
+              Your trusted partner for premium aquatic plants, rare fish species, and professional aquarium equipment.
               We bring the beauty of underwater ecosystems to your home with quality products and expert guidance.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mt-6">
@@ -140,7 +136,7 @@ export default function Home() {
       </section>
 
       {/* Featured Categories */}
-        <FeaturedCategories />
+      <FeaturedCategories />
 
       {/* Trending Products */}
       <TrendingProducts />
@@ -244,13 +240,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Promotional Banner - Disabled */}
-      {/* <PromotionalBanner /> */}
-
-      {/* Diwali Popup Banner - Disabled */}
-      {/* {shouldShowBanner && (
-        <DiwaliPopupBanner onClose={markBannerAsSeen} />
-      )} */}
     </>
   );
 }

@@ -130,4 +130,13 @@
   .badge-new {
     @apply absolute top-2 left-2 bg-[#10B981] text-white text-xs font-bold px-2 py-1 rounded;
   }
+
+  /* Utility to hide scrollbars */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

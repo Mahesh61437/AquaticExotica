@@ -101,14 +101,14 @@ export function CheckoutForm() {
   const { cart, clearCart } = useCart();
   const { currentUser } = useAuth();
   // const { trackOrderComplete } = useCheckoutAnalytics();
-  
+
   // Track selected saved address
   const [selectedSavedAddressId, setSelectedSavedAddressId] = useState<number | null>(null);
 
   // States for dependent dropdown selections
   const [selectedState, setSelectedState] = useState<string>("");
   const [availableCities, setAvailableCities] = useState<{ name: string; state: string }[]>([]);
-  
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -134,17 +134,29 @@ export function CheckoutForm() {
     },
   });
 
+  // Calculate dynamic shipping cost
+  const watchCity = form.watch("city");
+  const shippingCost = React.useMemo(() => {
+    if (!watchCity) return 150;
+    const cityLower = watchCity.toLowerCase().trim();
+    // Match Bangalore or Bengaluru
+    if (cityLower === "bangalore" || cityLower === "bengaluru") {
+      return 110;
+    }
+    return 150;
+  }, [watchCity]);
+
   // Fetch saved addresses
   const { data: savedAddressesResponse = [], isLoading: addressesLoading } = useQuery({
     queryKey: ["/api/shippingaddress"],
     queryFn: async () => {
       const response = await apiRequest("/api/shippingaddress");
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
+
       // Fallback to array format
       return response || [];
     },
@@ -155,20 +167,20 @@ export function CheckoutForm() {
   // Extract saved addresses from response
   const savedAddresses = React.useMemo(() => {
     if (!savedAddressesResponse) return [];
-    
+
     // Check if response is paginated with new format
     if (savedAddressesResponse && typeof savedAddressesResponse === 'object' && 'results' in savedAddressesResponse) {
       return (savedAddressesResponse as any).results || [];
     }
-    
+
     // Check if response is a direct array
     if (Array.isArray(savedAddressesResponse)) {
       return savedAddressesResponse;
     }
-    
+
     return [];
   }, [savedAddressesResponse]);
-  
+
   // Update available cities when state changes
   useEffect(() => {
     if (selectedState) {
@@ -177,7 +189,7 @@ export function CheckoutForm() {
       setAvailableCities([]);
     }
   }, [selectedState]);
-  
+
   // Check if user has saved addresses and populate form with default address
   useEffect(() => {
     if (currentUser && savedAddresses.length > 0) {
@@ -185,12 +197,12 @@ export function CheckoutForm() {
       if (currentUser.email) {
         form.setValue('email', currentUser.email);
       }
-      
+
       // Get default address
       const defaultAddress = savedAddresses.find((addr: SavedAddress) => addr.isDefault);
       if (defaultAddress) {
         console.log("Default address found:", defaultAddress);
-        
+
         // Pre-fill form with default address
         form.setValue('fullName', defaultAddress.recipientName);
         form.setValue('email', defaultAddress.recipientEmail || (currentUser?.email || ''));
@@ -199,10 +211,10 @@ export function CheckoutForm() {
         form.setValue('state', defaultAddress.state);
         form.setValue('zipCode', defaultAddress.zipCode);
         form.setValue('phone', defaultAddress.recipientPhone);
-        
+
         // Set selected state to update city dropdown
         setSelectedState(defaultAddress.state);
-        
+
         // Set as selected address
         setSelectedSavedAddressId(defaultAddress.id);
       }
@@ -212,7 +224,7 @@ export function CheckoutForm() {
   // Function to handle saved address selection
   const handleSavedAddressSelect = (address: SavedAddress) => {
     setSelectedSavedAddressId(address.id);
-    
+
     // Fill in the form with this address
     form.setValue('fullName', address.recipientName);
     form.setValue('email', address.recipientEmail || (currentUser?.email || ''));
@@ -221,7 +233,7 @@ export function CheckoutForm() {
     form.setValue('state', address.state);
     form.setValue('zipCode', address.zipCode);
     form.setValue('phone', address.recipientPhone);
-    
+
     // Update the state to populate cities dropdown
     setSelectedState(address.state);
   };
@@ -247,11 +259,9 @@ export function CheckoutForm() {
         variant_id: item.variantId ?? null  // Always include variant_id (null if no variant)
       }));
 
-      const shippingCost = 150; // Shipping cost
-
       // Create order data based on whether a saved address is selected
       let orderData;
-      
+
       if (selectedSavedAddressId) {
         // Use saved address
         orderData = {
@@ -277,7 +287,7 @@ export function CheckoutForm() {
 
       // Log the order data before submitting (for debugging)
       console.log("Submitting order data:", orderData);
-      
+
       // Submit order to API using apiRequest
       const response = await apiRequest("/api/orders/", {
         method: "POST",
@@ -289,35 +299,17 @@ export function CheckoutForm() {
 
       const orderId = response.id;
 
-      // Clear cart after order creation (before payment)
+      // Clear cart after order creation
       clearCart();
 
-      // Initiate PayU payment and redirect to PayU hosted checkout
-      // Backend will fetch order details and customer info from database
-      try {
-        const { processPayUPayment } = await import("@/lib/payu-service");
-        
-        await processPayUPayment(orderId);
-        
-        // User will be redirected to PayU, so no need to redirect here
-        // PayU will redirect back to success/failure URLs after payment
-        // Note: If backend API is not implemented, this will throw an error
-      } catch (paymentError: any) {
-        console.error("Payment initiation error:", paymentError);
-        
-        // If payment initiation fails, redirect to order confirmation anyway
-        // Order is already created, payment can be retried later
-        const errorMessage = paymentError?.message || paymentError?.error || "Unknown error";
-        
-        toast({
-          title: "Order created",
-          description: `Order created successfully. Payment initiation failed: ${errorMessage}. You can retry payment from order details.`,
-          variant: "default",
-          duration: 8000,
-        });
-        
-        setLocation(`/order-confirmation/${orderId}`);
-      }
+      // Notify success and redirect directly to order confirmation page
+      toast({
+        title: "Order placed successfully",
+        description: "Your order has been received and is pending confirmation.",
+        variant: "default",
+      });
+
+      setLocation(`/order-confirmation/${orderId}`);
     } catch (error) {
       console.error("Checkout error:", error);
       toast({
@@ -340,7 +332,7 @@ export function CheckoutForm() {
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <div className="space-y-6">
               <h2 className="text-2xl font-heading font-bold">Billing Information</h2>
-              
+
               {/* Saved addresses section */}
               {currentUser && savedAddresses.length > 0 && (
                 <div className="mb-6 p-4 border rounded-md bg-gray-50">
@@ -353,11 +345,10 @@ export function CheckoutForm() {
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
                       {Array.isArray(savedAddresses) && savedAddresses.map((address: SavedAddress) => (
-                        <div 
-                          key={address.id} 
-                          className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${
-                            selectedSavedAddressId === address.id ? 'border-primary bg-primary/5' : 'border-gray-200'
-                          }`}
+                        <div
+                          key={address.id}
+                          className={`p-3 border rounded-md cursor-pointer transition-colors hover:border-primary ${selectedSavedAddressId === address.id ? 'border-primary bg-primary/5' : 'border-gray-200'
+                            }`}
                           onClick={() => handleSavedAddressSelect(address)}
                         >
                           <div className="flex justify-between">
@@ -374,7 +365,7 @@ export function CheckoutForm() {
                       ))}
                     </div>
                   )}
-                  
+
                   {/* Option to use new address */}
                   <div className="mt-3">
                     <Button
@@ -392,7 +383,7 @@ export function CheckoutForm() {
                   </div>
                 </div>
               )}
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -460,7 +451,7 @@ export function CheckoutForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>State</FormLabel>
-                      <Select 
+                      <Select
                         value={field.value}
                         onValueChange={(value) => {
                           field.onChange(value);
@@ -532,8 +523,8 @@ export function CheckoutForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Country</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         defaultValue={field.value}
                         disabled={true} // Lock to India only
                       >
@@ -582,7 +573,7 @@ export function CheckoutForm() {
               {!sameAsBilling && (
                 <div className="space-y-4">
                   <h3 className="text-xl font-heading font-semibold">Shipping Information</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
@@ -634,7 +625,7 @@ export function CheckoutForm() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>State</FormLabel>
-                          <Select 
+                          <Select
                             value={field.value}
                             onValueChange={(value) => {
                               field.onChange(value);
@@ -702,8 +693,8 @@ export function CheckoutForm() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Country</FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
+                          <Select
+                            onValueChange={field.onChange}
                             defaultValue={field.value}
                             disabled={true}
                           >
@@ -809,7 +800,7 @@ export function CheckoutForm() {
                 </p>
               </div>
             ))}
-            
+
             <div className="pt-2">
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Subtotal</span>
@@ -817,11 +808,11 @@ export function CheckoutForm() {
               </div>
               <div className="flex justify-between py-1">
                 <span className="text-gray-600">Shipping</span>
-                <span>₹150.00</span>
+                <span>{formatPrice(shippingCost)}</span>
               </div>
               <div className="flex justify-between py-3 border-t border-b mt-2 text-lg font-semibold">
                 <span>Total</span>
-                <span>{formatPrice(cart.total + 150)}</span>
+                <span>{formatPrice(cart.total + shippingCost)}</span>
               </div>
             </div>
           </CardContent>

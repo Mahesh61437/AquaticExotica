@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Helmet } from "react-helmet";
 import { ShoppingCart, Package, ChevronRight, Truck, RotateCcw, Shield, ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
@@ -115,7 +115,7 @@ export default function ProductDetail() {
   // const { trackProductPageView, trackProductAddToCart } = useProductAnalytics();
   const [quantity, setQuantity] = useState(1);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
+
   // Edit form state
   const [editFormData, setEditFormData] = useState<Partial<{
     name: string;
@@ -137,12 +137,12 @@ export default function ProductDetail() {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
-  
+
   // Extract product ID from the slug
   const productId = params?.slug ? extractProductIdFromSlug(params.slug) : null;
-  
+
   console.log('🔍 ProductDetail - Slug:', params?.slug, 'Product ID:', productId);
-  
+
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const { data: product, isLoading, error } = useQuery<ApiProduct>({
     queryKey: [`/api/products/${productId}`],
@@ -166,12 +166,12 @@ export default function ProductDetail() {
       console.log('🏷️ Fetching tags');
       const response = await apiRequest("/api/tags/");
       console.log('🏷️ Tags response:', response);
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
+
       // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
@@ -185,12 +185,12 @@ export default function ProductDetail() {
       console.log('📂 Fetching categories');
       const response = await apiRequest("/api/categories/");
       console.log('📂 Categories response:', response);
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
+
       // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
@@ -205,12 +205,12 @@ export default function ProductDetail() {
       console.log('🔄 Fetching related products');
       const response = await apiRequest(`/api/products/${productId}/related`);
       console.log('🔄 Related products response:', response);
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response.results || [];
       }
-      
+
       // Fallback to array format
       return Array.isArray(response) ? response : [];
     },
@@ -336,7 +336,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return;
-    
+
 
     // Do not add to cart if the selected variant is out of stock
     if (variantStock <= 0) {
@@ -350,9 +350,9 @@ export default function ProductDetail() {
 
     // Make sure the quantity doesn't exceed available stock for the selected variant
     const finalQuantity = Math.min(quantity, variantStock);
-    
+
     const variantName = selectedVariant?.description || selectedVariant?.variantType || '';
-    
+
     addItem({
       id: product.id,
       variantId: selectedVariant?.id,
@@ -363,7 +363,7 @@ export default function ProductDetail() {
       variantName: variantName,
       maxStock: variantStock,
     }, finalQuantity, true); // Open cart when adding from product detail
-    
+
     // Track add to cart event
     // trackProductAddToCart({
     //   id: product.id,
@@ -372,7 +372,7 @@ export default function ProductDetail() {
     //   price: product.price,
     //   quantity: finalQuantity,
     // });
-    
+
     toast({
       title: "Added to cart",
       description: `${product.name} has been added to your cart.`,
@@ -431,15 +431,15 @@ export default function ProductDetail() {
       imageUrl: product.imageUrl,
       thumbnailUrl: product.thumbnailUrl,
     });
-    
+
     // Set selected tags
     setSelectedTagIds(product.tags || []);
     setTagInput("");
     // Initialize editable variants from product variants
-    setProductVariants(Array.isArray(product.variants) ? product.variants.map(v => ({...v})) : []);
+    setProductVariants(Array.isArray(product.variants) ? product.variants.map(v => ({ ...v })) : []);
     // Clear previous validation errors
     setEditErrors(null);
-    
+
     setIsEditModalOpen(true);
   };
 
@@ -628,7 +628,7 @@ export default function ProductDetail() {
         {/* Product Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {/* Product Image Carousel */}
-          <ProductImageCarousel 
+          <ProductImageCarousel
             images={product?.images || []}
             fallbackImage={product?.imageUrl || ''}
           />
@@ -649,14 +649,14 @@ export default function ProductDetail() {
                 </Button>
               )}
             </div>
-            
+
             <div className="flex items-center mt-4">
               <div className="flex text-yellow-400 text-sm mr-2"
                 dangerouslySetInnerHTML={{ __html: generateStarRating(product.rating) }}>
               </div>
               <span className="text-sm text-gray-500">({product.rating} rating)</span>
             </div>
-            
+
             <div className="mt-4">
               {selectedVariant ? (
                 <div className="flex items-center">
@@ -729,7 +729,7 @@ export default function ProductDetail() {
                 </div>
               )}
             </div>
-            
+
             {/* Variant selector (choose specific variant) */}
             {product.variants && product.variants.length > 0 && (
               <div className="mt-4 w-48">
@@ -752,18 +752,18 @@ export default function ProductDetail() {
               </div>
             )}
 
-            <div 
+            <div
               className="mt-6 text-gray-700 prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
-            
+
             <div className="mt-8 border-t border-b py-4">
               <div className="flex items-center mb-4">
                 <span className="text-gray-700 mr-4 text-sm sm:text-base">Quantity:</span>
                 <div className="flex items-center border-2 border-gray-200 rounded-lg shadow-sm">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity - 1)}
                     disabled={quantity <= 1}
@@ -771,9 +771,9 @@ export default function ProductDetail() {
                     <span className="text-lg font-medium">-</span>
                   </Button>
                   <span className="px-4 py-2 border-x border-gray-200 min-w-[50px] text-center font-semibold text-gray-900">{quantity}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-10 w-10 p-0 hover:bg-gray-100 active:bg-gray-200"
                     onClick={() => handleQuantityChange(quantity + 1)}
                   >
@@ -795,19 +795,19 @@ export default function ProductDetail() {
                   );
                 })()}
               </div>
-              
+
               <div className="flex flex-col sm:flex-row gap-3">
                 {variantStock > 0 ? (
-                  <Button 
+                  <Button
                     className="flex-1 !h-11 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98]"
                     onClick={handleAddToCart}
                   >
-                    <ShoppingCart className="mr-2 h-5 w-5" /> 
+                    <ShoppingCart className="mr-2 h-5 w-5" />
                     <span className="!text-sm">Add to Cart</span>
                   </Button>
                 ) : (
                   <div className="w-full">
-                    <StockNotificationForm 
+                    <StockNotificationForm
                       productId={product.id}
                       productName={product.name}
                     />
@@ -815,7 +815,7 @@ export default function ProductDetail() {
                 )}
               </div>
             </div>
-            
+
             <div className="mt-8 space-y-4">
               <div className="flex items-center">
                 <Truck className="h-5 w-5 text-primary mr-2" />
@@ -830,13 +830,13 @@ export default function ProductDetail() {
                 <span className="text-sm">3-5 working days for delivery</span>
               </div>
             </div>
-            
+
             <Accordion type="single" collapsible className="mt-8">
               <AccordionItem value="details" className="border-b">
                 <AccordionTrigger className="text-base font-medium py-4">Product Details</AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-2">
-                    <div 
+                    <div
                       className="prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: product.description }}
                     />
@@ -848,7 +848,7 @@ export default function ProductDetail() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
-              
+
               <AccordionItem value="shipping" className="border-b">
                 <AccordionTrigger className="text-base font-medium py-4">Shipping & Returns</AccordionTrigger>
                 <AccordionContent>
@@ -856,13 +856,12 @@ export default function ProductDetail() {
                     <div>
                       <h4 className="font-medium">Shipping</h4>
                       <ul className="text-sm text-gray-600 list-disc pl-5 space-y-2 mt-2">
-                        <li>Free shipping on orders more than ₹2000</li>
+                        <li>Safe & secure nationwide delivery across India</li>
                         <li>It will take at least 3-5 working days to ship</li>
                         <li>Delivery charges:
                           <ul className="list-disc pl-5 space-y-1 mt-1">
-                            <li>₹100 per kg for Karnataka</li>
-                            <li>₹120 per kg for Andhra Pradesh, Kerala, Tamil Nadu</li>
-                            <li>₹150 per kg for other places</li>
+                            <li>₹110 for Bangalore</li>
+                            <li>₹150 for all other places</li>
                           </ul>
                         </li>
                       </ul>
@@ -878,7 +877,7 @@ export default function ProductDetail() {
                   </div>
                 </AccordionContent>
               </AccordionItem>
-              
+
               <AccordionItem value="contact" className="border-b">
                 <AccordionTrigger className="text-base font-medium py-4">Contact Us</AccordionTrigger>
                 <AccordionContent>
@@ -897,7 +896,7 @@ export default function ProductDetail() {
             </Accordion>
           </div>
         </div>
-        
+
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div className="mt-16">
@@ -960,7 +959,7 @@ export default function ProductDetail() {
               Update product information. Click save when you're done.
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleEditSubmit} className="space-y-6">
             {/* Display API validation errors if any */}
             {editErrors && (
@@ -984,7 +983,7 @@ export default function ProductDetail() {
                   <Input
                     id="name"
                     value={editFormData.name || ''}
-                    onChange={(e) => setEditFormData({...editFormData, name: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
                     placeholder="Enter product name"
                     required
                   />
@@ -999,19 +998,19 @@ export default function ProductDetail() {
                     min="0"
                     max="5"
                     value={editFormData.rating || ''}
-                    onChange={(e) => setEditFormData({...editFormData, rating: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, rating: e.target.value })}
                     placeholder="0.0"
                   />
                 </div>
               </div>
-              
+
               {/* Category and Tags */}
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="category">Category</Label>
                   <Select
                     value={editFormData.categoryId?.toString() || ''}
-                    onValueChange={(value) => setEditFormData({...editFormData, categoryId: parseInt(value) || 0})}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, categoryId: parseInt(value) || 0 })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
@@ -1026,7 +1025,7 @@ export default function ProductDetail() {
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <div>
                   <Label>Tags</Label>
                   <div className="flex gap-2 mb-2">
@@ -1045,7 +1044,7 @@ export default function ProductDetail() {
                       <Plus className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2">
                     {selectedTagIds.map((tagId) => {
                       const tag = tags.find((t: ApiTag) => t.id === tagId);
@@ -1064,23 +1063,23 @@ export default function ProductDetail() {
                     })}
                   </div>
                 </div>
-                
+
                 <div>
                   <Label htmlFor="imageUrl">Image URL</Label>
                   <Input
                     id="imageUrl"
                     value={editFormData.imageUrl || ''}
-                    onChange={(e) => setEditFormData({...editFormData, imageUrl: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, imageUrl: e.target.value })}
                     placeholder="https://example.com/image.jpg"
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="thumbnailUrl">Thumbnail URL</Label>
                   <Input
                     id="thumbnailUrl"
                     value={editFormData.thumbnailUrl || ''}
-                    onChange={(e) => setEditFormData({...editFormData, thumbnailUrl: e.target.value})}
+                    onChange={(e) => setEditFormData({ ...editFormData, thumbnailUrl: e.target.value })}
                     placeholder="https://example.com/thumbnail.jpg"
                   />
                 </div>
@@ -1137,12 +1136,12 @@ export default function ProductDetail() {
               <Textarea
                 id="description"
                 value={editFormData.description || ''}
-                onChange={(e) => setEditFormData({...editFormData, description: e.target.value})}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
                 placeholder="Enter product description"
                 rows={4}
               />
             </div>
-            
+
             {/* Product Flags */}
             <div className="space-y-4">
               <Label>Product Flags</Label>
@@ -1151,40 +1150,40 @@ export default function ProductDetail() {
                   <Checkbox
                     id="isNew"
                     checked={editFormData.isNew || false}
-                    onCheckedChange={(checked) => setEditFormData({...editFormData, isNew: checked as boolean})}
+                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, isNew: checked as boolean })}
                   />
                   <Label htmlFor="isNew">New</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isSale"
                     checked={editFormData.isSale || false}
-                    onCheckedChange={(checked) => setEditFormData({...editFormData, isSale: checked as boolean})}
+                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, isSale: checked as boolean })}
                   />
                   <Label htmlFor="isSale">Sale</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isFeatured"
                     checked={editFormData.isFeatured || false}
-                    onCheckedChange={(checked) => setEditFormData({...editFormData, isFeatured: checked as boolean})}
+                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, isFeatured: checked as boolean })}
                   />
                   <Label htmlFor="isFeatured">Featured</Label>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="isTrending"
                     checked={editFormData.isTrending || false}
-                    onCheckedChange={(checked) => setEditFormData({...editFormData, isTrending: checked as boolean})}
+                    onCheckedChange={(checked) => setEditFormData({ ...editFormData, isTrending: checked as boolean })}
                   />
                   <Label htmlFor="isTrending">Trending</Label>
                 </div>
               </div>
             </div>
-            
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)}>
                 Cancel

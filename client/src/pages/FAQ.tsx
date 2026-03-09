@@ -16,8 +16,8 @@ export default function FAQ() {
           answer: "Most orders are processed within 1-2 business days. Once shipped, delivery typically takes 2-5 business days depending on your location. Mumbai and nearby areas usually receive orders within 1-2 days, while other locations may take 3-5 days."
         },
         {
-          question: "Do you offer free shipping?",
-          answer: "Yes! We offer free delivery on all orders above ₹2000. For orders below ₹2000, a standard shipping fee of ₹99 applies. Delivering across India."
+          question: "How much is the shipping fee?",
+          answer: "We deliver across India. The shipping fee is ₹110 for Bangalore and ₹150 for all other locations across the country."
         },
         {
           question: "How do you ship live plants and fish?",
@@ -104,7 +104,7 @@ export default function FAQ() {
       <div className="container mx-auto px-4 py-12">
         <h1 className="text-3xl md:text-4xl font-heading font-bold mb-4 text-center">Frequently Asked Questions</h1>
         <p className="text-gray-600 text-center max-w-3xl mx-auto mb-12">
-          Find answers to common questions about our products, shipping, aquarium maintenance, and more. 
+          Find answers to common questions about our products, shipping, aquarium maintenance, and more.
           Can't find what you're looking for? Contact our support team.
         </p>
 
@@ -131,7 +131,7 @@ export default function FAQ() {
         <div className="mt-16 text-center">
           <h2 className="text-2xl font-bold mb-4">Still Have Questions?</h2>
           <p className="text-gray-600 max-w-2xl mx-auto mb-8">
-            If you couldn't find the answer to your question, please feel free to contact us directly. 
+            If you couldn't find the answer to your question, please feel free to contact us directly.
             Our customer service team is ready to assist you.
           </p>
           <div className="inline-flex space-x-4">
