@@ -12,6 +12,7 @@ import TagManagement from "./TagManagement";
 import OrderManagement from "./OrderManagement";
 import UserManagement from "./UserManagement";
 import ProductSales from "./ProductSales";
+import CurrentOrders from "./CurrentOrders";
 
 interface AdminStats {
   products: number;
@@ -128,6 +129,10 @@ export default function AdminDashboard() {
                 <LayoutDashboard className="h-4 w-4" />
                 <span>Overview</span>
               </TabsTrigger>
+              <TabsTrigger value="current-orders" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap bg-primary/10 text-primary font-bold border-primary/20">
+                <Package className="h-4 w-4" />
+                <span>Current Orders</span>
+              </TabsTrigger>
               <TabsTrigger value="products" className="flex items-center gap-2 px-4 py-2 whitespace-nowrap">
                 <ShoppingBag className="h-4 w-4" />
                 <span>Products</span>
@@ -243,8 +248,11 @@ export default function AdminDashboard() {
                     <li>
                       <strong>Tags</strong>: Create and manage product tags for better organization
                     </li>
+                    <li className="text-primary font-bold">
+                      <strong>Current Orders</strong>: View and fulfill processing orders with aggregated packing lists
+                    </li>
                     <li>
-                      <strong>Orders</strong>: View and manage customer orders
+                      <strong>Orders</strong>: View and manage all customer orders
                     </li>
                     <li>
                       <strong>Users</strong>: Manage user accounts and permissions
@@ -279,6 +287,9 @@ export default function AdminDashboard() {
           </TabsContent>
           <TabsContent value="sales">
             <ProductSales />
+          </TabsContent>
+          <TabsContent value="current-orders">
+            <CurrentOrders />
           </TabsContent>
         </Tabs>
       </div>

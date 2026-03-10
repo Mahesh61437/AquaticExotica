@@ -16,7 +16,8 @@ const signupSchema = z.object({
   email: z
     .string()
     .min(1, { message: "Email is required" })
-    .email({ message: "Please enter a valid email address" }),
+    .email({ message: "Please enter a valid email address" })
+    .refine(val => !/\s/.test(val), { message: "Email cannot contain spaces" }),
   password: z
     .string()
     .min(6, { message: "Password must be at least 6 characters" }),
@@ -45,7 +46,7 @@ export default function SignupTest() {
   const onSubmit = async (data: SignupFormValues) => {
     try {
       setLoading(true);
-      
+
       // Use apiRequest instead of direct fetch
       await apiRequest('/api/auth/signup', {
         method: 'POST',
@@ -54,12 +55,12 @@ export default function SignupTest() {
         },
         body: JSON.stringify(data)
       });
-      
+
       toast({
         title: "Account created successfully",
         description: "Please sign in with your new account",
       });
-      
+
       setLocation("/login");
     } catch (error: any) {
       console.error("Signup error:", error);

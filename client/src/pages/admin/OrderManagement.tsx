@@ -24,13 +24,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Loader2, Eye, PenLine, Edit, Plus, Minus, Trash2, Save, X } from "lucide-react";
+import { Loader2, Eye, PenLine, Edit, Plus, Minus, Trash2, Save, X, CalendarIcon } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Order } from "@/types";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { formatPrice, generateProductUrl } from "@/lib/utils";
+import { formatPrice, generateProductUrl, cn } from "@/lib/utils";
+import { format, startOfDay, endOfDay } from "date-fns";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Badge } from "@/components/ui/badge";
 import React from "react";
 
 // Define variant type based on API response
@@ -109,57 +113,71 @@ export default function OrderManagement() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [productSearchQuery, setProductSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  
+
   // Debouncing for quantity updates
   const quantityUpdateTimeoutsRef = React.useRef<Map<number, number>>(new Map());
   const pendingUpdatesRef = React.useRef<Map<number, { quantity: number; price: string }>>(new Map());
-  
+
   // Track items being deleted to prevent duplicate delete calls
   const deletingItemsRef = React.useRef<Set<number>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
   const [allOrders, setAllOrders] = useState<NewOrder[]>([]);
   const [fetchedPages, setFetchedPages] = useState<Set<number>>(new Set());
   const [hasMorePages, setHasMorePages] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  
+
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchQuery]);
-  
+
   // Build API endpoint for orders
   const buildOrdersEndpoint = (page: number) => {
     const params = new URLSearchParams({
       page: String(page),
       page_size: String(itemsPerPage)
     });
-    
+
     if (debouncedSearchQuery) {
-      params.append('query', debouncedSearchQuery);
+      params.append('search', debouncedSearchQuery);
     }
-    
+
+    if (filterStatus && filterStatus !== "all") {
+      params.append('status', filterStatus);
+    }
+
+    if (startDate) {
+      params.append('start_date', format(startOfDay(startDate), "yyyy-MM-dd'T'HH:mm:ss"));
+    }
+    if (endDate) {
+      params.append('end_date', format(endOfDay(endDate), "yyyy-MM-dd'T'HH:mm:ss"));
+    }
+
     return `/api/orders/?${params.toString()}`;
   };
 
   // Fetch current page of orders
   const { data: currentPageResponse, isLoading } = useQuery({
-    queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery],
+    queryKey: ["/api/orders/", currentPage, itemsPerPage, debouncedSearchQuery, filterStatus, startDate, endDate],
     queryFn: async () => {
       console.log('📦 Admin OrderManagement API call:', buildOrdersEndpoint(currentPage));
       const response = await apiRequest(buildOrdersEndpoint(currentPage));
-      
+
       // Handle new pagination format: { count, next, previous, results }
       if (response && typeof response === 'object' && 'results' in response) {
         return response;
       }
-      
+
       // Fallback to array format
       return {
         count: response?.length || 0,
@@ -185,24 +203,24 @@ export default function OrderManagement() {
           // Only initialize if we don't already have data
           const newOrders = new Array(itemsPerPage * 10).fill(null); // Pre-allocate space
           const startIndex = (currentPage - 1) * itemsPerPage;
-          
+
           // Set the current page data
           currentPageData.forEach((order: NewOrder, index: number) => {
             newOrders[startIndex + index] = order;
           });
-          
+
           return newOrders;
         }
         return prev;
       });
-      
+
       setFetchedPages(prev => {
         if (prev.size === 0) {
           return new Set([currentPage]);
         }
         return prev;
       });
-      
+
       setHasMorePages(true);
     }
   }, [currentPageData, currentPage, itemsPerPage]);
@@ -213,17 +231,17 @@ export default function OrderManagement() {
       setAllOrders(prev => {
         const newOrders = [...prev];
         const startIndex = (currentPage - 1) * itemsPerPage;
-        
+
         // Replace orders for this page
         currentPageData.forEach((order: NewOrder, index: number) => {
           newOrders[startIndex + index] = order;
         });
-        
+
         return newOrders;
       });
-      
+
       setFetchedPages(prev => new Set(Array.from(prev).concat([currentPage])));
-      
+
       // Check if we have more pages
       if (currentPageData.length < itemsPerPage) {
         setHasMorePages(false);
@@ -234,27 +252,31 @@ export default function OrderManagement() {
     }
   }, [currentPageData, currentPage, itemsPerPage]);
 
-  // Reset pagination when search changes
-  const prevSearchQueryRef = React.useRef(debouncedSearchQuery);
+  // Reset pagination when filters change
+  const prevFiltersRef = React.useRef({ debouncedSearchQuery, filterStatus, startDate, endDate });
   React.useEffect(() => {
-    // Only reset if the search query actually changed to a different value
-    if (prevSearchQueryRef.current !== debouncedSearchQuery) {
+    if (
+      prevFiltersRef.current.debouncedSearchQuery !== debouncedSearchQuery ||
+      prevFiltersRef.current.filterStatus !== filterStatus ||
+      prevFiltersRef.current.startDate !== startDate ||
+      prevFiltersRef.current.endDate !== endDate
+    ) {
       setAllOrders([]);
       setFetchedPages(new Set());
       setHasMorePages(true);
       setCurrentPage(1);
-      prevSearchQueryRef.current = debouncedSearchQuery;
+      prevFiltersRef.current = { debouncedSearchQuery, filterStatus, startDate, endDate };
     }
-  }, [debouncedSearchQuery]);
+  }, [debouncedSearchQuery, filterStatus, startDate, endDate]);
 
   // Function to fetch a specific page
   const fetchPage = async (page: number) => {
     if (fetchedPages.has(page)) return;
-    
+
     setIsLoadingMore(true);
     try {
       const response = await apiRequest(buildOrdersEndpoint(page));
-      
+
       // Handle new pagination format: { count, next, previous, results }
       let pageData;
       if (response && typeof response === 'object' && 'results' in response) {
@@ -262,21 +284,21 @@ export default function OrderManagement() {
       } else {
         pageData = response || [];
       }
-      
+
       setAllOrders(prev => {
         const newOrders = [...prev];
         const startIndex = (page - 1) * itemsPerPage;
-        
+
         // Replace orders for this page
         pageData.forEach((order: NewOrder, index: number) => {
           newOrders[startIndex + index] = order;
         });
-        
+
         return newOrders;
       });
-      
+
       setFetchedPages(prev => new Set(Array.from(prev).concat([page])));
-      
+
       // Check if we have more pages
       if (pageData.length < itemsPerPage) {
         setHasMorePages(false);
@@ -373,7 +395,7 @@ export default function OrderManagement() {
       quantityUpdateTimeoutsRef.current.clear();
       pendingUpdatesRef.current.clear();
       deletingItemsRef.current.clear();
-      
+
       setIsEditMode(false);
       setEditedItems([...selectedOrder.items]);
       setIsAddingProduct(false);
@@ -421,11 +443,11 @@ export default function OrderManagement() {
 
   // Add order item mutation
   const addOrderItemMutation = useMutation({
-    mutationFn: async ({ orderId, productId, variantId, quantity, price }: { 
-      orderId: number; 
-      productId: number; 
-      variantId: number | null; 
-      quantity: number; 
+    mutationFn: async ({ orderId, productId, variantId, quantity, price }: {
+      orderId: number;
+      productId: number;
+      variantId: number | null;
+      quantity: number;
       price: string;
     }) => {
       return await apiRequest(`/api/orders/${orderId}/items/`, {
@@ -460,10 +482,10 @@ export default function OrderManagement() {
 
   // Update order item mutation
   const updateOrderItemMutation = useMutation({
-    mutationFn: async ({ orderId, itemId, quantity, price }: { 
-      orderId: number; 
-      itemId: number; 
-      quantity: number; 
+    mutationFn: async ({ orderId, itemId, quantity, price }: {
+      orderId: number;
+      itemId: number;
+      quantity: number;
       price: string;
     }) => {
       return await apiRequest(`/api/orders/${orderId}/items/${itemId}/`, {
@@ -530,7 +552,7 @@ export default function OrderManagement() {
 
   const handleUpdateItemQuantity = (itemId: number, newQuantity: number) => {
     if (!selectedOrder) return;
-    
+
     if (newQuantity <= 0) {
       handleRemoveItem(itemId);
       return;
@@ -572,7 +594,7 @@ export default function OrderManagement() {
         // Remove from pending updates
         pendingUpdatesRef.current.delete(itemId);
         quantityUpdateTimeoutsRef.current.delete(itemId);
-        
+
         // Make API call
         updateOrderItemMutation.mutate({
           orderId: selectedOrder.id,
@@ -588,16 +610,16 @@ export default function OrderManagement() {
 
   const handleRemoveItem = (itemId: number) => {
     if (!selectedOrder) return;
-    
+
     // Prevent duplicate delete calls
     if (deletingItemsRef.current.has(itemId)) {
       console.log('⚠️ Delete already in progress for item', itemId);
       return;
     }
-    
+
     // Mark as being deleted
     deletingItemsRef.current.add(itemId);
-    
+
     // Clear any pending update for this item
     const existingTimeout = quantityUpdateTimeoutsRef.current.get(itemId);
     if (existingTimeout) {
@@ -605,10 +627,10 @@ export default function OrderManagement() {
       quantityUpdateTimeoutsRef.current.delete(itemId);
     }
     pendingUpdatesRef.current.delete(itemId);
-    
+
     // Update local state immediately
     setEditedItems(prev => prev.filter(item => item.id !== itemId));
-    
+
     // Call API to delete immediately (no debounce for delete)
     deleteOrderItemMutation.mutate(
       {
@@ -626,7 +648,7 @@ export default function OrderManagement() {
 
   const handleAddProductToOrder = (product: any, variant?: any) => {
     if (!selectedOrder) return;
-    
+
     const price = variant ? parseFloat(variant.offerPrice || variant.originalPrice) : parseFloat(product.price || '0');
     const quantity = 1;
     const priceString = price.toFixed(2);
@@ -681,7 +703,7 @@ export default function OrderManagement() {
 
   const handleStatusSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedOrder || !newStatus) {
       toast({
         title: "Error",
@@ -696,12 +718,12 @@ export default function OrderManagement() {
 
   const handlePageChange = async (page: number) => {
     setCurrentPage(page);
-    
+
     // Fetch the page if not already fetched
     if (!fetchedPages.has(page)) {
       await fetchPage(page);
     }
-    
+
     // Pre-fetch next page if available
     if (hasMorePages && !fetchedPages.has(page + 1)) {
       fetchPage(page + 1);
@@ -718,12 +740,102 @@ export default function OrderManagement() {
 
   return (
     <div>
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold">Order Management</h2>
+      <div className="flex flex-col gap-6 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <h2 className="text-2xl font-bold">Order Management</h2>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Status Filter</label>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Statuses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="processing">Processing</SelectItem>
+                <SelectItem value="shipped">Shipped</SelectItem>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium">Date Range</label>
+            <div className="flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "PPP") : "Start Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={setStartDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <span className="text-gray-400">to</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "w-[140px] justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "PPP") : "End Date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={setEndDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {(filterStatus !== "all" || startDate || endDate) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterStatus("all");
+                setStartDate(undefined);
+                setEndDate(undefined);
+              }}
+              className="h-8 px-2 lg:px-3 mt-6"
+            >
+              Reset
+              <X className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {orders && (
-        <DataTable 
+        <DataTable
           data={orders}
           searchField={{
             placeholder: "Search orders...",
@@ -801,7 +913,7 @@ export default function OrderManagement() {
               Order details and items
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedOrder && (
             <div className="space-y-6">
               {/* Order Summary */}
@@ -823,7 +935,7 @@ export default function OrderManagement() {
                     <div className="mt-1">
                       {isEditMode ? (
                         formatCurrency(
-                          editedItems.reduce((sum, item) => sum + item.totalPrice, 0) + 
+                          editedItems.reduce((sum, item) => sum + item.totalPrice, 0) +
                           parseFloat(selectedOrder.shippingCost)
                         )
                       ) : (
@@ -875,8 +987,8 @@ export default function OrderManagement() {
                         <X className="h-4 w-4 mr-2" />
                         Cancel
                       </Button>
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         onClick={handleCancelEdit}
                         disabled={addOrderItemMutation.isPending || updateOrderItemMutation.isPending || deleteOrderItemMutation.isPending}
                       >
@@ -894,8 +1006,8 @@ export default function OrderManagement() {
                   <div className="space-y-4">
                     {(isEditMode ? editedItems : selectedOrder.items).map((item) => (
                       <div key={item.id} className="flex items-center gap-4 p-4 border rounded-lg">
-                        <img 
-                          src={item.product.imageUrl} 
+                        <img
+                          src={item.product.imageUrl}
                           alt={item.product.name}
                           className="w-16 h-16 object-cover rounded"
                         />
@@ -958,12 +1070,12 @@ export default function OrderManagement() {
                         </div>
                       </div>
                     ))}
-                    
+
                     {isEditMode && (
                       <div className="border-t pt-4">
                         {!isAddingProduct ? (
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             className="w-full"
                             onClick={() => setIsAddingProduct(true)}
                           >
@@ -1014,8 +1126,8 @@ export default function OrderManagement() {
                                 ))}
                               </div>
                             )}
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => {
                                 setIsAddingProduct(false);
@@ -1030,14 +1142,14 @@ export default function OrderManagement() {
                       </div>
                     )}
                   </div>
-                  
+
                   {isEditMode && (
                     <div className="mt-4 pt-4 border-t">
                       <div className="flex justify-between items-center">
                         <span className="font-medium">New Total:</span>
                         <span className="text-lg font-bold">
                           {formatCurrency(
-                            editedItems.reduce((sum, item) => sum + item.totalPrice, 0) + 
+                            editedItems.reduce((sum, item) => sum + item.totalPrice, 0) +
                             parseFloat(selectedOrder.shippingCost)
                           )}
                         </span>
@@ -1060,7 +1172,7 @@ export default function OrderManagement() {
               Update the status for order #{selectedOrder?.id}
             </DialogDescription>
           </DialogHeader>
-          
+
           <form onSubmit={handleStatusSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
@@ -1077,7 +1189,7 @@ export default function OrderManagement() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <DialogFooter>
               <Button type="submit" disabled={updateStatusMutation.isPending}>
                 {updateStatusMutation.isPending && (

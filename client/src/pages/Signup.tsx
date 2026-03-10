@@ -16,7 +16,8 @@ const signupSchema = z.object({
     .min(3, { message: "Full name must be at least 3 characters" }),
   email: z.string()
     .min(1, { message: "Email is required" })
-    .email({ message: "Please enter a valid email address" }),
+    .email({ message: "Please enter a valid email address" })
+    .refine(val => !/\s/.test(val), { message: "Email cannot contain spaces" }),
   password: z.string()
     .min(6, { message: "Password must be at least 6 characters" }),
   confirmPassword: z.string()
@@ -33,14 +34,14 @@ export default function Signup() {
   const { signUp, currentUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  
+
   // Redirect to home page if user is already logged in
   useEffect(() => {
     if (currentUser) {
       setLocation("/");
     }
   }, [currentUser, setLocation]);
-  
+
   const form = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -55,21 +56,21 @@ export default function Signup() {
     try {
       setLoading(true);
       await signUp(data.email, data.password, data.fullName);
-      
+
       // On successful signup, redirect to login page instead of account page
       toast({
         title: "Account created",
         description: "Your account has been created. Please sign in.",
       });
-      
+
       // Add a small delay before redirecting to ensure the toast is seen
       setTimeout(() => {
         setLocation("/login");
       }, 1500);
-      
+
     } catch (error: any) {
       console.error("Sign up error:", error);
-      
+
       // The message handling is primarily done in the AuthContext
       // Handle specific error cases here
       // if (error.message?.includes("already exists")) {

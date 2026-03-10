@@ -14,7 +14,8 @@ import { useToast } from "../hooks/use-toast";
 const loginSchema = z.object({
   emailOrUsername: z
     .string()
-    .min(1, { message: "Email or username is required" }),
+    .min(1, { message: "Email or username is required" })
+    .refine(val => !/\s/.test(val), { message: "Username cannot contain spaces" }),
   password: z
     .string()
     .min(6, { message: "Password must be at least 6 characters" })
@@ -28,7 +29,7 @@ export default function Login() {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [fromCheckout, setFromCheckout] = useState(false);
-  
+
   // Check if user is already authenticated, and if redirected from checkout
   useEffect(() => {
     // If user is already logged in, redirect to home page
@@ -36,7 +37,7 @@ export default function Login() {
       setLocation("/");
       return;
     }
-    
+
     // Otherwise, check if they were redirected from checkout
     const returnToCheckout = sessionStorage.getItem('returnToCheckout');
     if (returnToCheckout === 'true') {
@@ -44,7 +45,7 @@ export default function Login() {
       // Keep the flag in session storage until successful login
     }
   }, [currentUser, setLocation]);
-  
+
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -57,7 +58,7 @@ export default function Login() {
     try {
       setLoading(true);
       const user = await signIn(data.emailOrUsername, data.password);
-      
+
       if (user) {
         // Check if user was coming from checkout
         if (fromCheckout) {

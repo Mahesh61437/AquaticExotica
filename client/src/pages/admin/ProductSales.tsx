@@ -1,10 +1,15 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { apiRequest } from "@/lib/queryClient";
 import { DataTable } from "@/components/admin/DataTable";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, TrendingUp, Package, DollarSign } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import { Loader2, TrendingUp, Package, DollarSign, CalendarIcon, X } from "lucide-react";
+import { formatPrice, cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface OrderItem {
     id: number;
@@ -23,6 +28,7 @@ interface Order {
     items: OrderItem[];
     status: string;
     grandTotal: number;
+    createdAt: string;
 }
 
 interface AggregatedSales {
@@ -35,65 +41,54 @@ interface AggregatedSales {
 
 export default function ProductSales() {
     const [searchQuery, setSearchQuery] = useState("");
+    const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+    const [endDate, setEndDate] = useState<Date | undefined>(undefined);
+    const [selectedStatuses, setSelectedStatuses] = useState<string[]>(['processing', 'shipped', 'delivered']);
 
-    // Fetch all orders (using a large page size to get most data for now)
-    // In a real large-scale app, this should be a backend aggregation
-    const { data: ordersResponse, isLoading } = useQuery({
-        queryKey: ["/api/orders/", { page_size: 1000 }],
+    const availableStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+
+    const toggleStatus = (status: string) => {
+        setSelectedStatuses((current: string[]) =>
+            current.includes(status)
+                ? current.filter((s: string) => s !== status)
+                : [...current, status]
+        );
+    };
+
+    // Fetch aggregated sales stats from backend
+    const { data: salesStats, isLoading } = useQuery({
+        queryKey: ["/api/orders/sales-stats/", {
+            start_date: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+            end_date: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+            status: selectedStatuses
+        }],
         queryFn: async () => {
-            const response = await apiRequest("/api/orders/?page_size=1000");
-            return response?.results || response || [];
+            const params = new URLSearchParams();
+            if (startDate) params.append("start_date", format(startDate, "yyyy-MM-dd"));
+            if (endDate) params.append("end_date", format(endDate, "yyyy-MM-dd"));
+            selectedStatuses.forEach(s => params.append("status[]", s));
+
+            const response = await apiRequest(`/api/orders/sales-stats/?${params.toString()}`);
+            return response;
         },
     });
 
-    const salesData = useMemo(() => {
-        if (!ordersResponse || !Array.isArray(ordersResponse)) return [];
+    const summary = useMemo(() => salesStats?.summary || {
+        totalRevenue: 0,
+        totalShipping: 0,
+        netRevenue: 0,
+        grandTotal: 0,
+        totalQuantity: 0,
+        uniqueProducts: 0
+    }, [salesStats]);
 
-        const aggregation: Record<number, AggregatedSales> = {};
-        let totalItems = 0;
-        let totalRev = 0;
-
-        ordersResponse.forEach((order: Order) => {
-            // Typically we only count sales for completed/shipped orders, 
-            // but the user asked for "sold so far" which might include processing.
-            // We'll exclude 'cancelled' orders.
-            if (order.status.toLowerCase() === 'cancelled') return;
-
-            order.items?.forEach((item: OrderItem) => {
-                const productId = item.product.id;
-                if (!aggregation[productId]) {
-                    aggregation[productId] = {
-                        productId,
-                        name: item.product.name,
-                        imageUrl: item.product.imageUrl,
-                        quantitySold: 0,
-                        totalRevenue: 0,
-                    };
-                }
-
-                aggregation[productId].quantitySold += item.quantity;
-                aggregation[productId].totalRevenue += parseFloat(item.price) * item.quantity;
-
-                totalItems += item.quantity;
-                totalRev += parseFloat(item.price) * item.quantity;
-            });
-        });
-
-        return Object.values(aggregation).sort((a, b) => b.totalRevenue - a.totalRevenue);
-    }, [ordersResponse]);
-
-    const totals = useMemo(() => {
-        return salesData.reduce((acc, curr) => ({
-            quantity: acc.quantity + curr.quantitySold,
-            revenue: acc.revenue + curr.totalRevenue
-        }), { quantity: 0, revenue: 0 });
-    }, [salesData]);
+    const salesData = useMemo(() => salesStats?.products || [], [salesStats]);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
 
     const filteredSalesData = useMemo(() => {
-        return salesData.filter(item =>
+        return salesData.filter((item: AggregatedSales) =>
             item.name.toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [salesData, searchQuery]);
@@ -115,37 +110,137 @@ export default function ProductSales() {
 
     return (
         <div className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-4 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">Date Range</label>
+                        <div className="flex items-center gap-2">
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                            "w-[140px] justify-start text-left font-normal",
+                                            !startDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {startDate ? format(startDate, "PPP") : "Start Date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={startDate}
+                                        onSelect={setStartDate}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                            <span className="text-gray-400">to</span>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className={cn(
+                                            "w-[140px] justify-start text-left font-normal",
+                                            !endDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {endDate ? format(endDate, "PPP") : "End Date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={endDate}
+                                        onSelect={setEndDate}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium">Order Status</label>
+                        <div className="flex flex-wrap gap-2">
+                            {availableStatuses.map(status => (
+                                <Badge
+                                    key={status}
+                                    variant={selectedStatuses.includes(status) ? "default" : "outline"}
+                                    className="cursor-pointer capitalize"
+                                    onClick={() => toggleStatus(status)}
+                                >
+                                    {status}
+                                </Badge>
+                            ))}
+                        </div>
+                    </div>
+
+                    {(startDate || endDate || selectedStatuses.length !== 3) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                                setStartDate(undefined);
+                                setEndDate(undefined);
+                                setSelectedStatuses(['processing', 'shipped', 'delivered']);
+                            }}
+                            className="h-8 px-2 lg:px-3 mt-6"
+                        >
+                            Reset
+                            <X className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Total Products Sold</CardTitle>
+                        <CardTitle className="text-sm font-medium">Net Revenue</CardTitle>
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">{formatPrice(summary.netRevenue.toString())}</div>
+                        <p className="text-xs text-muted-foreground">Product sales total</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Shipping Collected</CardTitle>
+                        <DollarSign className="h-4 w-4 text-orange-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-orange-600">{formatPrice(summary.totalShipping.toString())}</div>
+                        <p className="text-xs text-muted-foreground">Total delivery fees</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Grand Total</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-primary" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{formatPrice(summary.grandTotal.toString())}</div>
+                        <p className="text-xs text-muted-foreground">Total order value</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">Products Sold</CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totals.quantity}</div>
-                        <p className="text-xs text-muted-foreground">Across all successful orders</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatPrice(totals.revenue.toString())}</div>
-                        <p className="text-xs text-muted-foreground">Total sales value</p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium">Unique Products Sold</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{salesData.length}</div>
-                        <p className="text-xs text-muted-foreground">Distinct items purchased</p>
+                        <div className="text-2xl font-bold">{summary.totalQuantity}</div>
+                        <p className="text-xs text-muted-foreground">{summary.uniqueProducts} unique items</p>
                     </CardContent>
                 </Card>
             </div>
