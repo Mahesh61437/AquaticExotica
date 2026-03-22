@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/context/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users, BarChart3 } from "lucide-react";
+import { Loader2, LayoutDashboard, ShoppingBag, Tags, Hash, ListOrdered, Users, BarChart3, Package } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProductManagement from "./ProductManagement";
